@@ -24,8 +24,10 @@ Next.js(App Router) + TypeScript + Tailwind + Supabase(Auth/DB/Storage/Realtime)
    - `0002_rls.sql`: 미승인 사용자 전체 비노출(0-1)을 강제하는 baseline RLS 정책
    - `0003_auth_trigger.sql`: 회원가입 시 `auth.users` → `public.users` 자동 생성 트리거
    - `0004_admin_and_storage.sql`: 관리자 심사 처리용 RLS + 인증서류 private 스토리지 버킷(`verification-documents`)
+   - `0005_posts_storage.sql`: 게시물 영상용 private 스토리지 버킷(`posts`)
 3. 첫 관리자 계정 만들기: 가입 후 Supabase 대시보드에서 해당 사용자의 `public.users.role`을 `admin`으로 직접 변경 (Phase 0은 운영자 1인 수동 심사 — spec 0-5)
-4. 의존성 설치 및 개발 서버 실행
+4. 만료 처리 cron 연결: Vercel에 배포하면 `vercel.json`의 스케줄이 자동 등록됨. 로컬에서 테스트하려면 `.env.local`에 `CRON_SECRET`을 채우고 `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/expire-posts` 호출 (FEED-06)
+5. 의존성 설치 및 개발 서버 실행
 
 ```bash
 npm install
@@ -39,19 +41,23 @@ npm run dev
 ```
 src/
   app/            화면별 라우트 (S1~S6, S8~S13, S16~S18 — spec 3.1)
-  lib/supabase/    브라우저/서버 Supabase 클라이언트
+  app/api/cron/    만료 처리(FEED-06) 등 cron 트리거용 route handler
+  lib/supabase/    브라우저/서버/관리자(service-role) Supabase 클라이언트
   proxy.ts         승인 상태(1.2)·관리자 권한(2.8) 기반 라우트 가드
   types/database.ts  DB 스키마 대응 타입
-supabase/migrations/  Phase 0 DDL + RLS
-docs/spec.md          원본 개발 명세서
+supabase/migrations/  Phase 0 DDL + RLS + 스토리지 버킷
+vercel.json           만료 처리 cron 스케줄(*/5분)
+docs/spec.md           원본 개발 명세서
 ```
 
 ## 구현 상태
 
-1. **인증·가입 플로우 (AUTH-01~06) — 완료.** 가입/로그인(Supabase Auth), 인증유형 선택 → 서류 업로드(Storage) → `verifications` 제출, 관리자 심사 대기열/상세/승인·반려, 승인 상태 기반 라우트 가드(`proxy.ts`)까지 연동됨. `docker`/`supabase` CLI가 없는 이 환경에서는 실제 Supabase 프로젝트 없이 런타임 검증을 하지 못했으므로, 실제 프로젝트 연결 후 가입→심사→승인 전체 플로우를 한 번 직접 테스트해볼 것을 권장.
-2. 업로드·피드 (FEED-01~11) — 아직 스텁. 영상 업로드/트랜스코딩, 만료 처리 cron 필요
+1. **인증·가입 플로우 (AUTH-01~06) — 완료.** 가입/로그인(Supabase Auth), 인증유형 선택 → 서류 업로드(Storage) → `verifications` 제출, 관리자 심사 대기열/상세/승인·반려, 승인 상태 기반 라우트 가드(`proxy.ts`)까지 연동됨.
+2. **업로드·피드 (FEED-01~11) — 완료.** 영상 업로드(Storage, mp4/mov, 60초 소프트 경고), 캡션/콘텐츠유형/악기태그/노출시간/협업표시, 즉시 게시, 메인 피드(서명된 URL로 영상 재생, 최신 20개), 프로필 피드(FEED-10)·게시물 관리 화면(FEED-11 삭제), 만료 처리 cron endpoint(`/api/cron/expire-posts`). 영상 트랜스코딩/적응형 비트레이트(1.5 비기능 요구사항)는 미구현 — 업로드된 원본 파일을 그대로 재생.
 3. 인터랙션 (좋아요/댓글) — 아직 스텁
-4. 프로필·팔로우 — 아직 스텁
+4. 프로필·팔로우 — 아직 스텁 (팔로우 자체. 프로필 조회/게시물 그리드는 위 FEED-10에서 구현됨)
 5. DM — 아직 스텁
+
+이 환경엔 Docker/Supabase CLI가 없어 실제 Supabase 프로젝트 없이는 런타임 검증(가입→심사→승인, 영상 업로드→피드 노출 등)을 끝까지 돌려보지 못했습니다. 빌드·린트·라우트 가드 리다이렉트만 확인된 상태이니, 실제 프로젝트를 연결한 뒤 전체 플로우를 한 번 직접 테스트해보는 걸 권장합니다.
 
 각 미구현 페이지는 화면 구조와 spec ID를 주석으로 남긴 스텁 상태입니다.
