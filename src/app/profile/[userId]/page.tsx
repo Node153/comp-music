@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
 // Phase 0: visibility가 public 고정이라 타인도 published/expired 게시물을 전부 볼 수 있음(0-2, 0-7)
@@ -47,6 +48,7 @@ export default async function ProfilePage({
 
   return (
     <main className="mx-auto max-w-lg p-6">
+      {isOwnProfile && <MarkNotificationsSeen userId={userId} />}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{user.name}</h1>
         {isOwnProfile && (

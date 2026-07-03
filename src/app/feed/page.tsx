@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/LogoutButton";
+import { LikeButton } from "./LikeButton";
+import { CommentPanel } from "./CommentPanel";
 import type { ContentType } from "@/types/database";
 
-// S6 메인 피드 (FEED-05~09) — 풀스크린 세로 스와이프, 활성 게시물만(status='published')
+// S6 메인 피드 (FEED-05~09, INTERACT-01/02) — 풀스크린 세로 스와이프, 활성 게시물만(status='published')
 // Phase 0: 필터(S7)·검색(S19) 없음, 최신순만, 페이지네이션 없이 최근 20개만(1.4)
+// 우측 좋아요/댓글 버튼이 시각적으로 가장 눈에 띄어야 함(3.3 UI 강조 우선순위 — 반응 > 매칭)
 
 const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
   composition: "작곡",
@@ -35,7 +38,9 @@ export default async function FeedPage() {
     .order("published_at", { ascending: false })
     .limit(FEED_LIMIT);
 
+  const postIds = (posts ?? []).map((p) => p.id);
   const userIds = [...new Set((posts ?? []).map((p) => p.user_id))];
+
   const { data: users } =
     userIds.length > 0
       ? await supabase.from("users").select("id, name").in("id", userIds)
@@ -46,6 +51,60 @@ export default async function FeedPage() {
       : { data: [] };
   const userMap = new Map((users ?? []).map((u) => [u.id, u]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+
+  const { data: likeRows } =
+    postIds.length > 0
+      ? await supabase.from("likes").select("post_id, user_id").in("post_id", postIds)
+      : { data: [] };
+  const { data: commentRows } =
+    postIds.length > 0
+      ? await supabase.from("comments").select("post_id").in("post_id", postIds)
+      : { data: [] };
+
+  const likeCountMap = new Map<string, number>();
+  const likedByMeSet = new Set<string>();
+  for (const row of likeRows ?? []) {
+    likeCountMap.set(row.post_id, (likeCountMap.get(row.post_id) ?? 0) + 1);
+    if (currentUser && row.user_id === currentUser.id) likedByMeSet.add(row.post_id);
+  }
+  const commentCountMap = new Map<string, number>();
+  for (const row of commentRows ?? []) {
+    commentCountMap.set(row.post_id, (commentCountMap.get(row.post_id) ?? 0) + 1);
+  }
+
+  // 1.4 인앱뱃지: 내 게시물에 달린, 마지막으로 확인한 시점 이후의 좋아요/댓글 수
+  let unseenNotifications = 0;
+  if (currentUser) {
+    const { data: myPosts } = await supabase
+      .from("posts")
+      .select("id")
+      .eq("user_id", currentUser.id);
+    const myPostIds = (myPosts ?? []).map((p) => p.id);
+
+    if (myPostIds.length > 0) {
+      const { data: me } = await supabase
+        .from("users")
+        .select("notifications_seen_at")
+        .eq("id", currentUser.id)
+        .single();
+      const seenAt = me?.notifications_seen_at ?? new Date(0).toISOString();
+
+      const { data: newLikes } = await supabase
+        .from("likes")
+        .select("id")
+        .in("post_id", myPostIds)
+        .neq("user_id", currentUser.id)
+        .gt("created_at", seenAt);
+      const { data: newComments } = await supabase
+        .from("comments")
+        .select("id")
+        .in("post_id", myPostIds)
+        .neq("user_id", currentUser.id)
+        .gt("created_at", seenAt);
+
+      unseenNotifications = (newLikes?.length ?? 0) + (newComments?.length ?? 0);
+    }
+  }
 
   const postsWithVideo = await Promise.all(
     (posts ?? []).map(async (post) => {
@@ -62,9 +121,14 @@ export default async function FeedPage() {
         {currentUser && (
           <Link
             href={`/profile/${currentUser.id}`}
-            className="rounded-full bg-white/20 px-3 py-2 text-sm text-white"
+            className="relative rounded-full bg-white/20 px-3 py-2 text-sm text-white"
           >
             내 프로필
+            {unseenNotifications > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
+                {unseenNotifications}
+              </span>
+            )}
           </Link>
         )}
         <Link
@@ -101,7 +165,24 @@ export default async function FeedPage() {
             ) : (
               <p className="text-sm text-gray-400">영상을 불러올 수 없습니다</p>
             )}
-            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/80 to-transparent p-4">
+
+            {currentUser && (
+              <div className="absolute bottom-24 right-3 z-10 flex flex-col items-center gap-5">
+                <LikeButton
+                  postId={post.id}
+                  userId={currentUser.id}
+                  initialLiked={likedByMeSet.has(post.id)}
+                  initialCount={likeCountMap.get(post.id) ?? 0}
+                />
+                <CommentPanel
+                  postId={post.id}
+                  userId={currentUser.id}
+                  initialCount={commentCountMap.get(post.id) ?? 0}
+                />
+              </div>
+            )}
+
+            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/80 to-transparent p-4 pr-16">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <span>{author?.name ?? "알 수 없음"}</span>
                 {(profile?.school || profile?.major) && (

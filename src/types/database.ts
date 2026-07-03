@@ -30,6 +30,7 @@ export interface Database {
           name: string;
           status: UserStatus;
           role: UserRole;
+          notifications_seen_at: string;
           created_at: string;
           updated_at: string;
         };
@@ -40,6 +41,7 @@ export interface Database {
           name: string;
           status?: UserStatus;
           role?: UserRole;
+          notifications_seen_at?: string;
           created_at?: string;
           updated_at?: string;
         };
