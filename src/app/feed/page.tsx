@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/LogoutButton";
+import { MessageButton } from "@/components/MessageButton";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import type { ContentType } from "@/types/database";
@@ -179,6 +180,16 @@ export default async function FeedPage() {
                   userId={currentUser.id}
                   initialCount={commentCountMap.get(post.id) ?? 0}
                 />
+                {post.user_id !== currentUser.id && (
+                  <MessageButton
+                    currentUserId={currentUser.id}
+                    otherUserId={post.user_id}
+                    sourcePostId={post.id}
+                    className="flex flex-col items-center gap-1 text-white"
+                  >
+                    <span className="text-2xl">✉️</span>
+                  </MessageButton>
+                )}
               </div>
             )}
 

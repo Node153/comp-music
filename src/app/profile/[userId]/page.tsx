@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
+import { MessageButton } from "@/components/MessageButton";
+import { FollowButton } from "./FollowButton";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
 // Phase 0: visibility가 public 고정이라 타인도 published/expired 게시물을 전부 볼 수 있음(0-2, 0-7)
-// 팔로워/팔로잉(PROFILE-02/03)은 다음 이터레이션에서 채운다.
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 10;
 
 export default async function ProfilePage({
@@ -46,17 +47,63 @@ export default async function ProfilePage({
     }),
   );
 
+  const { count: followerCount } = await supabase
+    .from("follows")
+    .select("id", { count: "exact", head: true })
+    .eq("followee_id", userId);
+  const { count: followingCount } = await supabase
+    .from("follows")
+    .select("id", { count: "exact", head: true })
+    .eq("follower_id", userId);
+
+  let isFollowing = false;
+  if (currentUser && !isOwnProfile) {
+    const { data: existingFollow } = await supabase
+      .from("follows")
+      .select("id")
+      .eq("follower_id", currentUser.id)
+      .eq("followee_id", userId)
+      .maybeSingle();
+    isFollowing = !!existingFollow;
+  }
+
   return (
     <main className="mx-auto max-w-lg p-6">
       {isOwnProfile && <MarkNotificationsSeen userId={userId} />}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{user.name}</h1>
-        {isOwnProfile && (
+        {isOwnProfile ? (
           <div className="flex gap-3 text-sm text-blue-600">
             <Link href="/profile/edit">프로필 수정</Link>
             <Link href="/profile/manage">게시물 관리</Link>
           </div>
+        ) : (
+          currentUser && (
+            <div className="flex gap-2">
+              <FollowButton
+                currentUserId={currentUser.id}
+                targetUserId={userId}
+                initialFollowing={isFollowing}
+              />
+              <MessageButton
+                currentUserId={currentUser.id}
+                otherUserId={userId}
+                className="rounded border px-3 py-1.5 text-sm font-medium"
+              >
+                메시지 보내기
+              </MessageButton>
+            </div>
+          )
         )}
+      </div>
+
+      <div className="mt-2 flex gap-4 text-sm text-gray-600">
+        <Link href={`/profile/${userId}/follows?tab=followers`}>
+          팔로워 <span className="font-medium text-black">{followerCount ?? 0}</span>
+        </Link>
+        <Link href={`/profile/${userId}/follows?tab=following`}>
+          팔로잉 <span className="font-medium text-black">{followingCount ?? 0}</span>
+        </Link>
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1 text-xs text-gray-600">
