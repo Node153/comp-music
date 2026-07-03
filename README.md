@@ -22,7 +22,10 @@ Next.js(App Router) + TypeScript + Tailwind + Supabase(Auth/DB/Storage/Realtime)
 2. DB 마이그레이션 적용 (Supabase SQL Editor 또는 CLI로 `supabase/migrations/*.sql` 순서대로 실행)
    - `0001_init.sql`: Phase 0 테이블 9개 (users, profiles, verifications, posts, likes, comments, follows, conversations, messages)
    - `0002_rls.sql`: 미승인 사용자 전체 비노출(0-1)을 강제하는 baseline RLS 정책
-3. 의존성 설치 및 개발 서버 실행
+   - `0003_auth_trigger.sql`: 회원가입 시 `auth.users` → `public.users` 자동 생성 트리거
+   - `0004_admin_and_storage.sql`: 관리자 심사 처리용 RLS + 인증서류 private 스토리지 버킷(`verification-documents`)
+3. 첫 관리자 계정 만들기: 가입 후 Supabase 대시보드에서 해당 사용자의 `public.users.role`을 `admin`으로 직접 변경 (Phase 0은 운영자 1인 수동 심사 — spec 0-5)
+4. 의존성 설치 및 개발 서버 실행
 
 ```bash
 npm install
@@ -43,12 +46,12 @@ supabase/migrations/  Phase 0 DDL + RLS
 docs/spec.md          원본 개발 명세서
 ```
 
-## 아직 구현되지 않은 것
+## 구현 상태
 
-각 페이지는 화면 구조와 spec ID를 주석으로 남긴 스텁 상태입니다. 다음 순서로 채워나가는 것을 권장합니다(spec 5.2 스프린트 순서 기준):
+1. **인증·가입 플로우 (AUTH-01~06) — 완료.** 가입/로그인(Supabase Auth), 인증유형 선택 → 서류 업로드(Storage) → `verifications` 제출, 관리자 심사 대기열/상세/승인·반려, 승인 상태 기반 라우트 가드(`proxy.ts`)까지 연동됨. `docker`/`supabase` CLI가 없는 이 환경에서는 실제 Supabase 프로젝트 없이 런타임 검증을 하지 못했으므로, 실제 프로젝트 연결 후 가입→심사→승인 전체 플로우를 한 번 직접 테스트해볼 것을 권장.
+2. 업로드·피드 (FEED-01~11) — 아직 스텁. 영상 업로드/트랜스코딩, 만료 처리 cron 필요
+3. 인터랙션 (좋아요/댓글) — 아직 스텁
+4. 프로필·팔로우 — 아직 스텁
+5. DM — 아직 스텁
 
-1. 인증·가입 플로우 (AUTH-01~06) — Supabase Auth 연동, verifications 제출/심사 처리
-2. 업로드·피드 (FEED-01~11) — 영상 업로드/트랜스코딩, 만료 처리 cron
-3. 인터랙션 (좋아요/댓글)
-4. 프로필·팔로우
-5. DM
+각 미구현 페이지는 화면 구조와 spec ID를 주석으로 남긴 스텁 상태입니다.

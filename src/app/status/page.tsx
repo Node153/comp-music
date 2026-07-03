@@ -1,7 +1,9 @@
 // S5 심사 상태 안내 (대기/반려 공용, Phase 0은 3단계만 사용 — 1.4)
-// 미승인 사용자가 middleware에서 리다이렉트되는 유일한 접근 가능 화면
-import { createClient } from "@/lib/supabase/server";
+// 미승인 사용자가 proxy.ts에서 리다이렉트되는 접근 가능 화면 중 하나
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { LogoutButton } from "@/components/LogoutButton";
 
 export default async function StatusPage() {
   const supabase = await createClient();
@@ -18,9 +20,25 @@ export default async function StatusPage() {
 
   const status = profile?.status ?? "pending";
 
+  const { data: latestVerification } = await supabase
+    .from("verifications")
+    .select("reject_reason")
+    .eq("user_id", user.id)
+    .order("submitted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6 text-center">
-      {status === "pending" && (
+      {status === "pending" && !latestVerification && (
+        <>
+          <h1 className="text-xl font-semibold">아직 인증 서류를 제출하지 않았어요</h1>
+          <Link href="/verify/type" className="rounded bg-black px-3 py-2 text-white">
+            인증 서류 제출하기
+          </Link>
+        </>
+      )}
+      {status === "pending" && latestVerification && (
         <>
           <h1 className="text-xl font-semibold">심사 대기 중이에요</h1>
           <p className="text-sm text-gray-500">평균 심사 기한은 48시간입니다 (0-5).</p>
@@ -29,12 +47,16 @@ export default async function StatusPage() {
       {status === "rejected" && (
         <>
           <h1 className="text-xl font-semibold">인증이 반려되었어요</h1>
+          {latestVerification?.reject_reason && (
+            <p className="text-sm text-gray-700">사유: {latestVerification.reject_reason}</p>
+          )}
           {/* Phase 0: 재심사 자동화 플로우 없음 — 이메일 문의 안내 (1.4) */}
           <p className="text-sm text-gray-500">
             문의사항은 이메일로 남겨주세요. 운영자가 직접 확인 후 안내드립니다.
           </p>
         </>
       )}
+      <LogoutButton />
     </main>
   );
 }

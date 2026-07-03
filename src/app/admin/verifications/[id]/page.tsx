@@ -1,28 +1,82 @@
 // S18 관리자 - 심사 상세 (AUTH-06, ADMIN-02)
-// Phase 0: 서류는 인라인 뷰어 대신 새 창에서 열기(1.4 저비용안) — 인라인 뷰어는 Phase 1에서 추가
+// Phase 0: 서류는 인라인 뷰어 대신 새 창에서 열기(1.4 저비용안)
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { AdminReviewForm } from "./AdminReviewForm";
+
+const SIGNED_URL_EXPIRY_SECONDS = 60 * 10;
+
 export default async function AdminVerificationDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: verification } = await supabase
+    .from("verifications")
+    .select("id, user_id, type, status, documents, reject_reason, submitted_at")
+    .eq("id", id)
+    .single();
+
+  if (!verification) notFound();
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("name, email")
+    .eq("id", verification.user_id)
+    .single();
+
+  const documentLinks = await Promise.all(
+    verification.documents.map(async (doc) => {
+      if (doc.doc_type === "music_link") {
+        return { ...doc, href: doc.file_url };
+      }
+      const { data } = await supabase.storage
+        .from("verification-documents")
+        .createSignedUrl(doc.file_url, SIGNED_URL_EXPIRY_SECONDS);
+      return { ...doc, href: data?.signedUrl ?? null };
+    }),
+  );
 
   return (
     <main className="mx-auto max-w-lg p-6">
       <h1 className="text-xl font-semibold">심사 상세</h1>
-      <p className="text-sm text-gray-500">verification_id: {id}</p>
-      {/* TODO: verifications.documents 목록을 "새 창에서 열기" 링크로 렌더링 */}
+      <div className="mt-2 text-sm text-gray-500">
+        <p>{user?.name ?? "-"} ({user?.email ?? "-"})</p>
+        <p>유형: {verification.type === "student" ? "전공생" : "활동자"}</p>
+        <p>제출일: {new Date(verification.submitted_at).toLocaleString("ko-KR")}</p>
+        <p>상태: {verification.status}</p>
+      </div>
+
       <div className="mt-4 flex flex-col gap-2">
-        {/* documents.map(doc => <a href={doc.file_url} target="_blank">{doc.doc_type}</a>) */}
+        {documentLinks.map((doc, i) =>
+          doc.href ? (
+            <a
+              key={i}
+              href={doc.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded border px-3 py-2 text-blue-600"
+            >
+              {doc.doc_type} (새 창에서 열기)
+            </a>
+          ) : (
+            <p key={i} className="text-sm text-red-600">
+              {doc.doc_type}: 파일을 불러올 수 없습니다
+            </p>
+          ),
+        )}
       </div>
-      {/* AUTH-04/06: 승인/반려 처리 시 users.status 갱신 + reviewer_id/reviewed_at 기록 */}
-      <div className="mt-6 flex flex-col gap-3">
-        <textarea placeholder="반려 사유 (선택)" className="rounded border px-3 py-2" />
-        <div className="flex gap-2">
-          <button className="flex-1 rounded bg-black px-3 py-2 text-white">승인</button>
-          <button className="flex-1 rounded border px-3 py-2">반려</button>
-        </div>
-      </div>
+
+      {verification.status === "pending" ? (
+        <AdminReviewForm verificationId={verification.id} userId={verification.user_id} />
+      ) : (
+        <p className="mt-6 text-sm text-gray-500">
+          이미 처리된 심사입니다{verification.reject_reason ? ` (사유: ${verification.reject_reason})` : ""}.
+        </p>
+      )}
     </main>
   );
 }
