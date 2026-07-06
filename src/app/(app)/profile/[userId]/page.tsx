@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { MessageButton } from "@/components/MessageButton";
+import { LogoutButton } from "@/components/LogoutButton";
 import { FollowButton } from "./FollowButton";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
@@ -68,14 +69,15 @@ export default async function ProfilePage({
   }
 
   return (
-    <main className="mx-auto max-w-lg p-6">
+    <main className="mx-auto max-w-lg p-6 pb-20">
       {isOwnProfile && <MarkNotificationsSeen userId={userId} />}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{user.name}</h1>
         {isOwnProfile ? (
-          <div className="flex gap-3 text-sm text-blue-600">
+          <div className="flex items-center gap-3 text-sm text-blue-600">
             <Link href="/profile/edit">프로필 수정</Link>
             <Link href="/profile/manage">게시물 관리</Link>
+            <LogoutButton />
           </div>
         ) : (
           currentUser && (

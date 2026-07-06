@@ -61,7 +61,7 @@ export default async function ConversationPage({
   }
 
   return (
-    <main className="mx-auto flex h-screen max-w-sm flex-col p-6">
+    <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-sm flex-col p-6">
       <MarkMessagesRead conversationId={conversationId} currentUserId={currentUser.id} />
       <h1 className="text-lg font-semibold">{otherUser?.name ?? "알 수 없음"}</h1>
 

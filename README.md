@@ -47,7 +47,9 @@ npm run dev
 ```
 src/
   app/            화면별 라우트 (S1~S6, S8~S13, S16~S18 — spec 3.1)
+  app/(app)/       승인 사용자 전용 화면(피드/업로드/프로필/DM) — 공통 레이아웃에서 하단 탭바 렌더링
   app/api/cron/    만료 처리(FEED-06) 등 cron 트리거용 route handler
+  components/BottomNav.tsx  피드·메시지·업로드·프로필 탭바 (인앱뱃지 포함)
   lib/supabase/    브라우저/서버/관리자(service-role) Supabase 클라이언트
   proxy.ts         승인 상태(1.2)·관리자 권한(2.8) 기반 라우트 가드
   types/database.ts  DB 스키마 대응 타입

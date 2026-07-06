@@ -140,7 +140,7 @@ export default function UploadPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col gap-4 p-6">
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col gap-4 p-6 pb-20">
       <h1 className="text-xl font-semibold">영상 업로드</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input

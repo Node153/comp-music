@@ -53,7 +53,7 @@ export default async function MessagesPage() {
   const unreadSet = new Set((unreadRows ?? []).map((r) => r.conversation_id));
 
   return (
-    <main className="mx-auto max-w-sm p-6">
+    <main className="mx-auto max-w-sm p-6 pb-20">
       <h1 className="text-xl font-semibold">메시지</h1>
       <ul className="mt-4 flex flex-col gap-1">
         {(conversations ?? []).map((c) => {

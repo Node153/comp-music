@@ -34,7 +34,7 @@ export default async function FollowsPage({
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
   return (
-    <main className="mx-auto max-w-sm p-6">
+    <main className="mx-auto max-w-sm p-6 pb-20">
       <h1 className="text-xl font-semibold">팔로워 / 팔로잉</h1>
       <div className="mt-4 flex gap-4 border-b text-sm">
         <Link

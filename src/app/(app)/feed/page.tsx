@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { LogoutButton } from "@/components/LogoutButton";
 import { MessageButton } from "@/components/MessageButton";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
@@ -73,40 +71,6 @@ export default async function FeedPage() {
     commentCountMap.set(row.post_id, (commentCountMap.get(row.post_id) ?? 0) + 1);
   }
 
-  // 1.4 인앱뱃지: 내 게시물에 달린, 마지막으로 확인한 시점 이후의 좋아요/댓글 수
-  let unseenNotifications = 0;
-  if (currentUser) {
-    const { data: myPosts } = await supabase
-      .from("posts")
-      .select("id")
-      .eq("user_id", currentUser.id);
-    const myPostIds = (myPosts ?? []).map((p) => p.id);
-
-    if (myPostIds.length > 0) {
-      const { data: me } = await supabase
-        .from("users")
-        .select("notifications_seen_at")
-        .eq("id", currentUser.id)
-        .single();
-      const seenAt = me?.notifications_seen_at ?? new Date(0).toISOString();
-
-      const { data: newLikes } = await supabase
-        .from("likes")
-        .select("id")
-        .in("post_id", myPostIds)
-        .neq("user_id", currentUser.id)
-        .gt("created_at", seenAt);
-      const { data: newComments } = await supabase
-        .from("comments")
-        .select("id")
-        .in("post_id", myPostIds)
-        .neq("user_id", currentUser.id)
-        .gt("created_at", seenAt);
-
-      unseenNotifications = (newLikes?.length ?? 0) + (newComments?.length ?? 0);
-    }
-  }
-
   const postsWithVideo = await Promise.all(
     (posts ?? []).map(async (post) => {
       const { data } = await supabase.storage
@@ -118,31 +82,9 @@ export default async function FeedPage() {
 
   return (
     <main className="relative flex h-screen w-full snap-y snap-mandatory flex-col overflow-y-scroll bg-black">
-      <div className="fixed inset-x-4 top-4 z-10 flex items-center justify-between">
-        {currentUser && (
-          <Link
-            href={`/profile/${currentUser.id}`}
-            className="relative rounded-full bg-white/20 px-3 py-2 text-sm text-white"
-          >
-            내 프로필
-            {unseenNotifications > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
-                {unseenNotifications}
-              </span>
-            )}
-          </Link>
-        )}
-        <Link
-          href="/upload"
-          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black"
-        >
-          + 업로드
-        </Link>
-      </div>
       {postsWithVideo.length === 0 && (
-        <section className="flex h-screen w-full snap-start flex-col items-center justify-center gap-4 text-white">
+        <section className="flex h-screen w-full snap-start items-center justify-center">
           <p className="text-sm text-gray-400">아직 게시물이 없습니다</p>
-          <LogoutButton />
         </section>
       )}
       {postsWithVideo.map((post) => {
@@ -193,7 +135,7 @@ export default async function FeedPage() {
               </div>
             )}
 
-            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/80 to-transparent p-4 pr-16">
+            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/80 to-transparent p-4 pb-16 pr-16">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <span>{author?.name ?? "알 수 없음"}</span>
                 {(profile?.school || profile?.major) && (

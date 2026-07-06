@@ -32,7 +32,7 @@ export default async function ManagePostsPage() {
   );
 
   return (
-    <main className="mx-auto max-w-lg p-6">
+    <main className="mx-auto max-w-lg p-6 pb-20">
       <h1 className="text-xl font-semibold">내 게시물 관리</h1>
       <div className="mt-6 grid grid-cols-3 gap-1">
         {postsWithVideo.map((post) => (
