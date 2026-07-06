@@ -63,11 +63,20 @@ export default async function ConversationPage({
   return (
     <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-sm flex-col p-6">
       <MarkMessagesRead conversationId={conversationId} currentUserId={currentUser.id} />
-      <h1 className="text-lg font-semibold">{otherUser?.name ?? "알 수 없음"}</h1>
+      <div className="flex items-center gap-3 pb-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500">
+          {(otherUser?.name ?? "?").slice(0, 1)}
+        </span>
+        <h1 className="text-base font-semibold text-gray-900">{otherUser?.name ?? "알 수 없음"}</h1>
+      </div>
 
       {pinnedPost?.videoSrc && (
-        <div className="mt-2 flex items-center gap-2 rounded border p-2">
-          <video src={pinnedPost.videoSrc} muted className="h-14 w-8 rounded object-cover" />
+        <div className="mb-2 flex items-center gap-3 rounded-xl border border-gray-200 p-2">
+          <video
+            src={pinnedPost.videoSrc}
+            muted
+            className="h-14 w-8 rounded-lg object-cover"
+          />
           <span className="truncate text-xs text-gray-500">
             {pinnedPost.caption ?? "게시물에서 시작된 대화"}
           </span>

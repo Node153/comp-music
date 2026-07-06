@@ -5,6 +5,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/Button";
+import { field, errorText, pageTitle } from "@/components/ui/styles";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,8 +38,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
-      <h1 className="text-xl font-semibold">로그인</h1>
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
+      <h1 className={pageTitle}>로그인</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           type="email"
@@ -45,7 +47,7 @@ export default function LoginPage() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded border px-3 py-2"
+          className={field}
         />
         <input
           type="password"
@@ -53,19 +55,15 @@ export default function LoginPage() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded border px-3 py-2"
+          className={field}
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
-        >
+        {error && <p className={errorText}>{error}</p>}
+        <Button type="submit" disabled={loading} className="mt-1 w-full">
           {loading ? "로그인 중..." : "로그인"}
-        </button>
+        </Button>
       </form>
-      <Link href="/signup" className="text-center text-sm text-gray-500">
-        아직 계정이 없으신가요? 가입하기
+      <Link href="/signup" className="text-center text-sm text-gray-500 hover:text-gray-900">
+        아직 계정이 없으신가요? <span className="font-medium text-gray-900">가입하기</span>
       </Link>
     </main>
   );

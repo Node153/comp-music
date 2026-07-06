@@ -1,20 +1,35 @@
+import { Button } from "@/components/ui/Button";
+import { field, label, pageTitle } from "@/components/ui/styles";
+
 // S10 프로필 수정 (PROFILE-01, 본인만 접근)
 export default function ProfileEditPage() {
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-3 p-6 pb-20">
-      <h1 className="text-xl font-semibold">프로필 수정</h1>
+    <main className="mx-auto flex max-w-sm flex-col gap-6 p-6 pb-20">
+      <h1 className={pageTitle}>프로필 수정</h1>
       {/* TODO: profiles upsert — school, major, instruments, region, collab_available, bio, portfolio_links */}
-      <form className="flex flex-col gap-3">
-        <input type="text" placeholder="학교" className="rounded border px-3 py-2" />
-        <input type="text" placeholder="전공" className="rounded border px-3 py-2" />
-        <input type="text" placeholder="지역" className="rounded border px-3 py-2" />
-        <textarea placeholder="소개글" className="rounded border px-3 py-2" />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" /> 협업 가능
+      <form className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <span className={label}>학교</span>
+          <input type="text" placeholder="학교명" className={field} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className={label}>전공</span>
+          <input type="text" placeholder="전공명" className={field} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className={label}>지역</span>
+          <input type="text" placeholder="활동 지역" className={field} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className={label}>소개글</span>
+          <textarea placeholder="나를 소개해주세요" rows={3} className={field} />
+        </div>
+        <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-3.5 py-3 text-sm">
+          <input type="checkbox" className="h-4 w-4 accent-black" /> 협업 가능
         </label>
-        <button type="submit" className="rounded bg-black px-3 py-2 text-white">
+        <Button type="submit" className="mt-1 w-full">
           저장
-        </button>
+        </Button>
       </form>
     </main>
   );

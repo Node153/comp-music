@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { pageTitle } from "@/components/ui/styles";
 
 // S12 DM 목록 (DM-02)
 export default async function MessagesPage() {
@@ -54,33 +55,37 @@ export default async function MessagesPage() {
 
   return (
     <main className="mx-auto max-w-sm p-6 pb-20">
-      <h1 className="text-xl font-semibold">메시지</h1>
-      <ul className="mt-4 flex flex-col gap-1">
+      <h1 className={pageTitle}>메시지</h1>
+      <ul className="mt-4 flex flex-col">
         {(conversations ?? []).map((c) => {
           const otherUserId = c.user_a_id === currentUser.id ? c.user_b_id : c.user_a_id;
+          const otherName = userMap.get(otherUserId) ?? "알 수 없음";
           const lastMessage = lastMessageMap.get(c.id);
           const isUnread = unreadSet.has(c.id);
           return (
             <li key={c.id}>
               <Link
                 href={`/messages/${c.id}`}
-                className="flex items-center justify-between rounded px-2 py-3 hover:bg-gray-50"
+                className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50"
               >
-                <div className="flex flex-col">
-                  <span className={`text-sm ${isUnread ? "font-semibold" : "font-medium"}`}>
-                    {userMap.get(otherUserId) ?? "알 수 없음"}
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500">
+                  {otherName.slice(0, 1)}
+                </span>
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <span className={`text-sm ${isUnread ? "font-semibold text-gray-900" : "font-medium text-gray-800"}`}>
+                    {otherName}
                   </span>
-                  <span className="max-w-[220px] truncate text-xs text-gray-500">
+                  <span className="truncate text-xs text-gray-500">
                     {lastMessage?.content ?? "대화를 시작해보세요"}
                   </span>
                 </div>
-                {isUnread && <span className="h-2 w-2 rounded-full bg-red-500" />}
+                {isUnread && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" />}
               </Link>
             </li>
           );
         })}
         {(conversations ?? []).length === 0 && (
-          <p className="py-6 text-center text-sm text-gray-400">대화가 없습니다</p>
+          <p className="py-10 text-center text-sm text-gray-400">대화가 없습니다</p>
         )}
       </ul>
     </main>

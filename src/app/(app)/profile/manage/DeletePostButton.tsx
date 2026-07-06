@@ -30,7 +30,7 @@ export function DeletePostButton({ postId, videoPath }: { postId: string; videoP
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="absolute right-1 top-1 rounded bg-black/60 px-2 py-1 text-[10px] text-white disabled:opacity-50"
+      className="absolute right-1.5 top-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur transition hover:bg-red-600 disabled:opacity-50"
     >
       삭제
     </button>

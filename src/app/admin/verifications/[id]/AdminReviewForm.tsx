@@ -4,6 +4,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/Button";
+import { field, errorText } from "@/components/ui/styles";
 
 export function AdminReviewForm({
   verificationId,
@@ -58,26 +60,22 @@ export function AdminReviewForm({
         placeholder="반려 사유 (반려 시 필수)"
         value={reason}
         onChange={(e) => setReason(e.target.value)}
-        className="rounded border px-3 py-2"
+        rows={2}
+        className={field}
       />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className={errorText}>{error}</p>}
       <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => review("approved")}
-          className="flex-1 rounded bg-black px-3 py-2 text-white disabled:opacity-50"
-        >
+        <Button disabled={loading} onClick={() => review("approved")} className="flex-1">
           승인
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="danger"
           disabled={loading || !reason.trim()}
           onClick={() => review("rejected")}
-          className="flex-1 rounded border px-3 py-2 disabled:opacity-50"
+          className="flex-1"
         >
           반려
-        </button>
+        </Button>
       </div>
     </div>
   );

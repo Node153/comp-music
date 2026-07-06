@@ -42,8 +42,10 @@ export function FollowButton({
     <button
       onClick={toggle}
       disabled={pending}
-      className={`rounded px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
-        following ? "border" : "bg-black text-white"
+      className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50 ${
+        following
+          ? "border border-gray-300 text-gray-900 hover:bg-gray-50"
+          : "bg-black text-white hover:bg-gray-800"
       }`}
     >
       {following ? "팔로잉" : "팔로우"}

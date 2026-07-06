@@ -6,6 +6,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/Button";
+import { field, errorText, pageTitle, mutedText, card } from "@/components/ui/styles";
 import type { UserType } from "@/types/database";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -120,20 +122,22 @@ function VerifyDocumentsForm() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
-      <h1 className="text-xl font-semibold">인증 서류 업로드</h1>
-      <p className="text-sm text-gray-500">
-        {userType === "student" ? "전공생" : "활동자"} 인증 — 최소 1종 이상 제출
-      </p>
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
+      <div className="flex flex-col gap-1">
+        <h1 className={pageTitle}>인증 서류 업로드</h1>
+        <p className={mutedText}>
+          {userType === "student" ? "전공생" : "활동자"} 인증 — 최소 1종 이상 제출
+        </p>
+      </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {rows.map((row, i) => {
           const option = options.find((o) => o.value === row.docType) ?? options[0];
           return (
-            <div key={i} className="flex flex-col gap-2 rounded border p-3">
+            <div key={i} className={`flex flex-col gap-2 ${card}`}>
               <select
                 value={row.docType}
                 onChange={(e) => updateRow(i, { docType: e.target.value, file: null, url: "" })}
-                className="rounded border px-3 py-2"
+                className={field}
               >
                 {options.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -148,7 +152,7 @@ function VerifyDocumentsForm() {
                   placeholder="https://..."
                   value={row.url}
                   onChange={(e) => updateRow(i, { url: e.target.value })}
-                  className="rounded border px-3 py-2"
+                  className={field}
                 />
               ) : (
                 <input
@@ -156,14 +160,14 @@ function VerifyDocumentsForm() {
                   type="file"
                   accept="image/*,application/pdf"
                   onChange={(e) => updateRow(i, { file: e.target.files?.[0] ?? null })}
-                  className="rounded border px-3 py-2"
+                  className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
                 />
               )}
               {rows.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeRow(i)}
-                  className="self-end text-xs text-gray-500"
+                  className="self-end text-xs text-gray-400 hover:text-red-600"
                 >
                   삭제
                 </button>
@@ -171,17 +175,17 @@ function VerifyDocumentsForm() {
             </div>
           );
         })}
-        <button type="button" onClick={addRow} className="rounded border px-3 py-2 text-sm">
+        <button
+          type="button"
+          onClick={addRow}
+          className="rounded-xl border border-dashed border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:border-gray-400 hover:bg-gray-50"
+        >
           + 서류 추가
         </button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
-        >
+        {error && <p className={errorText}>{error}</p>}
+        <Button type="submit" disabled={loading} className="mt-1 w-full">
           {loading ? "제출 중..." : "제출하기"}
-        </button>
+        </Button>
       </form>
     </main>
   );

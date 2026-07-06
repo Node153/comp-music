@@ -2,6 +2,7 @@
 // Phase 0: 서류는 인라인 뷰어 대신 새 창에서 열기(1.4 저비용안)
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { pageTitle, badge, card, mutedText } from "@/components/ui/styles";
 import { AdminReviewForm } from "./AdminReviewForm";
 
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 10;
@@ -42,12 +43,18 @@ export default async function AdminVerificationDetailPage({
 
   return (
     <main className="mx-auto max-w-lg p-6">
-      <h1 className="text-xl font-semibold">심사 상세</h1>
-      <div className="mt-2 text-sm text-gray-500">
-        <p>{user?.name ?? "-"} ({user?.email ?? "-"})</p>
-        <p>유형: {verification.type === "student" ? "전공생" : "활동자"}</p>
-        <p>제출일: {new Date(verification.submitted_at).toLocaleString("ko-KR")}</p>
-        <p>상태: {verification.status}</p>
+      <h1 className={pageTitle}>심사 상세</h1>
+
+      <div className={`mt-4 flex flex-col gap-2 ${card}`}>
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-gray-900">{user?.name ?? "-"}</span>
+          <span className={badge}>{verification.type === "student" ? "전공생" : "활동자"}</span>
+        </div>
+        <p className={mutedText}>{user?.email ?? "-"}</p>
+        <p className={mutedText}>
+          제출일: {new Date(verification.submitted_at).toLocaleString("ko-KR")}
+        </p>
+        <p className={mutedText}>상태: {verification.status}</p>
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
@@ -58,9 +65,10 @@ export default async function AdminVerificationDetailPage({
               href={doc.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded border px-3 py-2 text-blue-600"
+              className="flex items-center justify-between rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-medium text-blue-600 transition hover:bg-gray-50"
             >
-              {doc.doc_type} (새 창에서 열기)
+              {doc.doc_type}
+              <span className="text-xs text-gray-400">새 창에서 열기 ↗</span>
             </a>
           ) : (
             <p key={i} className="text-sm text-red-600">
@@ -73,7 +81,7 @@ export default async function AdminVerificationDetailPage({
       {verification.status === "pending" ? (
         <AdminReviewForm verificationId={verification.id} userId={verification.user_id} />
       ) : (
-        <p className="mt-6 text-sm text-gray-500">
+        <p className={`mt-6 ${mutedText}`}>
           이미 처리된 심사입니다{verification.reject_reason ? ` (사유: ${verification.reject_reason})` : ""}.
         </p>
       )}

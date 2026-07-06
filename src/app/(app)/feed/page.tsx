@@ -83,7 +83,8 @@ export default async function FeedPage() {
   return (
     <main className="relative flex h-screen w-full snap-y snap-mandatory flex-col overflow-y-scroll bg-black">
       {postsWithVideo.length === 0 && (
-        <section className="flex h-screen w-full snap-start items-center justify-center">
+        <section className="flex h-screen w-full snap-start flex-col items-center justify-center gap-2">
+          <span className="text-3xl">🎬</span>
           <p className="text-sm text-gray-400">아직 게시물이 없습니다</p>
         </section>
       )}
@@ -135,29 +136,32 @@ export default async function FeedPage() {
               </div>
             )}
 
-            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/80 to-transparent p-4 pb-16 pr-16">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <span>{author?.name ?? "알 수 없음"}</span>
+            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 pb-16 pr-16">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+                  {(author?.name ?? "?").slice(0, 1)}
+                </span>
+                <span className="text-sm font-semibold">{author?.name ?? "알 수 없음"}</span>
                 {(profile?.school || profile?.major) && (
-                  <span className="rounded bg-white/20 px-2 py-0.5 text-xs">
+                  <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs">
                     {[profile?.school, profile?.major].filter(Boolean).join(" · ")}
                   </span>
                 )}
               </div>
               {post.caption && <p className="text-sm">{post.caption}</p>}
               <div className="flex flex-wrap gap-1 text-xs">
-                <span className="rounded bg-white/20 px-2 py-0.5">
+                <span className="rounded-full bg-white/15 px-2 py-0.5">
                   {CONTENT_TYPE_LABEL[post.content_type]}
                 </span>
                 {(post.instrument_tags ?? []).map((tag) => (
-                  <span key={tag} className="rounded bg-white/20 px-2 py-0.5">
+                  <span key={tag} className="rounded-full bg-white/15 px-2 py-0.5">
                     #{tag}
                   </span>
                 ))}
               </div>
               {post.collab_available && (
-                <span className="mt-1 w-fit rounded bg-white px-2 py-1 text-xs font-medium text-black">
-                  협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
+                <span className="mt-1 w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-black">
+                  🤝 협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
                 </span>
               )}
             </div>

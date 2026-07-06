@@ -88,14 +88,17 @@ export function ConversationView({
   return (
     <>
       <div className="flex-1 overflow-y-auto">
+        {messages.length === 0 && (
+          <p className="py-10 text-center text-sm text-gray-400">첫 메시지를 보내보세요</p>
+        )}
         {messages.map((m) => (
           <div
             key={m.id}
             className={`mb-2 flex ${m.sender_id === currentUserId ? "justify-end" : "justify-start"}`}
           >
             <span
-              className={`max-w-[70%] rounded-2xl px-3 py-2 text-sm ${
-                m.sender_id === currentUserId ? "bg-black text-white" : "bg-gray-100"
+              className={`max-w-[70%] rounded-2xl px-3.5 py-2 text-sm ${
+                m.sender_id === currentUserId ? "bg-black text-white" : "bg-gray-100 text-gray-900"
               }`}
             >
               {m.content}
@@ -104,18 +107,18 @@ export function ConversationView({
         ))}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={handleSend} className="mt-2 flex gap-2">
+      <form onSubmit={handleSend} className="flex gap-2 border-t border-gray-100 pt-3">
         <input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="메시지 보내기"
-          className="flex-1 rounded border px-3 py-2"
+          className="flex-1 rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
         />
         <button
           type="submit"
           disabled={sending}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+          className="rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
         >
           전송
         </button>

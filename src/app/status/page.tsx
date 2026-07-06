@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/LogoutButton";
+import { pageTitle, mutedText } from "@/components/ui/styles";
 
 export default async function StatusPage() {
   const supabase = await createClient();
@@ -29,34 +30,46 @@ export default async function StatusPage() {
     .maybeSingle();
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6 text-center">
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center gap-4 p-6 text-center">
       {status === "pending" && !latestVerification && (
         <>
-          <h1 className="text-xl font-semibold">아직 인증 서류를 제출하지 않았어요</h1>
-          <Link href="/verify/type" className="rounded bg-black px-3 py-2 text-white">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
+            📄
+          </div>
+          <h1 className={pageTitle}>아직 인증 서류를 제출하지 않았어요</h1>
+          <Link
+            href="/verify/type"
+            className="mt-2 rounded-xl bg-black px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
+          >
             인증 서류 제출하기
           </Link>
         </>
       )}
       {status === "pending" && latestVerification && (
         <>
-          <h1 className="text-xl font-semibold">심사 대기 중이에요</h1>
-          <p className="text-sm text-gray-500">평균 심사 기한은 48시간입니다 (0-5).</p>
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
+            ⏳
+          </div>
+          <h1 className={pageTitle}>심사 대기 중이에요</h1>
+          <p className={mutedText}>평균 심사 기한은 48시간입니다.</p>
         </>
       )}
       {status === "rejected" && (
         <>
-          <h1 className="text-xl font-semibold">인증이 반려되었어요</h1>
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl">
+            ❌
+          </div>
+          <h1 className={pageTitle}>인증이 반려되었어요</h1>
           {latestVerification?.reject_reason && (
             <p className="text-sm text-gray-700">사유: {latestVerification.reject_reason}</p>
           )}
           {/* Phase 0: 재심사 자동화 플로우 없음 — 이메일 문의 안내 (1.4) */}
-          <p className="text-sm text-gray-500">
-            문의사항은 이메일로 남겨주세요. 운영자가 직접 확인 후 안내드립니다.
-          </p>
+          <p className={mutedText}>문의사항은 이메일로 남겨주세요. 운영자가 직접 확인 후 안내드립니다.</p>
         </>
       )}
-      <LogoutButton />
+      <div className="mt-4">
+        <LogoutButton />
+      </div>
     </main>
   );
 }

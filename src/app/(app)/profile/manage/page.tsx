@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { pageTitle } from "@/components/ui/styles";
 import { DeletePostButton } from "./DeletePostButton";
 
 // S16 마이 게시물 관리 (PROFILE-04, S9의 본인 전용 관리 모드)
@@ -33,15 +34,15 @@ export default async function ManagePostsPage() {
 
   return (
     <main className="mx-auto max-w-lg p-6 pb-20">
-      <h1 className="text-xl font-semibold">내 게시물 관리</h1>
-      <div className="mt-6 grid grid-cols-3 gap-1">
+      <h1 className={pageTitle}>내 게시물 관리</h1>
+      <div className="mt-6 grid grid-cols-3 gap-1.5">
         {postsWithVideo.map((post) => (
-          <div key={post.id} className="relative aspect-[9/16] bg-gray-100">
+          <div key={post.id} className="relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
             {post.videoSrc ? (
               <video src={post.videoSrc} className="h-full w-full object-cover" muted preload="metadata" />
             ) : null}
             {post.status === "expired" && (
-              <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] text-white">
+              <span className="absolute left-1 top-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white">
                 만료됨
               </span>
             )}
@@ -49,7 +50,7 @@ export default async function ManagePostsPage() {
           </div>
         ))}
         {postsWithVideo.length === 0 && (
-          <p className="col-span-3 py-6 text-center text-sm text-gray-400">게시물이 없습니다</p>
+          <p className="col-span-3 py-10 text-center text-sm text-gray-400">게시물이 없습니다</p>
         )}
       </div>
     </main>

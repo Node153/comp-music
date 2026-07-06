@@ -5,6 +5,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/Button";
+import { field, label as labelClass, errorText, pageTitle } from "@/components/ui/styles";
 import type { ContentType, ExpireHours } from "@/types/database";
 
 const CONTENT_TYPE_OPTIONS: { value: ContentType; label: string }[] = [
@@ -140,64 +142,86 @@ export default function UploadPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col gap-4 p-6 pb-20">
-      <h1 className="text-xl font-semibold">영상 업로드</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="file"
-          accept="video/mp4,video/quicktime"
-          onChange={handleVideoChange}
-          className="rounded border px-3 py-2"
-        />
-        {durationWarning && <p className="text-sm text-amber-600">{durationWarning}</p>}
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col gap-6 p-6 pb-20">
+      <h1 className={pageTitle}>영상 업로드</h1>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <span className={labelClass}>영상 (mp4/mov)</span>
+          <input
+            type="file"
+            accept="video/mp4,video/quicktime"
+            onChange={handleVideoChange}
+            className="text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+          />
+          {durationWarning && <p className="text-sm text-amber-600">{durationWarning}</p>}
+        </div>
 
-        <textarea
-          placeholder="캡션"
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          className="rounded border px-3 py-2"
-        />
+        <div className="flex flex-col gap-1.5">
+          <span className={labelClass}>캡션</span>
+          <textarea
+            placeholder="어떤 작업물인가요?"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            rows={3}
+            className={field}
+          />
+        </div>
 
-        <select
-          value={contentType}
-          onChange={(e) => setContentType(e.target.value as ContentType)}
-          className="rounded border px-3 py-2"
-        >
-          <option value="" disabled>
-            콘텐츠 유형
-          </option>
-          {CONTENT_TYPE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
+        <div className="flex flex-col gap-1.5">
+          <span className={labelClass}>콘텐츠 유형</span>
+          <select
+            value={contentType}
+            onChange={(e) => setContentType(e.target.value as ContentType)}
+            className={field}
+          >
+            <option value="" disabled>
+              선택해주세요
             </option>
-          ))}
-        </select>
+            {CONTENT_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <input
-          type="text"
-          placeholder="악기 태그 (쉼표로 구분, 예: 피아노, 보컬)"
-          value={instrumentTagsInput}
-          onChange={(e) => setInstrumentTagsInput(e.target.value)}
-          className="rounded border px-3 py-2"
-        />
+        <div className="flex flex-col gap-1.5">
+          <span className={labelClass}>악기 태그</span>
+          <input
+            type="text"
+            placeholder="쉼표로 구분, 예: 피아노, 보컬"
+            value={instrumentTagsInput}
+            onChange={(e) => setInstrumentTagsInput(e.target.value)}
+            className={field}
+          />
+        </div>
 
-        <select
-          value={expireHours}
-          onChange={(e) => setExpireHours(Number(e.target.value) as ExpireHours)}
-          className="rounded border px-3 py-2"
-        >
-          {EXPIRE_HOURS_OPTIONS.map((h) => (
-            <option key={h} value={h}>
-              {h}시간
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col gap-1.5">
+          <span className={labelClass}>노출 시간</span>
+          <div className="grid grid-cols-4 gap-2">
+            {EXPIRE_HOURS_OPTIONS.map((h) => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => setExpireHours(h)}
+                className={`rounded-xl border px-2 py-2 text-sm font-medium transition ${
+                  expireHours === h
+                    ? "border-black bg-black text-white"
+                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {h}h
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-3.5 py-3 text-sm">
           <input
             type="checkbox"
             checked={collabAvailable}
             onChange={(e) => setCollabAvailable(e.target.checked)}
+            className="h-4 w-4 accent-black"
           />
           협업 구함
         </label>
@@ -207,18 +231,14 @@ export default function UploadPage() {
             placeholder="찾는 역할 (예: 보컬)"
             value={collabRoleNeeded}
             onChange={(e) => setCollabRoleNeeded(e.target.value)}
-            className="rounded border px-3 py-2"
+            className={field}
           />
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
-        >
+        {error && <p className={errorText}>{error}</p>}
+        <Button type="submit" disabled={loading} className="mt-1 w-full">
           {loading ? "게시 중..." : "게시하기"}
-        </button>
+        </Button>
       </form>
     </main>
   );

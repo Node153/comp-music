@@ -4,6 +4,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/Button";
+import { field, errorText, pageTitle } from "@/components/ui/styles";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -52,18 +54,23 @@ export default function SignupPage() {
 
   if (pendingConfirm) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6 text-center">
-        <h1 className="text-xl font-semibold">이메일을 확인해주세요</h1>
-        <p className="text-sm text-gray-500">
-          {email} 로 인증 메일을 보냈습니다. 인증 후 다시 로그인해주세요.
+      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-3 p-6 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-2xl">
+          ✉️
+        </div>
+        <h1 className={pageTitle}>이메일을 확인해주세요</h1>
+        <p className="text-sm leading-relaxed text-gray-500">
+          <span className="font-medium text-gray-900">{email}</span> 로 인증 메일을 보냈습니다.
+          <br />
+          인증 후 다시 로그인해주세요.
         </p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
-      <h1 className="text-xl font-semibold">회원가입</h1>
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
+      <h1 className={pageTitle}>회원가입</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           type="text"
@@ -71,7 +78,7 @@ export default function SignupPage() {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="rounded border px-3 py-2"
+          className={field}
         />
         <input
           type="email"
@@ -79,7 +86,7 @@ export default function SignupPage() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded border px-3 py-2"
+          className={field}
         />
         <input
           type="password"
@@ -88,16 +95,12 @@ export default function SignupPage() {
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded border px-3 py-2"
+          className={field}
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
-        >
+        {error && <p className={errorText}>{error}</p>}
+        <Button type="submit" disabled={loading} className="mt-1 w-full">
           {loading ? "가입 중..." : "가입하기"}
-        </button>
+        </Button>
       </form>
     </main>
   );
