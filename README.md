@@ -27,7 +27,11 @@ Next.js(App Router) + TypeScript + Tailwind + Supabase(Auth/DB/Storage/Realtime)
    - `0005_posts_storage.sql`: 게시물 영상용 private 스토리지 버킷(`posts`)
    - `0006_notifications_and_guard.sql`: 인앱뱃지용 `notifications_seen_at` 컬럼 + `users_update_self` 정책의 권한 상승 취약점(자기 status/role을 직접 바꿀 수 있던 문제) 수정 트리거
    - `0007_messages_read_policy.sql`: DM 읽음처리·목록정렬에 필요한 messages/conversations update 정책 + messages 테이블 Realtime publication 등록
-3. 첫 관리자 계정 만들기: 가입 후 Supabase 대시보드에서 해당 사용자의 `public.users.role`을 `admin`으로 직접 변경 (Phase 0은 운영자 1인 수동 심사 — spec 0-5)
+   - `0008_fix_admin_trigger_bootstrap.sql`: 0006의 자가승격 방지 트리거가 `auth.uid()`가 없는 SQL Editor/service-role 컨텍스트까지 막아버려 최초 관리자 부트스트랩이 불가능했던 문제 수정
+3. 첫 관리자 계정 만들기: 가입 후 Supabase 대시보드 SQL Editor에서 아래 쿼리로 직접 변경 (Phase 0은 운영자 1인 수동 심사 — spec 0-5)
+   ```sql
+   update users set role = 'admin', status = 'approved' where email = '가입한 이메일';
+   ```
 4. 만료 처리 cron 연결: Vercel에 배포하면 `vercel.json`의 스케줄이 자동 등록됨. 로컬에서 테스트하려면 `.env.local`에 `CRON_SECRET`을 채우고 `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/expire-posts` 호출 (FEED-06)
 5. 의존성 설치 및 개발 서버 실행
 

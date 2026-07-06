@@ -143,6 +143,7 @@ function VerifyDocumentsForm() {
               </select>
               {option.isUrl ? (
                 <input
+                  key="url"
                   type="url"
                   placeholder="https://..."
                   value={row.url}
@@ -151,6 +152,7 @@ function VerifyDocumentsForm() {
                 />
               ) : (
                 <input
+                  key="file"
                   type="file"
                   accept="image/*,application/pdf"
                   onChange={(e) => updateRow(i, { file: e.target.files?.[0] ?? null })}
