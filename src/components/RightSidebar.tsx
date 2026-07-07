@@ -1,5 +1,9 @@
+import { VolumeBar } from "@/components/VolumeBar";
+
 // 데스크톱 우측 사이드바(페이스북 "친구 추천/연락처" 참고).
 // 아직 추천·접속상태 로직이 없어 목업 데이터로 자리만 잡아둔 상태 — 실제 추천/온라인 상태 API 연동은 이후 작업.
+const ONLINE_VOLUME_MAX = 8; // 이 인원 이상 접속하면 볼륨 바가 가득 참
+
 const MOCK_SUGGESTIONS = [
   { name: "김도윤", meta: "서울대 · 작곡" },
   { name: "이서연", meta: "한예종 · 보컬" },
@@ -52,7 +56,8 @@ export function RightSidebar() {
 
       <section>
         <div className="flex items-center justify-between px-2">
-          <h2 className="text-sm font-semibold text-gray-500">접속 중인 연락처</h2>
+          <h2 className="text-sm font-semibold text-gray-500">접속 중인 Companion</h2>
+          <VolumeBar level={MOCK_ONLINE.length / ONLINE_VOLUME_MAX} />
         </div>
         <div className="mt-1 flex flex-col gap-0.5" title="실시간 접속 상태는 준비 중이에요">
           {MOCK_ONLINE.map((person) => (

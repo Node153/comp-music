@@ -5,15 +5,14 @@ export default function LandingPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-white p-6">
       <div className="flex w-full max-w-sm flex-col items-center gap-8 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-black text-2xl text-white">
-          🎵
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-black text-xl font-bold text-white">
+          Comp
         </div>
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-            음악 전공생 네트워킹
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Comp</h1>
           <p className="text-sm leading-relaxed text-gray-500">
-            폐쇄형 인증 기반의 음악 전공/활동자 릴스 네트워킹 플랫폼
+            컴프레서처럼 다양한 소리를 고르게, 재즈 컴핑처럼 서로를 받쳐주는 음악 전공생·활동자
+            네트워킹 플랫폼
           </p>
         </div>
         <div className="flex w-full flex-col gap-3">

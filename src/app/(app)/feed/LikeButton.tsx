@@ -47,11 +47,11 @@ export function LikeButton({
     <button
       onClick={toggle}
       aria-pressed={liked}
-      className={`flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition hover:bg-gray-50 ${
+      className={`flex items-center justify-center gap-2 py-3 text-base font-medium transition hover:bg-gray-50 ${
         liked ? "text-red-600" : "text-gray-600"
       } ${className}`}
     >
-      <span className="text-base">{liked ? "❤️" : "🤍"}</span>
+      <span className="text-lg">{liked ? "❤️" : "🤍"}</span>
       좋아요{count > 0 ? ` ${count}` : ""}
     </button>
   );

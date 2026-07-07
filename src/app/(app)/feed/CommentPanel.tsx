@@ -94,9 +94,9 @@ export function CommentPanel({
     <>
       <button
         onClick={togglePanel}
-        className={`flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 ${buttonClassName}`}
+        className={`flex items-center justify-center gap-2 py-3 text-base font-medium text-gray-600 transition hover:bg-gray-50 ${buttonClassName}`}
       >
-        <span className="text-base">💬</span>
+        <span className="text-lg">💬</span>
         댓글{count > 0 ? ` ${count}` : ""}
       </button>
 

@@ -91,7 +91,7 @@ export default async function FeedPage() {
   );
 
   return (
-    <main className="mx-auto max-w-[600px] px-0 pb-24 pt-0 md:px-4 md:pb-8 md:pt-4">
+    <main className="mx-auto max-w-[900px] px-0 pb-24 pt-0 md:px-4 md:pb-8 md:pt-4">
       {postsWithVideo.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 py-24">
           <span className="text-3xl">🎬</span>
@@ -111,15 +111,15 @@ export default async function FeedPage() {
               key={post.id}
               className="overflow-hidden border-y border-gray-200 bg-white md:rounded-lg md:border md:shadow-sm"
             >
-              <div className="flex items-center gap-3 p-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500">
+              <div className="flex items-center gap-3 p-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base font-semibold text-gray-500">
                   {(author?.name ?? "?").slice(0, 1)}
                 </span>
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-base font-semibold text-gray-900">
                     {author?.name ?? "알 수 없음"}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-500">
                     {[profile?.school, profile?.major].filter(Boolean).join(" · ")}
                     {(profile?.school || profile?.major) && " · "}
                     {timeAgo(post.published_at ?? new Date().toISOString())}
@@ -127,13 +127,13 @@ export default async function FeedPage() {
                 </div>
               </div>
 
-              {post.caption && <p className="px-3 pb-3 text-sm text-gray-900">{post.caption}</p>}
+              {post.caption && <p className="px-4 pb-4 text-base text-gray-900">{post.caption}</p>}
 
               <div className="flex items-center justify-center bg-black">
                 {post.videoSrc ? (
                   <video
                     src={post.videoSrc}
-                    className="max-h-[520px] w-auto object-contain"
+                    className="max-h-[780px] w-auto object-contain"
                     controls
                     muted
                     playsInline
@@ -143,17 +143,17 @@ export default async function FeedPage() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5 p-3">
-                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
+              <div className="flex flex-wrap items-center gap-2 p-4">
+                <span className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700">
                   {CONTENT_TYPE_LABEL[post.content_type]}
                 </span>
                 {(post.instrument_tags ?? []).map((tag) => (
-                  <span key={tag} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
+                  <span key={tag} className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700">
                     #{tag}
                   </span>
                 ))}
                 {post.collab_available && (
-                  <span className="rounded-full bg-black px-2.5 py-1 text-xs font-medium text-white">
+                  <span className="rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white">
                     🤝 협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
                   </span>
                 )}
@@ -179,9 +179,9 @@ export default async function FeedPage() {
                       currentUserId={currentUser.id}
                       otherUserId={post.user_id}
                       sourcePostId={post.id}
-                      className={`flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 ${buttonBasis}`}
+                      className={`flex items-center justify-center gap-2 py-3 text-base font-medium text-gray-600 transition hover:bg-gray-50 ${buttonBasis}`}
                     >
-                      <span className="text-base">✉️</span>
+                      <span className="text-lg">✉️</span>
                       메시지
                     </MessageButton>
                   )}

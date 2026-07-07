@@ -26,10 +26,10 @@ export function TopNav({
     <header className="sticky top-0 z-40 hidden h-14 items-center gap-2 border-b border-gray-200 bg-white px-4 md:flex">
       <div className="flex flex-1 items-center gap-2">
         <Link href="/feed" className="flex shrink-0 items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-sm text-white">
-            🎵
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-xs font-bold text-white">
+            Comp
           </span>
-          <span className="text-lg font-bold text-gray-900">음악넷</span>
+          <span className="text-lg font-bold text-gray-900">Comp</span>
         </Link>
         <div className="relative ml-2 hidden lg:block">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
@@ -37,7 +37,7 @@ export function TopNav({
           </span>
           <input
             type="text"
-            placeholder="음악넷 검색"
+            placeholder="Comp 검색"
             disabled
             title="검색 기능은 준비 중이에요"
             className="w-60 rounded-full bg-gray-100 py-2 pl-9 pr-4 text-sm text-gray-600 placeholder:text-gray-400 disabled:cursor-not-allowed"
