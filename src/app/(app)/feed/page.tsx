@@ -4,9 +4,9 @@ import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import type { ContentType } from "@/types/database";
 
-// S6 메인 피드 (FEED-05~09, INTERACT-01/02) — 풀스크린 세로 스와이프, 활성 게시물만(status='published')
+// S6 메인 피드 (FEED-05~09, INTERACT-01/02)
+// 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
 // Phase 0: 필터(S7)·검색(S19) 없음, 최신순만, 페이지네이션 없이 최근 20개만(1.4)
-// 우측 좋아요/댓글 버튼이 시각적으로 가장 눈에 띄어야 함(3.3 UI 강조 우선순위 — 반응 > 매칭)
 
 const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
   composition: "작곡",
@@ -19,6 +19,16 @@ const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
 
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 30;
 const FEED_LIMIT = 20;
+
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "방금 전";
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  return `${Math.floor(hours / 24)}일 전`;
+}
 
 export default async function FeedPage() {
   const supabase = await createClient();
@@ -81,93 +91,106 @@ export default async function FeedPage() {
   );
 
   return (
-    <main className="relative flex h-screen w-full snap-y snap-mandatory flex-col overflow-y-scroll bg-black">
+    <main className="mx-auto max-w-[600px] px-0 pb-24 pt-0 md:px-4 md:pb-8 md:pt-4">
       {postsWithVideo.length === 0 && (
-        <section className="flex h-screen w-full snap-start flex-col items-center justify-center gap-2">
+        <div className="flex flex-col items-center justify-center gap-2 py-24">
           <span className="text-3xl">🎬</span>
           <p className="text-sm text-gray-400">아직 게시물이 없습니다</p>
-        </section>
+        </div>
       )}
-      {postsWithVideo.map((post) => {
-        const author = userMap.get(post.user_id);
-        const profile = profileMap.get(post.user_id);
-        return (
-          <section
-            key={post.id}
-            className="relative flex h-screen w-full snap-start items-center justify-center text-white"
-          >
-            {post.videoSrc ? (
-              <video
-                src={post.videoSrc}
-                className="h-full w-full object-contain"
-                autoPlay
-                muted
-                loop
-                playsInline
-                controls
-              />
-            ) : (
-              <p className="text-sm text-gray-400">영상을 불러올 수 없습니다</p>
-            )}
 
-            {currentUser && (
-              <div className="absolute bottom-24 right-3 z-10 flex flex-col items-center gap-5">
-                <LikeButton
-                  postId={post.id}
-                  userId={currentUser.id}
-                  initialLiked={likedByMeSet.has(post.id)}
-                  initialCount={likeCountMap.get(post.id) ?? 0}
-                />
-                <CommentPanel
-                  postId={post.id}
-                  userId={currentUser.id}
-                  initialCount={commentCountMap.get(post.id) ?? 0}
-                />
-                {post.user_id !== currentUser.id && (
-                  <MessageButton
-                    currentUserId={currentUser.id}
-                    otherUserId={post.user_id}
-                    sourcePostId={post.id}
-                    className="flex flex-col items-center gap-1 text-white"
-                  >
-                    <span className="text-2xl">✉️</span>
-                  </MessageButton>
-                )}
-              </div>
-            )}
+      <div className="flex flex-col gap-4">
+        {postsWithVideo.map((post) => {
+          const author = userMap.get(post.user_id);
+          const profile = profileMap.get(post.user_id);
+          const isOwnPost = currentUser?.id === post.user_id;
+          const buttonBasis = isOwnPost ? "basis-1/2" : "basis-1/3";
 
-            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 pb-16 pr-16">
-              <div className="flex items-center gap-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
+          return (
+            <article
+              key={post.id}
+              className="overflow-hidden border-y border-gray-200 bg-white md:rounded-lg md:border md:shadow-sm"
+            >
+              <div className="flex items-center gap-3 p-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500">
                   {(author?.name ?? "?").slice(0, 1)}
                 </span>
-                <span className="text-sm font-semibold">{author?.name ?? "알 수 없음"}</span>
-                {(profile?.school || profile?.major) && (
-                  <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs">
-                    {[profile?.school, profile?.major].filter(Boolean).join(" · ")}
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-gray-900">
+                    {author?.name ?? "알 수 없음"}
                   </span>
+                  <span className="text-xs text-gray-500">
+                    {[profile?.school, profile?.major].filter(Boolean).join(" · ")}
+                    {(profile?.school || profile?.major) && " · "}
+                    {timeAgo(post.published_at ?? new Date().toISOString())}
+                  </span>
+                </div>
+              </div>
+
+              {post.caption && <p className="px-3 pb-3 text-sm text-gray-900">{post.caption}</p>}
+
+              <div className="flex items-center justify-center bg-black">
+                {post.videoSrc ? (
+                  <video
+                    src={post.videoSrc}
+                    className="max-h-[520px] w-auto object-contain"
+                    controls
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <p className="py-24 text-sm text-gray-400">영상을 불러올 수 없습니다</p>
                 )}
               </div>
-              {post.caption && <p className="text-sm">{post.caption}</p>}
-              <div className="flex flex-wrap gap-1 text-xs">
-                <span className="rounded-full bg-white/15 px-2 py-0.5">
+
+              <div className="flex flex-wrap items-center gap-1.5 p-3">
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
                   {CONTENT_TYPE_LABEL[post.content_type]}
                 </span>
                 {(post.instrument_tags ?? []).map((tag) => (
-                  <span key={tag} className="rounded-full bg-white/15 px-2 py-0.5">
+                  <span key={tag} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
                     #{tag}
                   </span>
                 ))}
+                {post.collab_available && (
+                  <span className="rounded-full bg-black px-2.5 py-1 text-xs font-medium text-white">
+                    🤝 협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
+                  </span>
+                )}
               </div>
-              {post.collab_available && (
-                <span className="mt-1 w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-black">
-                  🤝 협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
-                </span>
+
+              {currentUser && (
+                <div className="flex flex-wrap border-t border-gray-100">
+                  <LikeButton
+                    postId={post.id}
+                    userId={currentUser.id}
+                    initialLiked={likedByMeSet.has(post.id)}
+                    initialCount={likeCountMap.get(post.id) ?? 0}
+                    className={buttonBasis}
+                  />
+                  <CommentPanel
+                    postId={post.id}
+                    userId={currentUser.id}
+                    initialCount={commentCountMap.get(post.id) ?? 0}
+                    buttonClassName={buttonBasis}
+                  />
+                  {!isOwnPost && (
+                    <MessageButton
+                      currentUserId={currentUser.id}
+                      otherUserId={post.user_id}
+                      sourcePostId={post.id}
+                      className={`flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 ${buttonBasis}`}
+                    >
+                      <span className="text-base">✉️</span>
+                      메시지
+                    </MessageButton>
+                  )}
+                </div>
               )}
-            </div>
-          </section>
-        );
-      })}
+            </article>
+          );
+        })}
+      </div>
     </main>
   );
 }

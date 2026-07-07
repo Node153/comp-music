@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "@/components/BottomNav";
+import { TopNav } from "@/components/TopNav";
 
 // 승인된 사용자 전용 화면(S6 피드, S8 업로드, S9 프로필, S12/S13 DM) 공통 레이아웃.
-// 각 화면 콘텐츠는 하단 탭바(56px, h-14) 높이만큼 자체적으로 여백을 확보해야 한다.
+// 웹(md 이상)은 상단 네비(TopNav, 페이스북 참고)가 기본, 모바일은 하단 탭바(BottomNav)가 대신함.
+// 각 화면 콘텐츠는 모바일에서 하단 탭바(56px, h-14) 높이만큼 자체적으로 여백을 확보해야 한다.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
@@ -40,9 +42,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-100 md:bg-[#f0f2f5]">
+      {user && <TopNav currentUserId={user.id} unseenNotifications={unseenNotifications} />}
       {children}
       {user && <BottomNav currentUserId={user.id} unseenNotifications={unseenNotifications} />}
-    </>
+    </div>
   );
 }

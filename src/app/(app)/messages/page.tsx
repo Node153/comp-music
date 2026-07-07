@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { pageTitle } from "@/components/ui/styles";
+import { pageTitle, pageCard } from "@/components/ui/styles";
 
 // S12 DM 목록 (DM-02)
 export default async function MessagesPage() {
@@ -54,7 +54,7 @@ export default async function MessagesPage() {
   const unreadSet = new Set((unreadRows ?? []).map((r) => r.conversation_id));
 
   return (
-    <main className="mx-auto max-w-sm p-6 pb-20">
+    <main className={pageCard}>
       <h1 className={pageTitle}>메시지</h1>
       <ul className="mt-4 flex flex-col">
         {(conversations ?? []).map((c) => {

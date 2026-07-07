@@ -21,3 +21,7 @@ export const mutedText = "text-sm text-gray-500";
 export const link = "text-sm font-medium text-blue-600 hover:underline";
 
 export const card = "rounded-2xl border border-gray-200 bg-white p-4";
+
+// (app) 라우트 그룹 화면(피드 제외) 공통 래퍼 — 모바일은 여백만 있는 전체폭, md 이상은 회색 배경 위 흰 카드(페이스북 참고)
+export const pageCard =
+  "mx-auto max-w-[600px] bg-white p-6 pb-24 md:my-6 md:rounded-lg md:border md:border-gray-200 md:pb-6 md:shadow-sm";

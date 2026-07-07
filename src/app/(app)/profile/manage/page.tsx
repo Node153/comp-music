@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { pageTitle } from "@/components/ui/styles";
+import { pageTitle, pageCard } from "@/components/ui/styles";
 import { DeletePostButton } from "./DeletePostButton";
 
 // S16 마이 게시물 관리 (PROFILE-04, S9의 본인 전용 관리 모드)
@@ -33,7 +33,7 @@ export default async function ManagePostsPage() {
   );
 
   return (
-    <main className="mx-auto max-w-lg p-6 pb-20">
+    <main className={pageCard}>
       <h1 className={pageTitle}>내 게시물 관리</h1>
       <div className="mt-6 grid grid-cols-3 gap-1.5">
         {postsWithVideo.map((post) => (

@@ -61,7 +61,7 @@ export default async function ConversationPage({
   }
 
   return (
-    <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-sm flex-col p-6">
+    <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-[600px] flex-col bg-white p-6 md:my-6 md:h-[70vh] md:rounded-lg md:border md:border-gray-200 md:shadow-sm">
       <MarkMessagesRead conversationId={conversationId} currentUserId={currentUser.id} />
       <div className="flex items-center gap-3 pb-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500">

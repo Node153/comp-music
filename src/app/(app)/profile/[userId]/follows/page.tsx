@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { pageTitle } from "@/components/ui/styles";
+import { pageTitle, pageCard } from "@/components/ui/styles";
 
 // S11 팔로워/팔로잉 목록 (PROFILE-03)
 export default async function FollowsPage({
@@ -35,7 +35,7 @@ export default async function FollowsPage({
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
   return (
-    <main className="mx-auto max-w-sm p-6 pb-20">
+    <main className={pageCard}>
       <h1 className={pageTitle}>팔로워 / 팔로잉</h1>
       <div className="mt-4 flex gap-6 border-b border-gray-200 text-sm">
         <Link

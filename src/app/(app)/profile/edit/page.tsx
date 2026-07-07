@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/Button";
-import { field, label, pageTitle } from "@/components/ui/styles";
+import { field, label, pageTitle, pageCard } from "@/components/ui/styles";
 
 // S10 프로필 수정 (PROFILE-01, 본인만 접근)
 export default function ProfileEditPage() {
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-6 p-6 pb-20">
+    <main className={`${pageCard} flex flex-col gap-6`}>
       <h1 className={pageTitle}>프로필 수정</h1>
       {/* TODO: profiles upsert — school, major, instruments, region, collab_available, bio, portfolio_links */}
       <form className="flex flex-col gap-4">

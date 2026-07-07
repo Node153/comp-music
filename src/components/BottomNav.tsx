@@ -23,7 +23,7 @@ export function BottomNav({
   const tabs = TABS(currentUserId);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-white/10 bg-black/80 text-white backdrop-blur">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-white/10 bg-black/80 text-white backdrop-blur md:hidden">
       {tabs.map((tab) => {
         const isActive =
           tab.href === "/feed" ? pathname === "/feed" : pathname.startsWith(tab.href);

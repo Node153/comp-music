@@ -12,6 +12,10 @@
 
 Phase 0 → Phase 1 전환은 코드베이스 교체가 아니라 "꺼져 있던 컬럼/화면을 켜는" 방식으로 설계되어 있음(spec 1.4).
 
+## 디자인 방향
+
+라이트 테마, 데스크톱 웹 기준(페이스북 참고) 레이아웃 — 상단 네비게이션 + 중앙 정렬 카드형 콘텐츠. 피드(S6)는 인스타그램 릴스처럼 화면을 꽉 채우는 전체화면 영상이 아니라, 페이스북 게시물처럼 카드 안에 영상이 담기는 형태로 구성됨(헤더-캡션-영상-태그-반응 순). `md`(768px) 미만에서는 하단 탭바(BottomNav)로 전환.
+
 ## 스택
 
 Next.js(App Router) + TypeScript + Tailwind + Supabase(Auth/DB/Storage/Realtime) — spec 5.1 추천안.
@@ -47,9 +51,10 @@ npm run dev
 ```
 src/
   app/            화면별 라우트 (S1~S6, S8~S13, S16~S18 — spec 3.1)
-  app/(app)/       승인 사용자 전용 화면(피드/업로드/프로필/DM) — 공통 레이아웃에서 하단 탭바 렌더링
+  app/(app)/       승인 사용자 전용 화면(피드/업로드/프로필/DM) — 공통 레이아웃에서 네비게이션 렌더링
   app/api/cron/    만료 처리(FEED-06) 등 cron 트리거용 route handler
-  components/BottomNav.tsx  피드·메시지·업로드·프로필 탭바 (인앱뱃지 포함)
+  components/TopNav.tsx     데스크톱(md 이상) 상단 네비게이션 — 페이스북 참고
+  components/BottomNav.tsx  모바일(md 미만) 하단 탭바 — 인앱뱃지 포함
   lib/supabase/    브라우저/서버/관리자(service-role) Supabase 클라이언트
   proxy.ts         승인 상태(1.2)·관리자 권한(2.8) 기반 라우트 가드
   types/database.ts  DB 스키마 대응 타입

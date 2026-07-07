@@ -9,11 +9,13 @@ export function LikeButton({
   userId,
   initialLiked,
   initialCount,
+  className = "",
 }: {
   postId: string;
   userId: string;
   initialLiked: boolean;
   initialCount: number;
+  className?: string;
 }) {
   const supabase = createClient();
   const [liked, setLiked] = useState(initialLiked);
@@ -44,11 +46,13 @@ export function LikeButton({
   return (
     <button
       onClick={toggle}
-      className="flex flex-col items-center gap-1 text-white"
       aria-pressed={liked}
+      className={`flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition hover:bg-gray-50 ${
+        liked ? "text-red-600" : "text-gray-600"
+      } ${className}`}
     >
-      <span className={`text-2xl ${liked ? "" : "opacity-60"}`}>{liked ? "❤️" : "🤍"}</span>
-      <span className="text-xs">{count}</span>
+      <span className="text-base">{liked ? "❤️" : "🤍"}</span>
+      좋아요{count > 0 ? ` ${count}` : ""}
     </button>
   );
 }

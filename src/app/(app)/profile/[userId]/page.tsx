@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { MessageButton } from "@/components/MessageButton";
 import { LogoutButton } from "@/components/LogoutButton";
-import { badge, badgeDark } from "@/components/ui/styles";
+import { badge, badgeDark, pageCard } from "@/components/ui/styles";
 import { FollowButton } from "./FollowButton";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
@@ -70,7 +70,7 @@ export default async function ProfilePage({
   }
 
   return (
-    <main className="mx-auto max-w-lg p-6 pb-20">
+    <main className={pageCard}>
       {isOwnProfile && <MarkNotificationsSeen userId={userId} />}
 
       <div className="flex items-start gap-4">

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { field, label as labelClass, errorText, pageTitle } from "@/components/ui/styles";
+import { field, label as labelClass, errorText, pageTitle, pageCard } from "@/components/ui/styles";
 import type { ContentType, ExpireHours } from "@/types/database";
 
 const CONTENT_TYPE_OPTIONS: { value: ContentType; label: string }[] = [
@@ -142,7 +142,7 @@ export default function UploadPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col gap-6 p-6 pb-20">
+    <main className={`${pageCard} flex flex-col gap-6`}>
       <h1 className={pageTitle}>영상 업로드</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
