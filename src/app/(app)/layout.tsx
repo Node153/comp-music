@@ -49,7 +49,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-[#f0f2f5]">
-      {user && <TopNav currentUserId={user.id} unseenNotifications={unseenNotifications} />}
+      {user && (
+        <TopNav
+          currentUserId={user.id}
+          userName={userName}
+          unseenNotifications={unseenNotifications}
+        />
+      )}
       {user ? (
         <div className="mx-auto md:grid md:max-w-[1200px] md:grid-cols-[240px_minmax(0,1fr)_280px] md:gap-4 md:px-4 md:pt-4">
           <LeftSidebar userId={user.id} userName={userName} />
