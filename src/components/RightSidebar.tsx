@@ -17,9 +17,67 @@ const MOCK_ONLINE = [
   { name: "한지민", meta: "작곡" },
 ];
 
+// 실시간 PEAK 게시물 = 지금 핫한 게시물(좋아요+댓글이 많이 몰리는 게시물). 피드의 샘플 게시물과 연결되는 목업.
+const MOCK_PEAK_POSTS = [
+  {
+    name: "한지민",
+    caption: "합주 영상 반응이 심상치 않아요",
+    likes: 48,
+    comments: 21,
+    emoji: "🔥",
+    gradient: "from-rose-600 to-orange-500",
+  },
+  {
+    name: "오세준",
+    caption: "즉흥 세션 녹화했어요",
+    likes: 15,
+    comments: 6,
+    emoji: "🎸",
+    gradient: "from-indigo-600 to-purple-700",
+  },
+];
+
 export function RightSidebar() {
   return (
     <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-5 md:flex">
+      <section>
+        <div className="flex items-center gap-1.5 px-2">
+          <h2 className="text-sm font-semibold text-gray-500">🔥 실시간 PEAK 게시물</h2>
+          <span
+            className="cursor-help text-xs text-gray-400"
+            title="PEAK 게시물 = 지금 핫한 게시물 (좋아요·댓글이 많이 몰린 게시물)"
+          >
+            ⓘ
+          </span>
+        </div>
+        <div className="mt-1 flex flex-col gap-1" title="실시간 집계 기능은 준비 중이에요">
+          {MOCK_PEAK_POSTS.map((post) => (
+            <div
+              key={post.name}
+              className="flex items-center gap-3 rounded-lg px-2 py-2 opacity-80 transition hover:bg-gray-200/60"
+            >
+              <span
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-lg ${post.gradient}`}
+              >
+                {post.emoji}
+              </span>
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate text-sm font-medium text-gray-800">{post.name}</span>
+                  <span className="shrink-0 rounded bg-red-600 px-1 text-[9px] font-extrabold text-white">
+                    PEAK
+                  </span>
+                </div>
+                <span className="truncate text-xs text-gray-500">{post.caption}</span>
+              </div>
+              <span className="shrink-0 text-xs text-gray-400">
+                ❤️{post.likes} 💬{post.comments}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section>
         <div className="flex items-center justify-between px-2">
           <h2 className="text-sm font-semibold text-gray-500">추천 크리에이터</h2>
