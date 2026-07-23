@@ -7,16 +7,10 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label as labelClass, errorText, pageTitle, pageCard } from "@/components/ui/styles";
-import type { ContentType, ExpireHours } from "@/types/database";
+import { ALL_GENRES } from "@/lib/genres";
+import type { ExpireHours } from "@/types/database";
 
-const CONTENT_TYPE_OPTIONS: { value: ContentType; label: string }[] = [
-  { value: "composition", label: "작곡" },
-  { value: "performance", label: "연주" },
-  { value: "practice", label: "연습" },
-  { value: "rehearsal", label: "리허설" },
-  { value: "improv", label: "즉흥" },
-  { value: "ensemble", label: "합주" },
-];
+const MIN_TAGS = 3;
 
 const EXPIRE_HOURS_OPTIONS: ExpireHours[] = [6, 12, 24, 48];
 
@@ -43,8 +37,7 @@ export default function UploadPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [durationWarning, setDurationWarning] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
-  const [contentType, setContentType] = useState<ContentType | "">("");
-  const [instrumentTagsInput, setInstrumentTagsInput] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [expireHours, setExpireHours] = useState<ExpireHours>(24);
   const [collabAvailable, setCollabAvailable] = useState(false);
   const [collabRoleNeeded, setCollabRoleNeeded] = useState("");
@@ -65,25 +58,22 @@ export default function UploadPage() {
     }
   }
 
+  function toggleTag(tag: string) {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-
-    const instrumentTags = instrumentTagsInput
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
 
     if (!videoFile) {
       setError("영상을 선택해주세요.");
       return;
     }
-    if (!contentType) {
-      setError("콘텐츠 유형을 선택해주세요.");
-      return;
-    }
-    if (instrumentTags.length === 0) {
-      setError("악기 태그를 최소 1개 입력해주세요.");
+    if (selectedTags.length < MIN_TAGS) {
+      setError(`해시태그를 최소 ${MIN_TAGS}개 선택해주세요.`);
       return;
     }
 
@@ -119,8 +109,7 @@ export default function UploadPage() {
         user_id: user.id,
         video_url: videoPath,
         caption: caption || null,
-        content_type: contentType,
-        instrument_tags: instrumentTags,
+        instrument_tags: selectedTags,
         collab_available: collabAvailable,
         collab_role_needed: collabAvailable ? collabRoleNeeded || null : null,
         status: "published",
@@ -168,32 +157,31 @@ export default function UploadPage() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className={labelClass}>콘텐츠 유형</span>
-          <select
-            value={contentType}
-            onChange={(e) => setContentType(e.target.value as ContentType)}
-            className={field}
-          >
-            <option value="" disabled>
-              선택해주세요
-            </option>
-            {CONTENT_TYPE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <span className={labelClass}>악기 태그</span>
-          <input
-            type="text"
-            placeholder="쉼표로 구분, 예: 피아노, 보컬"
-            value={instrumentTagsInput}
-            onChange={(e) => setInstrumentTagsInput(e.target.value)}
-            className={field}
-          />
+          <div className="flex items-center justify-between">
+            <span className={labelClass}>해시태그</span>
+            <span className="text-xs text-gray-400">
+              {selectedTags.length}/{MIN_TAGS}개 이상 선택
+            </span>
+          </div>
+          <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-gray-200 p-3">
+            {ALL_GENRES.map((tag) => {
+              const isSelected = selectedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                    isSelected
+                      ? "bg-black text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  #{tag}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex flex-col gap-1.5">

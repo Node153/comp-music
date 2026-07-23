@@ -6,7 +6,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function ProfileMenu({ userId, userName }: { userId: string; userName: string }) {
+export function ProfileMenu({
+  userId,
+  userName,
+  unseenCount = 0,
+}: {
+  userId: string;
+  userName: string;
+  unseenCount?: number;
+}) {
   const router = useRouter();
   const supabase = createClient();
   const [open, setOpen] = useState(false);
@@ -21,9 +29,14 @@ export function ProfileMenu({ userId, userName }: { userId: string; userName: st
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-600 transition hover:brightness-95"
+        className="relative flex h-9 items-center rounded-full bg-gray-200 px-3 text-sm font-semibold text-gray-600 transition hover:brightness-95 dark:bg-gray-800 dark:text-gray-300"
       >
-        {userName.slice(0, 1) || "👤"}
+        Me
+        {unseenCount > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+            {unseenCount}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -33,26 +46,26 @@ export function ProfileMenu({ userId, userName }: { userId: string; userName: st
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-40 cursor-default"
           />
-          <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+          <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-950">
             <Link
               href={`/profile/${userId}`}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-gray-100"
+              className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-900"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
                 {userName.slice(0, 1)}
               </span>
               <span>
-                <span className="block font-medium text-gray-900">{userName}</span>
-                <span className="block text-xs text-gray-500">프로필 보기</span>
+                <span className="block font-medium text-gray-900 dark:text-gray-100">{userName}</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400">프로필 보기</span>
               </span>
             </Link>
-            <div className="my-1 border-t border-gray-100" />
+            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+              className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-900"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm dark:bg-gray-800">
                 🚪
               </span>
               로그아웃

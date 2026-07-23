@@ -1,15 +1,8 @@
-import { VolumeBar } from "@/components/VolumeBar";
-
-// 데스크톱 우측 사이드바(페이스북 "친구 추천/연락처" 참고).
-// 아직 추천·접속상태 로직이 없어 목업 데이터로 자리만 잡아둔 상태 — 실제 추천/온라인 상태 API 연동은 이후 작업.
-const ONLINE_VOLUME_MAX = 8; // 이 인원 이상 접속하면 볼륨 바가 가득 참
-
-const MOCK_SUGGESTIONS = [
-  { name: "김도윤", meta: "서울대 · 작곡" },
-  { name: "이서연", meta: "한예종 · 보컬" },
-  { name: "박지훈", meta: "활동자 · 드럼" },
-  { name: "최민아", meta: "경희대 · 피아노" },
-];
+// 데스크톱 우측 사이드바 — Discord 접속자 리스트 참고. 페이스북 카드형 박스 대신
+// 아바타+이름 한 줄로 축약해서 위계를 낮춘다.
+// 아직 실시간 로직이 없어 목업 데이터로 자리만 잡아둔 상태 — 실제 API 연동은 이후 작업.
+import Link from "next/link";
+import { SidebarChatPanel } from "@/components/SidebarChatPanel";
 
 const MOCK_ONLINE = [
   { name: "정하늘", meta: "베이스" },
@@ -17,122 +10,87 @@ const MOCK_ONLINE = [
   { name: "한지민", meta: "작곡" },
 ];
 
-// 실시간 PEAK 게시물 = 지금 핫한 게시물(좋아요+댓글이 많이 몰리는 게시물). 피드의 샘플 게시물과 연결되는 목업.
+// 실시간 PEAK 게시물 = 지금 핫한 게시물(좋아요+댓글 합이 PEAK_THRESHOLD를 넘은 게시물).
+// postId는 feed/page.tsx의 COMPLETION_MOCK_SAMPLES와 같은 값 — 클릭하면 해당 게시물로 이동(#앵커).
 const MOCK_PEAK_POSTS = [
   {
+    postId: "mock-completion-3",
     name: "한지민",
     caption: "합주 영상 반응이 심상치 않아요",
-    likes: 48,
-    comments: 21,
+    publishedAgo: "5시간 전",
     emoji: "🔥",
-    gradient: "from-rose-600 to-orange-500",
   },
   {
+    postId: "mock-completion-2",
     name: "오세준",
     caption: "즉흥 세션 녹화했어요",
-    likes: 15,
-    comments: 6,
+    publishedAgo: "1일 전",
     emoji: "🎸",
-    gradient: "from-indigo-600 to-purple-700",
+  },
+  {
+    postId: "mock-completion-8",
+    name: "강태오",
+    caption: "베이스 솔로 챌린지 영상",
+    publishedAgo: "1일 전",
+    emoji: "🎸",
   },
 ];
 
 export function RightSidebar() {
   return (
-    <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-5 md:flex">
+    <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-4 md:flex">
       <section>
-        <div className="flex items-center gap-1.5 px-2">
-          <h2 className="text-sm font-semibold text-gray-500">🔥 실시간 PEAK 게시물</h2>
-          <span
-            className="cursor-help text-xs text-gray-400"
-            title="PEAK 게시물 = 지금 핫한 게시물 (좋아요·댓글이 많이 몰린 게시물)"
-          >
-            ⓘ
-          </span>
-        </div>
-        <div className="mt-1 flex flex-col gap-1" title="실시간 집계 기능은 준비 중이에요">
-          {MOCK_PEAK_POSTS.map((post) => (
-            <div
-              key={post.name}
-              className="flex items-center gap-3 rounded-lg px-2 py-2 opacity-80 transition hover:bg-gray-200/60"
+        <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+          실시간 PEAK
+        </h2>
+        <div className="mt-1 flex flex-col gap-1">
+          {MOCK_PEAK_POSTS.map((post, i) => (
+            <Link
+              key={post.postId}
+              href={`/feed?feed=completion#${post.postId}`}
+              style={{ animationDelay: `${i * 100}ms` }}
+              className="animate-peak-in flex items-center gap-2 rounded-md border border-red-100 bg-red-50 px-2 py-1.5 transition hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:hover:bg-red-950/50"
             >
-              <span
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-lg ${post.gradient}`}
-              >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs dark:bg-black/30">
                 {post.emoji}
               </span>
-              <div className="flex flex-1 flex-col overflow-hidden">
+              <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate text-sm font-medium text-gray-800">{post.name}</span>
-                  <span className="shrink-0 rounded bg-red-600 px-1 text-[9px] font-extrabold text-white">
-                    PEAK
-                  </span>
+                  <span className="truncate text-sm text-gray-700 dark:text-gray-200">{post.name}</span>
+                  <span className="shrink-0 text-[10px] font-bold text-red-500">🔥 PEAK</span>
                 </div>
-                <span className="truncate text-xs text-gray-500">{post.caption}</span>
+                <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">
+                  {post.publishedAgo}
+                </span>
               </div>
-              <span className="shrink-0 text-xs text-gray-400">
-                ❤️{post.likes} 💬{post.comments}
-              </span>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
 
       <section>
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-sm font-semibold text-gray-500">추천 크리에이터</h2>
-          <div className="flex items-center gap-1 text-gray-400">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full text-sm hover:bg-gray-200/60">
-              🔍
-            </span>
-            <span className="flex h-7 w-7 items-center justify-center rounded-full text-sm hover:bg-gray-200/60">
-              ⋯
-            </span>
-          </div>
-        </div>
-        <div className="mt-1 flex flex-col gap-0.5">
-          {MOCK_SUGGESTIONS.map((person) => (
-            <div
+        <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+          접속 중 · {MOCK_ONLINE.length}
+        </h2>
+        <div
+          className="mt-1.5 flex items-center px-2"
+          title={`${MOCK_ONLINE.map((p) => `${p.name}(${p.meta})`).join(", ")} — 실시간 접속 상태는 준비 중이에요`}
+        >
+          {MOCK_ONLINE.map((person, i) => (
+            <span
               key={person.name}
-              className="flex items-center gap-3 rounded-lg px-2 py-2 opacity-70"
-              title="추천 기능은 준비 중이에요"
+              style={{ zIndex: MOCK_ONLINE.length - i, marginLeft: i === 0 ? 0 : "-0.5rem" }}
+              className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[10px] font-semibold text-gray-500 dark:border-black dark:bg-gray-800 dark:text-gray-400"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-500">
-                {person.name.slice(0, 1)}
-              </span>
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <span className="truncate text-sm font-medium text-gray-800">{person.name}</span>
-                <span className="truncate text-xs text-gray-500">{person.meta}</span>
-              </div>
-              <span className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600">
-                팔로우
-              </span>
-            </div>
+              {person.name.slice(0, 1)}
+              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white bg-emerald-500 dark:border-black" />
+            </span>
           ))}
+          <span className="ml-2 truncate text-xs text-gray-400">지금 {MOCK_ONLINE.length}명 활동 중</span>
         </div>
       </section>
 
-      <section>
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-sm font-semibold text-gray-500">접속 중인 Companion</h2>
-          <VolumeBar level={MOCK_ONLINE.length / ONLINE_VOLUME_MAX} />
-        </div>
-        <div className="mt-1 flex flex-col gap-0.5" title="실시간 접속 상태는 준비 중이에요">
-          {MOCK_ONLINE.map((person) => (
-            <div
-              key={person.name}
-              className="flex cursor-default items-center gap-3 rounded-lg px-2 py-1.5 opacity-70 transition hover:bg-gray-200/60"
-            >
-              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-500">
-                {person.name.slice(0, 1)}
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
-              </span>
-              <span className="flex-1 truncate text-sm text-gray-700">{person.name}</span>
-              <span className="truncate text-xs text-gray-400">{person.meta}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      <SidebarChatPanel />
     </aside>
   );
 }

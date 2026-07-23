@@ -3,23 +3,22 @@
 // INTERACT-01: 게시물당 사용자 1회, 토글 가능
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { usePostEngagement } from "@/components/PostEngagementContext";
 
 export function LikeButton({
   postId,
   userId,
   initialLiked,
-  initialCount,
   className = "",
 }: {
   postId: string;
   userId: string;
   initialLiked: boolean;
-  initialCount: number;
   className?: string;
 }) {
   const supabase = createClient();
+  const { likeCount, setLikeCount } = usePostEngagement();
   const [liked, setLiked] = useState(initialLiked);
-  const [count, setCount] = useState(initialCount);
   const [pending, setPending] = useState(false);
 
   async function toggle() {
@@ -28,7 +27,7 @@ export function LikeButton({
 
     const nextLiked = !liked;
     setLiked(nextLiked);
-    setCount((c) => c + (nextLiked ? 1 : -1));
+    setLikeCount((c) => c + (nextLiked ? 1 : -1));
 
     const { error } = nextLiked
       ? await supabase.from("likes").insert({ post_id: postId, user_id: userId })
@@ -37,7 +36,7 @@ export function LikeButton({
     if (error) {
       // 실패 시 낙관적 업데이트 롤백
       setLiked(!nextLiked);
-      setCount((c) => c + (nextLiked ? -1 : 1));
+      setLikeCount((c) => c + (nextLiked ? -1 : 1));
     }
 
     setPending(false);
@@ -47,12 +46,12 @@ export function LikeButton({
     <button
       onClick={toggle}
       aria-pressed={liked}
-      className={`flex items-center justify-center gap-2 py-3 text-base font-medium transition hover:bg-gray-50 ${
+      className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold transition hover:bg-gray-50 ${
         liked ? "text-red-600" : "text-gray-600"
       } ${className}`}
     >
       <span className="text-lg">{liked ? "❤️" : "🤍"}</span>
-      좋아요{count > 0 ? ` ${count}` : ""}
+      좋아요{likeCount > 0 ? ` ${likeCount}` : ""}
     </button>
   );
 }

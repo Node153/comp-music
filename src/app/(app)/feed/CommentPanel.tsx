@@ -3,6 +3,7 @@
 // INTERACT-02: 텍스트 댓글, 대댓글(1단계만) — 페이스북처럼 게시물 카드 안에서 인라인으로 펼침
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { usePostEngagement } from "@/components/PostEngagementContext";
 
 type CommentRow = {
   id: string;
@@ -15,19 +16,17 @@ type CommentRow = {
 export function CommentPanel({
   postId,
   userId,
-  initialCount,
   buttonClassName = "",
 }: {
   postId: string;
   userId: string;
-  initialCount: number;
   buttonClassName?: string;
 }) {
   const supabase = createClient();
+  const { commentCount, setCommentCount } = usePostEngagement();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [comments, setComments] = useState<CommentRow[]>([]);
-  const [count, setCount] = useState(initialCount);
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: string; authorName: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -75,7 +74,7 @@ export function CommentPanel({
     if (error || !inserted) return;
 
     setComments((prev) => [...prev, { ...inserted, authorName: "나" }]);
-    setCount((c) => c + 1);
+    setCommentCount((c) => c + 1);
     setText("");
     setReplyTo(null);
   }
@@ -94,10 +93,10 @@ export function CommentPanel({
     <>
       <button
         onClick={togglePanel}
-        className={`flex items-center justify-center gap-2 py-3 text-base font-medium text-gray-600 transition hover:bg-gray-50 ${buttonClassName}`}
+        className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 ${buttonClassName}`}
       >
         <span className="text-lg">💬</span>
-        댓글{count > 0 ? ` ${count}` : ""}
+        댓글{commentCount > 0 ? ` ${commentCount}` : ""}
       </button>
 
       {open && (

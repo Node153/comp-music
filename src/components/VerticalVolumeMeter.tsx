@@ -18,8 +18,8 @@ export function VerticalVolumeMeter({ level }: { level: number }) {
   return (
     <div className="flex flex-col items-center gap-1.5">
       {isPeak && (
-        <span className="animate-pulse rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wider text-white shadow-lg">
-          PEAK
+        <span className="flex animate-pulse items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wider text-white shadow-lg">
+          🔥 PEAK
         </span>
       )}
       <div className="flex h-28 w-3 flex-col-reverse gap-[3px] rounded-full bg-black/30 p-1 backdrop-blur">

@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { MessageButton } from "@/components/MessageButton";
-import { VerticalVolumeMeter } from "@/components/VerticalVolumeMeter";
+import { EngagementMeter } from "@/components/EngagementMeter";
+import { PostEngagementProvider } from "@/components/PostEngagementContext";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
+import { PostVideo } from "@/components/PostVideo";
+import { MockPlayOverlay } from "@/components/MockPlayOverlay";
+import { ComplexPostChat } from "@/components/ComplexPostChat";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import type { ContentType } from "@/types/database";
@@ -22,8 +26,26 @@ const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 30;
 const FEED_LIMIT = 20;
 
-// PEAK 게시물 = 지금 핫한 게시물. (좋아요+댓글) 합이 이 값을 넘으면 볼륨미터가 PEAK를 찍는다.
-const PEAK_THRESHOLD = 50;
+// 악기/장르 태그 색상 매핑 — 스캔성 향상 + Discord 느낌의 키치한 톤. 목록에 없는 태그는 회색 기본값.
+const TAG_COLOR_CLASSES: Record<string, string> = {
+  보컬: "bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300",
+  기타: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+  베이스: "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300",
+  드럼: "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
+  "피아노/건반": "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300",
+  피아노: "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300",
+  작곡: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300",
+  발라드: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+  밴드: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  클래식: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+  라이브: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300",
+  챌린지: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-300",
+  필름스코어: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+};
+const DEFAULT_TAG_COLOR_CLASS = "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400";
+function tagColorClass(tag: string) {
+  return TAG_COLOR_CLASSES[tag] ?? DEFAULT_TAG_COLOR_CLASS;
+}
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -35,73 +57,249 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hours / 24)}일 전`;
 }
 
-// 샘플 게시물 3개 — 실제 업로드 없이 볼륨미터/PEAK/타임리밋 UI를 바로 확인할 수 있도록 넣은 데모 데이터.
+// 샘플 게시물 — 실제 업로드 없이 볼륨미터/PEAK/타임리밋 UI를 바로 확인할 수 있도록 넣은 데모 데이터.
 // isMock 게시물은 DB에 실제 row가 없어 좋아요/댓글 버튼을 누를 수 없고 숫자만 정적으로 보여준다.
-const MOCK_SAMPLES = [
+// Completion(전체공개, 노출영구·완성작) / Complex(팔로워공개, 노출시간필수·raw) 두 세트로 분리.
+type MockSample = {
+  postId: string;
+  userId: string;
+  name: string;
+  school: string;
+  major: string;
+  caption: string;
+  contentType: ContentType;
+  tags: string[];
+  collab: boolean;
+  collabRole: string | null;
+  likes: number;
+  comments: number;
+  publishedHoursAgo: number;
+  expireHours: number | null;
+  gradient: string;
+  emoji: string;
+  demoVideoSrc?: string;
+  invitedNames?: string[]; // Complex 전용 — 팔로워 전체가 아니라 특정 사람만 초대해서 볼 수 있는 목업 설정
+};
+
+const COMPLETION_MOCK_SAMPLES: MockSample[] = [
   {
-    postId: "mock-1",
+    postId: "mock-completion-1",
     userId: "mock-user-1",
     name: "정하늘",
     school: "서울대",
     major: "작곡과",
-    caption: "새로 쓴 발라드 초안이에요, 피드백 환영합니다!",
-    contentType: "composition" as ContentType,
+    caption: "드디어 완성한 첫 발라드 싱글, 앨범 커버까지 다 뽑았어요!",
+    contentType: "composition",
     tags: ["피아노", "발라드"],
     collab: false,
-    collabRole: null as string | null,
-    likes: 2,
-    comments: 1,
-    publishedHoursAgo: 3,
-    expireHours: 24,
+    collabRole: null,
+    likes: 32,
+    comments: 9,
+    publishedHoursAgo: 20,
+    expireHours: null,
     gradient: "from-slate-700 to-slate-900",
     emoji: "🎹",
   },
   {
-    postId: "mock-2",
+    postId: "mock-completion-2",
     userId: "mock-user-2",
     name: "오세준",
     school: "한예종",
     major: "실용음악과",
-    caption: "오늘 합주실에서 즉흥 세션 녹화했어요",
-    contentType: "improv" as ContentType,
-    tags: ["기타", "베이스"],
-    collab: true,
-    collabRole: "드러머",
-    likes: 15,
-    comments: 6,
-    publishedHoursAgo: 6,
-    expireHours: 12,
+    caption: "6개월 준비한 합주 영상 최종본 공개합니다",
+    contentType: "ensemble",
+    tags: ["기타", "밴드"],
+    collab: false,
+    collabRole: null,
+    likes: 58,
+    comments: 14,
+    publishedHoursAgo: 30,
+    expireHours: null,
     gradient: "from-indigo-600 to-purple-700",
     emoji: "🎸",
   },
   {
-    postId: "mock-3",
+    postId: "mock-completion-3",
     userId: "mock-user-3",
     name: "한지민",
     school: "활동자",
     major: "보컬",
-    caption: "합주 영상 반응이 심상치 않아요 다들 들어와서 들어보세요!",
-    contentType: "ensemble" as ContentType,
-    tags: ["보컬", "밴드"],
-    collab: true,
-    collabRole: "세션 보컬",
-    likes: 48,
-    comments: 21,
-    publishedHoursAgo: 1,
-    expireHours: 47,
+    caption: "제 보컬 커버 정식 업로드했어요, 많이 들어주세요!",
+    contentType: "performance",
+    tags: ["보컬"],
+    collab: false,
+    collabRole: null,
+    likes: 71,
+    comments: 25,
+    publishedHoursAgo: 5,
+    expireHours: null,
     gradient: "from-rose-600 to-orange-500",
-    emoji: "🔥",
+    emoji: "🎤",
+    // Completion 게시물만 우선 재생 가능하게 테스트하기 위한 데모 오디오(하단 GlobalPlayerBar 확인용).
+    demoVideoSrc: "/demo-completion-track.wav",
+  },
+  // 아래 5개는 반응량이 서로 달라서 미터가 초록/노랑/빨강/PEAK 구간을 골고루 보여주도록 넣은 샘플.
+  {
+    postId: "mock-completion-4",
+    userId: "mock-user-4",
+    name: "이서연",
+    school: "한예종",
+    major: "보컬",
+    caption: "첫 라이브 클립 편집 완료! 떨렸지만 재밌었어요",
+    contentType: "performance",
+    tags: ["보컬", "라이브"],
+    collab: false,
+    collabRole: null,
+    likes: 5,
+    comments: 1,
+    publishedHoursAgo: 2,
+    expireHours: null,
+    gradient: "from-sky-600 to-cyan-700",
+    emoji: "🎙️",
+  },
+  {
+    postId: "mock-completion-5",
+    userId: "mock-user-5",
+    name: "박지훈",
+    school: "활동자",
+    major: "드럼",
+    caption: "드럼 커버 영상 새로 올려요, 이번엔 좀 빠른 곡으로",
+    contentType: "performance",
+    tags: ["드럼"],
+    collab: false,
+    collabRole: null,
+    likes: 15,
+    comments: 3,
+    publishedHoursAgo: 9,
+    expireHours: null,
+    gradient: "from-amber-700 to-yellow-600",
+    emoji: "🥁",
+  },
+  {
+    postId: "mock-completion-6",
+    userId: "mock-user-6",
+    name: "최민아",
+    school: "경희대",
+    major: "피아노",
+    caption: "쇼팽 녹턴 연주 영상입니다, 편안하게 들어주세요",
+    contentType: "performance",
+    tags: ["피아노", "클래식"],
+    collab: false,
+    collabRole: null,
+    likes: 24,
+    comments: 6,
+    publishedHoursAgo: 14,
+    expireHours: null,
+    gradient: "from-emerald-700 to-teal-800",
+    emoji: "🎹",
+  },
+  {
+    postId: "mock-completion-7",
+    userId: "mock-user-7",
+    name: "김도윤",
+    school: "서울대",
+    major: "작곡",
+    caption: "영화음악 샘플 트랙 공개합니다, 피드백 환영해요",
+    contentType: "composition",
+    tags: ["작곡", "필름스코어"],
+    collab: false,
+    collabRole: null,
+    likes: 33,
+    comments: 8,
+    publishedHoursAgo: 26,
+    expireHours: null,
+    gradient: "from-orange-700 to-red-700",
+    emoji: "🎬",
+  },
+  {
+    postId: "mock-completion-8",
+    userId: "mock-user-8",
+    name: "강태오",
+    school: "활동자",
+    major: "베이스",
+    caption: "베이스 솔로 챌린지 영상, 다들 한번 도전해보세요!",
+    contentType: "improv",
+    tags: ["베이스", "챌린지"],
+    collab: false,
+    collabRole: null,
+    likes: 40,
+    comments: 10,
+    publishedHoursAgo: 40,
+    expireHours: null,
+    gradient: "from-fuchsia-700 to-pink-800",
+    emoji: "🎸",
+  },
+];
+
+const COMPLEX_MOCK_SAMPLES: MockSample[] = [
+  {
+    postId: "mock-complex-1",
+    userId: "mock-user-1",
+    name: "정하늘",
+    school: "서울대",
+    major: "작곡과",
+    caption: "새벽에 혼자 연습하다 녹음한 거... 친한 사람들만 들어줘 ㅠㅠ",
+    contentType: "practice",
+    tags: ["피아노"],
+    collab: false,
+    collabRole: null,
+    likes: 4,
+    comments: 2,
+    publishedHoursAgo: 1,
+    expireHours: 6,
+    gradient: "from-neutral-600 to-neutral-800",
+    emoji: "😳",
+    invitedNames: ["오세준", "한지민"],
+  },
+  {
+    postId: "mock-complex-2",
+    userId: "mock-user-2",
+    name: "오세준",
+    school: "한예종",
+    major: "실용음악과",
+    caption: "리허설 날것 그대로임, 절대 못 보여줌 큰일나 ㅋㅋ",
+    contentType: "rehearsal",
+    tags: ["기타"],
+    collab: false,
+    collabRole: null,
+    likes: 9,
+    comments: 5,
+    publishedHoursAgo: 2,
+    expireHours: 3,
+    gradient: "from-violet-800 to-fuchsia-900",
+    emoji: "🙈",
+    invitedNames: ["정하늘"],
+  },
+  {
+    postId: "mock-complex-3",
+    userId: "mock-user-3",
+    name: "한지민",
+    school: "활동자",
+    major: "보컬",
+    caption: "가사 쓰다 막혀서 넋두리... 아무한테도 말 안 했던 얘기",
+    contentType: "practice",
+    tags: ["보컬"],
+    collab: false,
+    collabRole: null,
+    likes: 6,
+    comments: 3,
+    publishedHoursAgo: 4,
+    expireHours: 12,
+    gradient: "from-red-800 to-neutral-900",
+    emoji: "🫣",
+    invitedNames: ["정하늘", "오세준"],
   },
 ];
 
 function buildMockPosts(
+  samples: MockSample[],
   userMap: Map<string, { id: string; name: string }>,
   profileMap: Map<string, { user_id: string; school: string | null; major: string | null }>,
   likeCountMap: Map<string, number>,
   commentCountMap: Map<string, number>,
 ) {
   const now = Date.now();
-  return MOCK_SAMPLES.map((m) => {
+  return samples.map((m) => {
     userMap.set(m.userId, { id: m.userId, name: m.name });
     profileMap.set(m.userId, { user_id: m.userId, school: m.school, major: m.major });
     likeCountMap.set(m.postId, m.likes);
@@ -116,31 +314,44 @@ function buildMockPosts(
       collab_available: m.collab,
       collab_role_needed: m.collabRole,
       published_at: new Date(now - m.publishedHoursAgo * 3600 * 1000).toISOString(),
-      expires_at: new Date(now + m.expireHours * 3600 * 1000).toISOString(),
+      expires_at: m.expireHours == null ? null : new Date(now + m.expireHours * 3600 * 1000).toISOString(),
       videoSrc: null,
       isMock: true as const,
       gradient: m.gradient,
       emoji: m.emoji,
+      demoVideoSrc: m.demoVideoSrc ?? null,
+      invitedNames: m.invitedNames ?? null,
     };
   });
 }
 
-export default async function FeedPage() {
+export default async function FeedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ feed?: string }>;
+}) {
+  const { feed: feedParam } = await searchParams;
+  // Completion(전체공개, 노출영구) 기본값 · Complex(팔로워공개, 노출시간필수)는 아직 실제 비공개 게시물이
+  // 없어서(비공개 범위는 Phase 1 데이터 연결 예정) 샘플 게시물로만 UI를 보여준다.
+  const isComplex = feedParam === "complex";
+
   const supabase = await createClient();
 
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
 
-  const { data: posts } = await supabase
-    .from("posts")
-    .select(
-      "id, user_id, video_url, caption, content_type, instrument_tags, collab_available, collab_role_needed, published_at, expires_at",
-    )
-    .eq("status", "published")
-    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-    .order("published_at", { ascending: false })
-    .limit(FEED_LIMIT);
+  const { data: posts } = isComplex
+    ? { data: [] }
+    : await supabase
+        .from("posts")
+        .select(
+          "id, user_id, video_url, caption, content_type, instrument_tags, collab_available, collab_role_needed, published_at, expires_at",
+        )
+        .eq("status", "published")
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .order("published_at", { ascending: false })
+        .limit(FEED_LIMIT);
 
   const postIds = (posts ?? []).map((p) => p.id);
   const userIds = [...new Set((posts ?? []).map((p) => p.user_id))];
@@ -181,11 +392,25 @@ export default async function FeedPage() {
       const { data } = await supabase.storage
         .from("posts")
         .createSignedUrl(post.video_url, SIGNED_URL_EXPIRY_SECONDS);
-      return { ...post, videoSrc: data?.signedUrl ?? null, isMock: false as const, gradient: "", emoji: "" };
+      return {
+        ...post,
+        videoSrc: data?.signedUrl ?? null,
+        isMock: false as const,
+        gradient: "",
+        emoji: "",
+        demoVideoSrc: null,
+        invitedNames: null,
+      };
     }),
   );
 
-  const mockPosts = buildMockPosts(userMap, profileMap, likeCountMap, commentCountMap);
+  const mockPosts = buildMockPosts(
+    isComplex ? COMPLEX_MOCK_SAMPLES : COMPLETION_MOCK_SAMPLES,
+    userMap,
+    profileMap,
+    likeCountMap,
+    commentCountMap,
+  );
 
   const allPosts = [...postsWithVideo, ...mockPosts].sort(
     (a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime(),
@@ -196,11 +421,11 @@ export default async function FeedPage() {
       {allPosts.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 py-24">
           <span className="text-3xl">🎬</span>
-          <p className="text-sm text-gray-400">아직 게시물이 없습니다</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">아직 게시물이 없습니다</p>
         </div>
       )}
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
         {allPosts.map((post) => {
           const author = userMap.get(post.user_id);
           const profile = profileMap.get(post.user_id);
@@ -208,30 +433,49 @@ export default async function FeedPage() {
           const buttonBasis = isOwnPost ? "basis-1/2" : "basis-1/3";
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
-          const engagementLevel = (likeCount + commentCount) / PEAK_THRESHOLD;
 
           return (
             <article
               key={post.id}
-              className="overflow-hidden border-y border-gray-200 bg-white md:rounded-lg md:border md:shadow-sm"
+              id={post.id}
+              className="scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border md:shadow-sm dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400"
             >
-              <div className="flex items-center gap-3 p-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base font-semibold text-gray-500">
+              <PostEngagementProvider initialLikeCount={likeCount} initialCommentCount={commentCount}>
+              <div className="flex items-center gap-2 p-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500 dark:bg-gray-900 dark:text-gray-400">
                   {(author?.name ?? "?").slice(0, 1)}
                 </span>
-                <div className="flex flex-col">
-                  <span className="text-base font-semibold text-gray-900">
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
                     {author?.name ?? "알 수 없음"}
                   </span>
-                  <span className="text-sm text-gray-500">
+                  <span className="truncate text-xs text-gray-400 dark:text-gray-500">
                     {[profile?.school, profile?.major].filter(Boolean).join(" · ")}
                     {(profile?.school || profile?.major) && " · "}
                     {timeAgo(post.published_at ?? new Date().toISOString())}
                   </span>
                 </div>
+                <span
+                  className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                    isComplex
+                      ? "bg-violet-900/50 text-violet-300"
+                      : "bg-gray-100 text-gray-400 dark:bg-gray-900 dark:text-gray-500"
+                  }`}
+                >
+                  {isComplex ? "🌀 Complex" : "♾️ demo"}
+                </span>
               </div>
 
-              {post.caption && <p className="px-4 pb-4 text-base text-gray-900">{post.caption}</p>}
+              {isComplex && post.invitedNames && post.invitedNames.length > 0 && (
+                <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
+                  <span>🔒 초대됨:</span>
+                  <span className="truncate">{post.invitedNames.join(", ")}</span>
+                </div>
+              )}
+
+              {post.caption && (
+                <p className="px-3 pb-2 text-sm text-gray-700 dark:text-gray-300">{post.caption}</p>
+              )}
 
               <div className="relative flex items-center justify-center bg-black">
                 {post.expires_at && (
@@ -239,48 +483,70 @@ export default async function FeedPage() {
                     <TimeLimitBadge expiresAt={post.expires_at} />
                   </div>
                 )}
-                <div className="absolute right-3 top-3 z-10">
-                  <VerticalVolumeMeter level={engagementLevel} />
-                </div>
+                {!isComplex && (
+                  <div className="absolute right-3 top-3 z-10">
+                    <EngagementMeter />
+                  </div>
+                )}
 
                 {post.isMock ? (
                   <div
-                    className={`flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
+                    className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
                   >
                     {post.emoji}
+                    {post.demoVideoSrc && (
+                      <MockPlayOverlay
+                        postId={post.id}
+                        title={post.caption}
+                        author={author?.name ?? "알 수 없음"}
+                        videoSrc={post.demoVideoSrc}
+                      />
+                    )}
                   </div>
                 ) : post.videoSrc ? (
-                  <video
-                    src={post.videoSrc}
-                    className="max-h-[780px] w-auto object-contain"
-                    controls
-                    muted
-                    playsInline
+                  <PostVideo
+                    postId={post.id}
+                    title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
+                    author={author?.name ?? "알 수 없음"}
+                    videoSrc={post.videoSrc}
                   />
                 ) : (
                   <p className="py-24 text-sm text-gray-400">영상을 불러올 수 없습니다</p>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 p-4">
-                <span className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700">
-                  {CONTENT_TYPE_LABEL[post.content_type]}
-                </span>
+              <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
+                {post.content_type && (
+                  <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400">
+                    {CONTENT_TYPE_LABEL[post.content_type]}
+                  </span>
+                )}
                 {(post.instrument_tags ?? []).map((tag) => (
-                  <span key={tag} className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700">
+                  <span
+                    key={tag}
+                    className={`rounded-full px-2 py-1 text-xs font-medium ${tagColorClass(tag)}`}
+                  >
                     #{tag}
                   </span>
                 ))}
                 {post.collab_available && (
-                  <span className="rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white">
+                  <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
                     🤝 협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
                   </span>
                 )}
               </div>
 
-              {post.isMock ? (
+              {isComplex && post.isMock ? (
+                <ComplexPostChat
+                  postId={post.id}
+                  authorName={author?.name ?? "알 수 없음"}
+                  participants={post.invitedNames ?? []}
+                  originalGradient={post.gradient}
+                  originalEmoji={post.emoji}
+                />
+              ) : post.isMock ? (
                 <div
-                  className="flex items-center gap-6 border-t border-gray-100 px-4 py-3 text-sm text-gray-500"
+                  className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
                   title="샘플 게시물이라 실제로 누를 수는 없어요"
                 >
                   <span>❤️ 좋아요 {likeCount}</span>
@@ -293,21 +559,15 @@ export default async function FeedPage() {
                       postId={post.id}
                       userId={currentUser.id}
                       initialLiked={likedByMeSet.has(post.id)}
-                      initialCount={likeCount}
                       className={buttonBasis}
                     />
-                    <CommentPanel
-                      postId={post.id}
-                      userId={currentUser.id}
-                      initialCount={commentCount}
-                      buttonClassName={buttonBasis}
-                    />
+                    <CommentPanel postId={post.id} userId={currentUser.id} buttonClassName={buttonBasis} />
                     {!isOwnPost && (
                       <MessageButton
                         currentUserId={currentUser.id}
                         otherUserId={post.user_id}
                         sourcePostId={post.id}
-                        className={`flex items-center justify-center gap-2 py-3 text-base font-medium text-gray-600 transition hover:bg-gray-50 ${buttonBasis}`}
+                        className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 ${buttonBasis}`}
                       >
                         <span className="text-lg">✉️</span>
                         메시지
@@ -316,6 +576,7 @@ export default async function FeedPage() {
                   </div>
                 )
               )}
+              </PostEngagementProvider>
             </article>
           );
         })}

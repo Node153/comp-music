@@ -3,6 +3,9 @@ import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightSidebar } from "@/components/RightSidebar";
+import { NowPlayingProvider } from "@/components/NowPlayingContext";
+import { GlobalPlayerBar } from "@/components/GlobalPlayerBar";
+import { ThemeSync } from "@/components/ThemeSync";
 
 // 승인된 사용자 전용 화면(S6 피드, S8 업로드, S9 프로필, S12/S13 DM) 공통 레이아웃.
 // 웹(md 이상)은 상단 네비 + 좌우 사이드바(페이스북 3단 레이아웃 참고)가 기본,
@@ -48,24 +51,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 md:bg-[#f0f2f5]">
-      {user && (
-        <TopNav
-          currentUserId={user.id}
-          userName={userName}
-          unseenNotifications={unseenNotifications}
-        />
-      )}
-      {user ? (
-        <div className="mx-auto md:grid md:max-w-[1520px] md:grid-cols-[240px_minmax(0,1fr)_280px] md:gap-4 md:px-4 md:pt-4">
-          <LeftSidebar userId={user.id} userName={userName} />
-          <div>{children}</div>
-          <RightSidebar />
-        </div>
-      ) : (
-        children
-      )}
-      {user && <BottomNav currentUserId={user.id} unseenNotifications={unseenNotifications} />}
-    </div>
+    <NowPlayingProvider>
+      <ThemeSync />
+      <div className="min-h-screen bg-gray-100 transition-colors duration-300 dark:bg-black md:bg-[#f0f2f5] md:dark:bg-black">
+        {user && (
+          <TopNav
+            currentUserId={user.id}
+            userName={userName}
+            unseenNotifications={unseenNotifications}
+          />
+        )}
+        {user ? (
+          <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
+            <LeftSidebar />
+            <div>{children}</div>
+            <RightSidebar />
+          </div>
+        ) : (
+          children
+        )}
+        {user && <BottomNav currentUserId={user.id} unseenNotifications={unseenNotifications} />}
+        {user && <GlobalPlayerBar />}
+      </div>
+    </NowPlayingProvider>
   );
 }

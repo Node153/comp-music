@@ -109,7 +109,7 @@ export interface Database {
           video_url: string;
           thumbnail_url: string | null;
           caption: string | null;
-          content_type: ContentType;
+          content_type: ContentType | null;
           instrument_tags: string[] | null;
           visibility: PostVisibility;
           collab_available: boolean;
@@ -127,7 +127,7 @@ export interface Database {
           video_url: string;
           thumbnail_url?: string | null;
           caption?: string | null;
-          content_type: ContentType;
+          content_type?: ContentType | null;
           instrument_tags?: string[] | null;
           visibility?: PostVisibility;
           collab_available?: boolean;
