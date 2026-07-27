@@ -115,8 +115,8 @@ Phase 1 확장(공개범위 5단계, 예약게시, 필터, 검색, 협업제안 
 
 ## 7. 다음으로 이어갈 만한 것
 
-- 미커밋 변경사항 정리 및 커밋 (위 "0. 지금 당장 알아야 할 것" 참고)
-- GitHub 저장소 생성 → `git remote add origin` → push → Vercel Git 연동 전환
+- ~~미커밋 변경사항 정리 및 커밋~~ — 완료 (2026-07-23, 기능 단위로 나눠 커밋)
+- ~~GitHub 저장소 생성 → `git remote add origin` → push → Vercel Git 연동 전환~~ — 완료 (2026-07-24, `Node153/comp-music` private repo, Vercel `comp808/comp-music`와 Git 연동 완료. 저장소는 개인 GitHub 계정 소유라 Vercel의 "Vercel" GitHub App을 그 저장소에 한정해서 별도로 승인해야 했음 — Vercel 팀 유료 좌석과는 무관)
 - 0009 마이그레이션 적용 여부 확인
 - Complex 기능(초대 범위/채팅/작업물 스택)의 실제 Supabase 연동 — 현재 전부 mock
 - 2026-07-15로 잡았던 "메인탭 완성" 마감은 지난 상태 — 다음 목표/우선순위 재설정 필요
