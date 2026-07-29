@@ -46,6 +46,16 @@ export function ComplexAccessGate({
 
   const iAmInvited = invited.includes(ME);
 
+  // 락 걸린 상태(미초대)에서 보여줄 대표자+인원수 표기. 대표자는 invitedNames의 첫 번째 사람으로
+  // 고정 — 보는 사람이 누구든 항상 같은 사람이 대표로 뜬다. "내가 팔로우하는 사람을 대표로 보여주기"
+  // 같은 동적 매칭은 실제 팔로우 데이터 연동 단계(Phase 1)에서 다룰 예정.
+  const [representative, ...otherInvited] = invited;
+  const inviteSummary = representative
+    ? otherInvited.length > 0
+      ? `${representative} 외 ${otherInvited.length}명에게만 공개된 게시물`
+      : `${representative}에게만 공개된 게시물`
+    : "특정 인원에게만 공개된 게시물";
+
   function knock() {
     if (knocked || iAmInvited) return;
     setKnocked(true);
@@ -74,7 +84,7 @@ export function ComplexAccessGate({
         )
       ) : (
         <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-          <span>🔒 특정 인원에게만 공개된 게시물</span>
+          <span>🔒 {inviteSummary}</span>
         </div>
       )}
 
