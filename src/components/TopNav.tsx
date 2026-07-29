@@ -9,7 +9,7 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 
 const ICON_ACTIONS = [{ href: "/messages", label: "DM", icon: "✉️", unread: 2 }];
 
-// 전체공개(Completion, 노출시간 영구·설정불가) / 팔로워공개(Complex, 노출시간 설정 필수) 두 피드 탭.
+// 전체공개(Demo, 노출시간 영구·설정불가) / 팔로워공개(Complex, 노출시간 설정 필수) 두 피드 탭.
 // 아직 UI만 있고 실제 필터링·업로드 연동은 데이터 연결 단계에서 진행 예정.
 const FEED_TABS = [
   { value: "completion", label: "demo", icon: "♾️" },

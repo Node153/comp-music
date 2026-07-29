@@ -59,7 +59,7 @@ function timeAgo(iso: string): string {
 
 // 샘플 게시물 — 실제 업로드 없이 볼륨미터/PEAK/타임리밋 UI를 바로 확인할 수 있도록 넣은 데모 데이터.
 // isMock 게시물은 DB에 실제 row가 없어 좋아요/댓글 버튼을 누를 수 없고 숫자만 정적으로 보여준다.
-// Completion(전체공개, 노출영구·완성작) / Complex(팔로워공개, 노출시간필수·raw) 두 세트로 분리.
+// Demo(전체공개, 노출영구·완성작) / Complex(팔로워공개, 노출시간필수·raw) 두 세트로 분리.
 type MockSample = {
   postId: string;
   userId: string;
@@ -81,7 +81,7 @@ type MockSample = {
   invitedNames?: string[]; // Complex 전용 — 팔로워 전체가 아니라 특정 사람만 초대해서 볼 수 있는 목업 설정
 };
 
-const COMPLETION_MOCK_SAMPLES: MockSample[] = [
+const DEMO_MOCK_SAMPLES: MockSample[] = [
   {
     postId: "mock-completion-1",
     userId: "mock-user-1",
@@ -135,7 +135,7 @@ const COMPLETION_MOCK_SAMPLES: MockSample[] = [
     expireHours: null,
     gradient: "from-rose-600 to-orange-500",
     emoji: "🎤",
-    // Completion 게시물만 우선 재생 가능하게 테스트하기 위한 데모 오디오(하단 GlobalPlayerBar 확인용).
+    // Demo 게시물만 우선 재생 가능하게 테스트하기 위한 데모 오디오(하단 GlobalPlayerBar 확인용).
     demoVideoSrc: "/demo-completion-track.wav",
   },
   // 아래 5개는 반응량이 서로 달라서 미터가 초록/노랑/빨강/PEAK 구간을 골고루 보여주도록 넣은 샘플.
@@ -331,7 +331,7 @@ export default async function FeedPage({
   searchParams: Promise<{ feed?: string }>;
 }) {
   const { feed: feedParam } = await searchParams;
-  // Completion(전체공개, 노출영구) 기본값 · Complex(팔로워공개, 노출시간필수)는 아직 실제 비공개 게시물이
+  // Demo(전체공개, 노출영구) 기본값 · Complex(팔로워공개, 노출시간필수)는 아직 실제 비공개 게시물이
   // 없어서(비공개 범위는 Phase 1 데이터 연결 예정) 샘플 게시물로만 UI를 보여준다.
   const isComplex = feedParam === "complex";
 
@@ -405,7 +405,7 @@ export default async function FeedPage({
   );
 
   const mockPosts = buildMockPosts(
-    isComplex ? COMPLEX_MOCK_SAMPLES : COMPLETION_MOCK_SAMPLES,
+    isComplex ? COMPLEX_MOCK_SAMPLES : DEMO_MOCK_SAMPLES,
     userMap,
     profileMap,
     likeCountMap,

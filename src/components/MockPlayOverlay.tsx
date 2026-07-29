@@ -1,7 +1,7 @@
 "use client";
 
 // mock 게시물(실제 영상 파일이 없는 데모 데이터) 중 재생 가능하도록 지정된 것만
-// 재생 버튼을 얹어서 하단 GlobalPlayerBar로 넘겨준다. Completion 게시물만 재생 가능하게
+// 재생 버튼을 얹어서 하단 GlobalPlayerBar로 넘겨준다. Demo 게시물만 재생 가능하게
 // 하기 위해 이 오버레이는 demoVideoSrc가 있는 게시물에만 렌더링된다(feed/page.tsx에서 제어).
 import { useNowPlaying } from "@/components/NowPlayingContext";
 

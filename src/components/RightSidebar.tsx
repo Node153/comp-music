@@ -11,7 +11,7 @@ const MOCK_ONLINE = [
 ];
 
 // 실시간 PEAK 게시물 = 지금 핫한 게시물(좋아요+댓글 합이 PEAK_THRESHOLD를 넘은 게시물).
-// postId는 feed/page.tsx의 COMPLETION_MOCK_SAMPLES와 같은 값 — 클릭하면 해당 게시물로 이동(#앵커).
+// postId는 feed/page.tsx의 DEMO_MOCK_SAMPLES와 같은 값 — 클릭하면 해당 게시물로 이동(#앵커).
 const MOCK_PEAK_POSTS = [
   {
     postId: "mock-completion-3",
