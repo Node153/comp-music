@@ -59,7 +59,8 @@ function timeAgo(iso: string): string {
 
 // 샘플 게시물 — 실제 업로드 없이 볼륨미터/PEAK/타임리밋 UI를 바로 확인할 수 있도록 넣은 데모 데이터.
 // isMock 게시물은 DB에 실제 row가 없어 좋아요/댓글 버튼을 누를 수 없고 숫자만 정적으로 보여준다.
-// Demo(전체공개, 노출영구·완성작) / Complex(팔로워공개, 노출시간필수·raw) 두 세트로 분리.
+// Demo(전체공개, 노출영구·완성작) / Complex(비공개, 노출시간필수·raw — 공개범위는 팔로워공개
+// 또는 특정인 초대 중 하나) 두 세트로 분리.
 type MockSample = {
   postId: string;
   userId: string;
@@ -78,7 +79,10 @@ type MockSample = {
   gradient: string;
   emoji: string;
   demoVideoSrc?: string;
-  invitedNames?: string[]; // Complex 전용 — 팔로워 전체가 아니라 특정 사람만 초대해서 볼 수 있는 목업 설정
+  // Complex 전용 — 공개범위 두 옵션. "followers"는 팔로워 전체 공개, "specific"은 invitedNames로
+  // 지정한 특정 인원만 공개. 초대 UI 자체는 아직 없고 이 필드로 두 옵션을 구분해서 보여주는 단계.
+  visibility?: "followers" | "specific";
+  invitedNames?: string[]; // visibility가 "specific"일 때만 사용 — 초대된 특정 인원 이름 목록
 };
 
 const DEMO_MOCK_SAMPLES: MockSample[] = [
@@ -249,6 +253,7 @@ const COMPLEX_MOCK_SAMPLES: MockSample[] = [
     expireHours: 6,
     gradient: "from-neutral-600 to-neutral-800",
     emoji: "😳",
+    visibility: "specific",
     invitedNames: ["오세준", "한지민"],
   },
   {
@@ -257,7 +262,7 @@ const COMPLEX_MOCK_SAMPLES: MockSample[] = [
     name: "오세준",
     school: "한예종",
     major: "실용음악과",
-    caption: "리허설 날것 그대로임, 절대 못 보여줌 큰일나 ㅋㅋ",
+    caption: "리허설 날것 그대로임, 팔로워들한테만 공개할게요",
     contentType: "rehearsal",
     tags: ["기타"],
     collab: false,
@@ -268,7 +273,7 @@ const COMPLEX_MOCK_SAMPLES: MockSample[] = [
     expireHours: 3,
     gradient: "from-violet-800 to-fuchsia-900",
     emoji: "🙈",
-    invitedNames: ["정하늘"],
+    visibility: "followers",
   },
   {
     postId: "mock-complex-3",
@@ -287,6 +292,7 @@ const COMPLEX_MOCK_SAMPLES: MockSample[] = [
     expireHours: 12,
     gradient: "from-red-800 to-neutral-900",
     emoji: "🫣",
+    visibility: "specific",
     invitedNames: ["정하늘", "오세준"],
   },
 ];
@@ -320,6 +326,7 @@ function buildMockPosts(
       gradient: m.gradient,
       emoji: m.emoji,
       demoVideoSrc: m.demoVideoSrc ?? null,
+      visibility: m.visibility ?? null,
       invitedNames: m.invitedNames ?? null,
     };
   });
@@ -331,8 +338,8 @@ export default async function FeedPage({
   searchParams: Promise<{ feed?: string }>;
 }) {
   const { feed: feedParam } = await searchParams;
-  // Demo(전체공개, 노출영구) 기본값 · Complex(팔로워공개, 노출시간필수)는 아직 실제 비공개 게시물이
-  // 없어서(비공개 범위는 Phase 1 데이터 연결 예정) 샘플 게시물로만 UI를 보여준다.
+  // Demo(전체공개, 노출영구) 기본값 · Complex(비공개, 노출시간필수 — 팔로워공개 또는 특정인 초대)는
+  // 아직 실제 비공개 게시물이 없어서(초대 UI·DB 연동은 Phase 1 예정) 샘플 게시물로만 UI를 보여준다.
   const isComplex = feedParam === "complex";
 
   const supabase = await createClient();
@@ -399,6 +406,7 @@ export default async function FeedPage({
         gradient: "",
         emoji: "",
         demoVideoSrc: null,
+        visibility: null,
         invitedNames: null,
       };
     }),
@@ -466,7 +474,12 @@ export default async function FeedPage({
                 </span>
               </div>
 
-              {isComplex && post.invitedNames && post.invitedNames.length > 0 && (
+              {isComplex && post.visibility === "followers" && (
+                <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
+                  <span>🔒 팔로워 공개</span>
+                </div>
+              )}
+              {isComplex && post.visibility === "specific" && post.invitedNames && post.invitedNames.length > 0 && (
                 <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
                   <span>🔒 초대됨:</span>
                   <span className="truncate">{post.invitedNames.join(", ")}</span>
