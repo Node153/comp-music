@@ -18,6 +18,9 @@ export type ContentType =
 export type PostVisibility = "public" | "major" | "school" | "followers" | "private";
 export type PostStatus = "scheduled" | "published" | "expired" | "deleted";
 export type ExpireHours = 6 | 12 | 24 | 48;
+// 0010_posts_media_type + 0011_posts_audio_media_type: 업로드 화면에서 영상/이미지/음원 중
+// 하나를 고르며, 고른 쪽 컬럼(video_url/image_url/audio_url)만 채워진다.
+export type MediaType = "video" | "image" | "audio";
 
 export interface Database {
   public: {
@@ -106,7 +109,10 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          video_url: string;
+          video_url: string | null;
+          image_url: string | null;
+          audio_url: string | null;
+          media_type: MediaType;
           thumbnail_url: string | null;
           caption: string | null;
           content_type: ContentType | null;
@@ -124,7 +130,10 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          video_url: string;
+          video_url?: string | null;
+          image_url?: string | null;
+          audio_url?: string | null;
+          media_type?: MediaType;
           thumbnail_url?: string | null;
           caption?: string | null;
           content_type?: ContentType | null;

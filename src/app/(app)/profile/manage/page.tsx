@@ -18,17 +18,18 @@ export default async function ManagePostsPage() {
 
   const { data: posts } = await supabase
     .from("posts")
-    .select("id, video_url, status")
+    .select("id, video_url, image_url, media_type, status")
     .eq("user_id", user.id)
     .in("status", ["published", "expired"])
     .order("created_at", { ascending: false });
 
   const postsWithVideo = await Promise.all(
     (posts ?? []).map(async (post) => {
+      const mediaPath = post.video_url ?? post.image_url ?? "";
       const { data } = await supabase.storage
         .from("posts")
-        .createSignedUrl(post.video_url, SIGNED_URL_EXPIRY_SECONDS);
-      return { ...post, videoSrc: data?.signedUrl ?? null };
+        .createSignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS);
+      return { ...post, videoSrc: data?.signedUrl ?? null, mediaPath };
     }),
   );
 
@@ -38,7 +39,9 @@ export default async function ManagePostsPage() {
       <div className="mt-6 grid grid-cols-3 gap-1.5">
         {postsWithVideo.map((post) => (
           <div key={post.id} className="relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
-            {post.videoSrc ? (
+            {post.videoSrc && post.media_type === "image" ? (
+              <img src={post.videoSrc} alt="" className="h-full w-full object-cover" />
+            ) : post.videoSrc ? (
               <video src={post.videoSrc} className="h-full w-full object-cover" muted preload="metadata" />
             ) : null}
             {post.status === "expired" && (
@@ -46,7 +49,7 @@ export default async function ManagePostsPage() {
                 만료됨
               </span>
             )}
-            <DeletePostButton postId={post.id} videoPath={post.video_url} />
+            <DeletePostButton postId={post.id} mediaPath={post.mediaPath} />
           </div>
         ))}
         {postsWithVideo.length === 0 && (

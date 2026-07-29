@@ -35,7 +35,7 @@ export default async function ProfilePage({
 
   const { data: posts } = await supabase
     .from("posts")
-    .select("id, video_url, content_type, status")
+    .select("id, video_url, image_url, media_type, content_type, status")
     .eq("user_id", userId)
     .in("status", ["published", "expired"])
     .order("created_at", { ascending: false });
@@ -44,7 +44,7 @@ export default async function ProfilePage({
     (posts ?? []).map(async (post) => {
       const { data } = await supabase.storage
         .from("posts")
-        .createSignedUrl(post.video_url, SIGNED_URL_EXPIRY_SECONDS);
+        .createSignedUrl(post.video_url ?? post.image_url ?? "", SIGNED_URL_EXPIRY_SECONDS);
       return { ...post, videoSrc: data?.signedUrl ?? null };
     }),
   );
@@ -144,7 +144,9 @@ export default async function ProfilePage({
       <div className="mt-6 grid grid-cols-3 gap-1.5">
         {postsWithVideo.map((post) => (
           <div key={post.id} className="relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
-            {post.videoSrc ? (
+            {post.videoSrc && post.media_type === "image" ? (
+              <img src={post.videoSrc} alt="" className="h-full w-full object-cover" />
+            ) : post.videoSrc ? (
               <video src={post.videoSrc} className="h-full w-full object-cover" muted preload="metadata" />
             ) : null}
             {post.status === "expired" && (

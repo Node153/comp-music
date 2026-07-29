@@ -260,8 +260,8 @@ const COMPLEX_MOCK_SAMPLES: MockSample[] = [
     caption: "리허설 날것 그대로임, 절대 못 보여줌 큰일나 ㅋㅋ",
     contentType: "rehearsal",
     tags: ["기타"],
-    collab: false,
-    collabRole: null,
+    collab: true,
+    collabRole: "베이스",
     likes: 9,
     comments: 5,
     publishedHoursAgo: 2,
@@ -346,7 +346,7 @@ export default async function FeedPage({
     : await supabase
         .from("posts")
         .select(
-          "id, user_id, video_url, caption, content_type, instrument_tags, collab_available, collab_role_needed, published_at, expires_at",
+          "id, user_id, video_url, image_url, audio_url, media_type, thumbnail_url, caption, content_type, instrument_tags, collab_available, collab_role_needed, published_at, expires_at",
         )
         .eq("status", "published")
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
@@ -389,12 +389,17 @@ export default async function FeedPage({
 
   const postsWithVideo = await Promise.all(
     (posts ?? []).map(async (post) => {
+      const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
       const { data } = await supabase.storage
         .from("posts")
-        .createSignedUrl(post.video_url, SIGNED_URL_EXPIRY_SECONDS);
+        .createSignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS);
+      const { data: posterData } = post.thumbnail_url
+        ? await supabase.storage.from("posts").createSignedUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS)
+        : { data: null };
       return {
         ...post,
         videoSrc: data?.signedUrl ?? null,
+        posterSrc: posterData?.signedUrl ?? null,
         isMock: false as const,
         gradient: "",
         emoji: "",
@@ -503,15 +508,37 @@ export default async function FeedPage({
                       />
                     )}
                   </div>
+                ) : post.videoSrc && post.media_type === "image" ? (
+                  <img
+                    src={post.videoSrc}
+                    alt={post.caption ?? "이미지 게시물"}
+                    className="max-h-[780px] w-auto object-contain"
+                  />
+                ) : post.videoSrc && post.media_type === "audio" ? (
+                  <div className="flex w-full flex-col items-center gap-3 p-4">
+                    {post.posterSrc ? (
+                      <img
+                        src={post.posterSrc}
+                        alt={post.caption ?? "커버 이미지"}
+                        className="max-h-[420px] w-auto rounded-xl object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-56 w-56 items-center justify-center rounded-xl bg-gray-800 text-5xl">
+                        🎵
+                      </div>
+                    )}
+                    <audio src={post.videoSrc} controls className="w-full max-w-md" />
+                  </div>
                 ) : post.videoSrc ? (
                   <PostVideo
                     postId={post.id}
                     title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
                     author={author?.name ?? "알 수 없음"}
                     videoSrc={post.videoSrc}
+                    posterSrc={post.posterSrc}
                   />
                 ) : (
-                  <p className="py-24 text-sm text-gray-400">영상을 불러올 수 없습니다</p>
+                  <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
                 )}
               </div>
 
@@ -543,6 +570,7 @@ export default async function FeedPage({
                   participants={post.invitedNames ?? []}
                   originalGradient={post.gradient}
                   originalEmoji={post.emoji}
+                  collabAvailable={post.collab_available}
                 />
               ) : post.isMock ? (
                 <div

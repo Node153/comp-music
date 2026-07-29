@@ -9,17 +9,20 @@ export function PostVideo({
   title,
   author,
   videoSrc,
+  posterSrc,
 }: {
   postId: string;
   title: string;
   author: string;
   videoSrc: string;
+  posterSrc?: string | null;
 }) {
   const { track, play, pause } = useNowPlaying();
 
   return (
     <video
       src={videoSrc}
+      poster={posterSrc ?? undefined}
       className="max-h-[780px] w-auto object-contain"
       controls
       muted

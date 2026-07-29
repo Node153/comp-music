@@ -45,18 +45,22 @@ export default async function ConversationPage({
     .order("created_at", { ascending: true });
 
   const pinnedPostId = (messages ?? []).find((m) => m.source_post_id)?.source_post_id ?? null;
-  let pinnedPost: { videoSrc: string | null; caption: string | null } | null = null;
+  let pinnedPost: { videoSrc: string | null; caption: string | null; isImage: boolean } | null = null;
   if (pinnedPostId) {
     const { data: post } = await supabase
       .from("posts")
-      .select("video_url, caption")
+      .select("video_url, image_url, media_type, caption")
       .eq("id", pinnedPostId)
       .maybeSingle();
     if (post) {
       const { data: signed } = await supabase.storage
         .from("posts")
-        .createSignedUrl(post.video_url, SIGNED_URL_EXPIRY_SECONDS);
-      pinnedPost = { videoSrc: signed?.signedUrl ?? null, caption: post.caption };
+        .createSignedUrl(post.video_url ?? post.image_url ?? "", SIGNED_URL_EXPIRY_SECONDS);
+      pinnedPost = {
+        videoSrc: signed?.signedUrl ?? null,
+        caption: post.caption,
+        isImage: post.media_type === "image",
+      };
     }
   }
 
@@ -72,11 +76,11 @@ export default async function ConversationPage({
 
       {pinnedPost?.videoSrc && (
         <div className="mb-2 flex items-center gap-3 rounded-xl border border-gray-200 p-2">
-          <video
-            src={pinnedPost.videoSrc}
-            muted
-            className="h-14 w-8 rounded-lg object-cover"
-          />
+          {pinnedPost.isImage ? (
+            <img src={pinnedPost.videoSrc} alt="" className="h-14 w-8 rounded-lg object-cover" />
+          ) : (
+            <video src={pinnedPost.videoSrc} muted className="h-14 w-8 rounded-lg object-cover" />
+          )}
           <span className="truncate text-xs text-gray-500">
             {pinnedPost.caption ?? "게시물에서 시작된 대화"}
           </span>

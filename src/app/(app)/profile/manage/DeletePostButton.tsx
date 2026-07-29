@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function DeletePostButton({ postId, videoPath }: { postId: string; videoPath: string }) {
+export function DeletePostButton({ postId, mediaPath }: { postId: string; mediaPath: string }) {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
@@ -14,7 +14,7 @@ export function DeletePostButton({ postId, videoPath }: { postId: string; videoP
     if (!window.confirm("삭제하면 복구할 수 없습니다. 정말 삭제하시겠어요?")) return;
 
     setLoading(true);
-    await supabase.storage.from("posts").remove([videoPath]);
+    await supabase.storage.from("posts").remove([mediaPath]);
     const { error } = await supabase.from("posts").delete().eq("id", postId);
     setLoading(false);
 

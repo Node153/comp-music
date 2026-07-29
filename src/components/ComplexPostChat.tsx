@@ -35,12 +35,17 @@ export function ComplexPostChat({
   participants,
   originalGradient,
   originalEmoji,
+  collabAvailable,
 }: {
   postId: string;
   authorName: string;
   participants: string[];
   originalGradient: string;
   originalEmoji: string;
+  // 협업 구함(post.collab_available)이 켜진 게시물에서만 이미지/오디오 작업물 업로드 버튼을 쓸 수 있음.
+  // 이 컴포넌트는 실제 로그인 사용자 구분 없이 채팅 참여자를 전부 "나"로 취급하는 목업이라
+  // "작성자 본인은 항상 가능" 같은 작성자 예외는 없음 — 꺼져 있으면 채팅 참여자 전원(작성자 시점 포함) 업로드 불가.
+  collabAvailable: boolean;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
@@ -280,17 +285,19 @@ export function ComplexPostChat({
         </button>
         <button
           type="button"
-          title="이미지 작업물 올리기"
+          disabled={!collabAvailable}
+          title={collabAvailable ? "이미지 작업물 올리기" : "협업 구함 게시물에서만 이미지를 올릴 수 있어요"}
           onClick={() => imageInputRef.current?.click()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
         >
           🖼️
         </button>
         <button
           type="button"
-          title="오디오 작업물 올리기"
+          disabled={!collabAvailable}
+          title={collabAvailable ? "오디오 작업물 올리기" : "협업 구함 게시물에서만 오디오를 올릴 수 있어요"}
           onClick={() => audioInputRef.current?.click()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
         >
           🎵
         </button>
