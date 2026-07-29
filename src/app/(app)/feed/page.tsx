@@ -6,9 +6,11 @@ import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { PostVideo } from "@/components/PostVideo";
 import { MockPlayOverlay } from "@/components/MockPlayOverlay";
 import { ComplexPostChat } from "@/components/ComplexPostChat";
+import { ComplexAccessGate } from "@/components/ComplexAccessGate";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import type { ContentType } from "@/types/database";
+import { tagColorClass } from "@/lib/feedConstants";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -25,27 +27,6 @@ const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
 
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 30;
 const FEED_LIMIT = 20;
-
-// 악기/장르 태그 색상 매핑 — 스캔성 향상 + Discord 느낌의 키치한 톤. 목록에 없는 태그는 회색 기본값.
-const TAG_COLOR_CLASSES: Record<string, string> = {
-  보컬: "bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300",
-  기타: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
-  베이스: "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300",
-  드럼: "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
-  "피아노/건반": "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300",
-  피아노: "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300",
-  작곡: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300",
-  발라드: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-  밴드: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  클래식: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-  라이브: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300",
-  챌린지: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-300",
-  필름스코어: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-};
-const DEFAULT_TAG_COLOR_CLASS = "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400";
-function tagColorClass(tag: string) {
-  return TAG_COLOR_CLASSES[tag] ?? DEFAULT_TAG_COLOR_CLASS;
-}
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -83,6 +64,7 @@ type MockSample = {
   // 지정한 특정 인원만 공개. 초대 UI 자체는 아직 없고 이 필드로 두 옵션을 구분해서 보여주는 단계.
   visibility?: "followers" | "specific";
   invitedNames?: string[]; // visibility가 "specific"일 때만 사용 — 초대된 특정 인원 이름 목록
+  pendingKnockNames?: string[]; // visibility가 "specific"일 때만 사용 — 이미 노크(열람 요청)를 보낸 미초대 인원 데모용 시드
 };
 
 const DEMO_MOCK_SAMPLES: MockSample[] = [
@@ -255,6 +237,8 @@ const COMPLEX_MOCK_SAMPLES: MockSample[] = [
     emoji: "😳",
     visibility: "specific",
     invitedNames: ["오세준", "한지민"],
+    // 노크(열람 요청)가 이미 하나 와있는 상태를 데모하기 위한 시드 — 개별 수락/거절 UI 확인용.
+    pendingKnockNames: ["강태오"],
   },
   {
     postId: "mock-complex-2",
@@ -328,6 +312,7 @@ function buildMockPosts(
       demoVideoSrc: m.demoVideoSrc ?? null,
       visibility: m.visibility ?? null,
       invitedNames: m.invitedNames ?? null,
+      pendingKnockNames: m.pendingKnockNames ?? null,
     };
   });
 }
@@ -408,6 +393,7 @@ export default async function FeedPage({
         demoVideoSrc: null,
         visibility: null,
         invitedNames: null,
+        pendingKnockNames: null,
       };
     }),
   );
@@ -474,98 +460,108 @@ export default async function FeedPage({
                 </span>
               </div>
 
-              {isComplex && post.visibility === "followers" && (
-                <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-                  <span>🔒 팔로워 공개</span>
-                </div>
-              )}
-              {isComplex && post.visibility === "specific" && post.invitedNames && post.invitedNames.length > 0 && (
-                <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-                  <span>🔒 초대됨:</span>
-                  <span className="truncate">{post.invitedNames.join(", ")}</span>
-                </div>
-              )}
-
               {post.caption && (
                 <p className="px-3 pb-2 text-sm text-gray-700 dark:text-gray-300">{post.caption}</p>
               )}
 
-              <div className="relative flex items-center justify-center bg-black">
-                {post.expires_at && (
-                  <div className="absolute left-3 top-3 z-10">
-                    <TimeLimitBadge expiresAt={post.expires_at} />
-                  </div>
-                )}
-                {!isComplex && (
-                  <div className="absolute right-3 top-3 z-10">
-                    <EngagementMeter />
-                  </div>
-                )}
-
-                {post.isMock ? (
-                  <div
-                    className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
-                  >
-                    {post.emoji}
-                    {post.demoVideoSrc && (
-                      <MockPlayOverlay
-                        postId={post.id}
-                        title={post.caption}
-                        author={author?.name ?? "알 수 없음"}
-                        videoSrc={post.demoVideoSrc}
-                      />
-                    )}
-                  </div>
-                ) : post.videoSrc ? (
-                  <PostVideo
-                    postId={post.id}
-                    title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
-                    author={author?.name ?? "알 수 없음"}
-                    videoSrc={post.videoSrc}
-                  />
-                ) : (
-                  <p className="py-24 text-sm text-gray-400">영상을 불러올 수 없습니다</p>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
-                {post.content_type && (
-                  <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400">
-                    {CONTENT_TYPE_LABEL[post.content_type]}
-                  </span>
-                )}
-                {(post.instrument_tags ?? []).map((tag) => (
-                  <span
-                    key={tag}
-                    className={`rounded-full px-2 py-1 text-xs font-medium ${tagColorClass(tag)}`}
-                  >
-                    #{tag}
-                  </span>
-                ))}
-                {post.collab_available && (
-                  <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
-                    🤝 협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
-                  </span>
-                )}
-              </div>
-
-              {isComplex && post.isMock ? (
-                <ComplexPostChat
+              {isComplex && post.visibility === "specific" && post.isMock ? (
+                <ComplexAccessGate
                   postId={post.id}
                   authorName={author?.name ?? "알 수 없음"}
-                  participants={post.invitedNames ?? []}
-                  originalGradient={post.gradient}
-                  originalEmoji={post.emoji}
+                  expiresAt={post.expires_at}
+                  initialInvitedNames={post.invitedNames ?? []}
+                  initialPendingNames={post.pendingKnockNames ?? []}
+                  gradient={post.gradient}
+                  emoji={post.emoji}
+                  contentTypeLabel={post.content_type ? CONTENT_TYPE_LABEL[post.content_type] : null}
+                  tags={post.instrument_tags ?? []}
+                  collabAvailable={post.collab_available}
+                  collabRoleNeeded={post.collab_role_needed}
                 />
-              ) : post.isMock ? (
-                <div
-                  className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
-                  title="샘플 게시물이라 실제로 누를 수는 없어요"
-                >
-                  <span>❤️ 좋아요 {likeCount}</span>
-                  <span>💬 댓글 {commentCount}</span>
-                </div>
               ) : (
+                <>
+                  {isComplex && post.visibility === "followers" && (
+                    <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
+                      <span>🔒 팔로워 공개</span>
+                    </div>
+                  )}
+
+                  <div className="relative flex items-center justify-center bg-black">
+                    {post.expires_at && (
+                      <div className="absolute left-3 top-3 z-10">
+                        <TimeLimitBadge expiresAt={post.expires_at} />
+                      </div>
+                    )}
+                    {!isComplex && (
+                      <div className="absolute right-3 top-3 z-10">
+                        <EngagementMeter />
+                      </div>
+                    )}
+
+                    {post.isMock ? (
+                      <div
+                        className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
+                      >
+                        {post.emoji}
+                        {post.demoVideoSrc && (
+                          <MockPlayOverlay
+                            postId={post.id}
+                            title={post.caption}
+                            author={author?.name ?? "알 수 없음"}
+                            videoSrc={post.demoVideoSrc}
+                          />
+                        )}
+                      </div>
+                    ) : post.videoSrc ? (
+                      <PostVideo
+                        postId={post.id}
+                        title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
+                        author={author?.name ?? "알 수 없음"}
+                        videoSrc={post.videoSrc}
+                      />
+                    ) : (
+                      <p className="py-24 text-sm text-gray-400">영상을 불러올 수 없습니다</p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
+                    {post.content_type && (
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400">
+                        {CONTENT_TYPE_LABEL[post.content_type]}
+                      </span>
+                    )}
+                    {(post.instrument_tags ?? []).map((tag) => (
+                      <span
+                        key={tag}
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${tagColorClass(tag)}`}
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                    {post.collab_available && (
+                      <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
+                        🤝 협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
+                      </span>
+                    )}
+                  </div>
+
+                  {isComplex && post.isMock ? (
+                    <ComplexPostChat
+                      postId={post.id}
+                      authorName={author?.name ?? "알 수 없음"}
+                      participants={post.invitedNames ?? []}
+                      originalGradient={post.gradient}
+                      originalEmoji={post.emoji}
+                    />
+                  ) : post.isMock ? (
+                    <div
+                      className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
+                      title="샘플 게시물이라 실제로 누를 수는 없어요"
+                    >
+                      <span>❤️ 좋아요 {likeCount}</span>
+                      <span>💬 댓글 {commentCount}</span>
+                    </div>
+                  ) : (
                 currentUser && (
                   <div className="flex flex-wrap border-t border-gray-100">
                     <LikeButton
@@ -588,6 +584,8 @@ export default async function FeedPage({
                     )}
                   </div>
                 )
+              )}
+                </>
               )}
               </PostEngagementProvider>
             </article>
