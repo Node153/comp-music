@@ -27,10 +27,12 @@ const UPLOAD_TYPE_OPTIONS: { value: UploadType; label: string; icon: string }[] 
 
 // demo = 전체공개·노출시간 영구(만료 없음) / Complex = 팔로워공개 or 특정 사람 초대공개·노출시간 필수설정.
 // demo는 그래서 노출 시간 UI 자체가 없고, Complex만 아래 공개범위+노출시간을 요구한다.
-type ComplexVisibility = "followers" | "invite";
+// feed/page.tsx MockSample.visibility("followers" | "specific")와 동일한 값 이름을 사용 —
+// 실제 DB 연동 시 두 화면이 같은 값을 주고받아야 하므로 이름을 맞춰둔다.
+type ComplexVisibility = "followers" | "specific";
 const COMPLEX_VISIBILITY_OPTIONS: { value: ComplexVisibility; label: string; icon: string }[] = [
   { value: "followers", label: "팔로워 공개", icon: "👥" },
-  { value: "invite", label: "초대한 사람만", icon: "🔒" },
+  { value: "specific", label: "초대한 사람만", icon: "🔒" },
 ];
 // posts.expire_hours는 not null 컬럼이라 demo(영구노출)에도 값이 필요하지만,
 // 영구노출 여부는 expires_at(null)로만 판단하므로(feed/page.tsx 쿼리 참고) 이 값 자체는 화면에 노출되지 않는다.
@@ -218,7 +220,7 @@ export default function UploadPage() {
         setError("음원(mp3/wav) 또는 영상 파일을 업로드해주세요.");
         return;
       }
-      if (complexVisibility === "invite") {
+      if (complexVisibility === "specific") {
         const invited = inviteNames
           .split(",")
           .map((name) => name.trim())
@@ -518,7 +520,7 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              {complexVisibility === "invite" && (
+              {complexVisibility === "specific" && (
                 <div className="flex flex-col gap-1.5">
                   <span className={darkLabel}>초대할 사람</span>
                   <input

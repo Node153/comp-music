@@ -48,7 +48,8 @@ export function ComplexAccessGate({
   const [knocked, setKnocked] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
 
-  const iAmInvited = invited.includes(ME);
+  // 작성자는 초대 목록 소속 여부와 무관하게 항상 자기 게시물을 볼 수 있어야 한다 — isOwnPost로 우회.
+  const iAmInvited = invited.includes(ME) || isOwnPost;
 
   // 락 걸린 상태(미초대)에서 보여줄 대표자+인원수 표기. 대표자는 invitedNames의 첫 번째 사람으로
   // 고정 — 보는 사람이 누구든 항상 같은 사람이 대표로 뜬다. "내가 팔로우하는 사람을 대표로 보여주기"
