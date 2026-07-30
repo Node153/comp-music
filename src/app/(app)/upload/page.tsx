@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { uploadFileToR2 } from "@/lib/uploadToR2";
 import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { field, label as labelClass, errorText, pageTitle, pageCard } from "@/components/ui/styles";
@@ -103,8 +104,6 @@ export default function UploadPage() {
   // Complex 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
   const [complexFile, setComplexFile] = useState<File | null>(null);
   const [complexKind, setComplexKind] = useState<DetectedMediaKind | null>(null);
-  // 음원일 때만 씀 — 사운드바는 재생용 위젯이라 미리보기(aside)에는 대신 이 커버 이미지를 보여준다.
-  const [complexCoverFile, setComplexCoverFile] = useState<File | null>(null);
 
   const [caption, setCaption] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -118,6 +117,9 @@ export default function UploadPage() {
   const [collabRoleNeeded, setCollabRoleNeeded] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // 미리보기 aside는 영상 업로드일 때만 나타나고, 버튼으로 접었다 폈다 할 수 있음(음원은 폼 안
+  // 사운드바로 이미 충분해서 aside 자체가 안 뜸).
+  const [previewOpen, setPreviewOpen] = useState(true);
 
   // Complex 선택 시 피드의 Complex 탭(ThemeSync.tsx)과 동일하게 다크 테마로 전환.
   // ThemeSync는 URL(/feed?feed=complex)만 감시해서 이 페이지의 로컬 상태는 모르기 때문에
@@ -145,16 +147,6 @@ export default function UploadPage() {
       if (complexObjectUrl) URL.revokeObjectURL(complexObjectUrl);
     };
   }, [complexObjectUrl]);
-
-  const complexCoverUrl = useMemo(
-    () => (complexCoverFile ? URL.createObjectURL(complexCoverFile) : null),
-    [complexCoverFile],
-  );
-  useEffect(() => {
-    return () => {
-      if (complexCoverUrl) URL.revokeObjectURL(complexCoverUrl);
-    };
-  }, [complexCoverUrl]);
 
   function handleUploadTypeChange(next: UploadType) {
     setUploadType(next);
@@ -185,11 +177,6 @@ export default function UploadPage() {
     const file = e.target.files?.[0] ?? null;
     setComplexFile(file);
     setComplexKind(file ? detectMediaKind(file) : null);
-    setComplexCoverFile(null);
-  }
-
-  function handleComplexCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setComplexCoverFile(e.target.files?.[0] ?? null);
   }
 
   function toggleTag(tag: string) {
@@ -208,6 +195,16 @@ export default function UploadPage() {
   const filteredGenres = ALL_GENRES.filter((tag) =>
     tag.toLowerCase().includes(tagSearch.trim().toLowerCase()),
   );
+
+  // demo·Complex 둘 다 영상일 때만 옆 미리보기 aside를 씀(음원은 폼 안 사운드바로 충분).
+  const previewVideoSrc =
+    uploadType === "demo"
+      ? mediaKind === "video"
+        ? mediaObjectUrl
+        : null
+      : complexKind === "video"
+        ? complexObjectUrl
+        : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -254,11 +251,12 @@ export default function UploadPage() {
       return;
     }
 
-    const mediaPath = `${user.id}/${Date.now()}-${mediaFile.name}`;
-    const { error: uploadError } = await supabase.storage.from("posts").upload(mediaPath, mediaFile);
-
-    if (uploadError) {
-      setError(`업로드 실패: ${uploadError.message}`);
+    // R2로 이전(2026-07-29) — presigned PUT URL을 발급받아 브라우저가 R2에 직접 업로드.
+    let mediaPath: string;
+    try {
+      mediaPath = await uploadFileToR2(mediaFile);
+    } catch (err) {
+      setError(`업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
       setLoading(false);
       return;
     }
@@ -266,14 +264,13 @@ export default function UploadPage() {
     // 선택적으로 커버 이미지를 같이 올려서 thumbnail_url(원래 있던 미사용 컬럼)에 저장한다.
     let thumbnailPath: string | null = null;
     if (coverFile) {
-      const coverPath = `${user.id}/${Date.now()}-cover-${coverFile.name}`;
-      const { error: coverUploadError } = await supabase.storage.from("posts").upload(coverPath, coverFile);
-      if (coverUploadError) {
-        setError(`커버 이미지 업로드 실패: ${coverUploadError.message}`);
+      try {
+        thumbnailPath = await uploadFileToR2(coverFile);
+      } catch (err) {
+        setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
         setLoading(false);
         return;
       }
-      thumbnailPath = coverPath;
     }
 
     const publishedAt = new Date();
@@ -309,8 +306,8 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="flex max-w-[1200px] flex-col gap-6 px-4 md:flex-row md:items-start">
-      <main className={`${darkPageCard} flex flex-col gap-6 md:mx-0`}>
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 md:flex-row md:items-start md:justify-center">
+      <main className={`${darkPageCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
         <h1 className={`${pageTitle} dark:text-gray-100`}>영상 업로드</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -355,6 +352,15 @@ export default function UploadPage() {
               {durationWarning && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">{durationWarning}</p>
               )}
+              {mediaFile && mediaKind === "video" && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen((v) => !v)}
+                  className="hidden self-start text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 md:inline"
+                >
+                  {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
+                </button>
+              )}
               {mediaFile && mediaKind === "audio" && mediaObjectUrl && (
                 <SoundbarPreview
                   key={`${mediaFile.name}-${mediaFile.size}-${mediaFile.lastModified}`}
@@ -388,21 +394,21 @@ export default function UploadPage() {
                   영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
                 </p>
               )}
+              {complexFile && complexKind === "video" && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen((v) => !v)}
+                  className="hidden self-start text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 md:inline"
+                >
+                  {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
+                </button>
+              )}
               {complexFile && complexKind === "audio" && complexObjectUrl && (
-                <>
-                  <SoundbarPreview
-                    key={`${complexFile.name}-${complexFile.size}-${complexFile.lastModified}`}
-                    file={complexFile}
-                    src={complexObjectUrl}
-                  />
-                  <span className={darkLabel}>커버 이미지 (선택)</span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleComplexCoverChange}
-                    className={darkFileInput}
-                  />
-                </>
+                <SoundbarPreview
+                  key={`${complexFile.name}-${complexFile.size}-${complexFile.lastModified}`}
+                  file={complexFile}
+                  src={complexObjectUrl}
+                />
               )}
             </div>
           )}
@@ -578,28 +584,16 @@ export default function UploadPage() {
         </form>
       </main>
 
-      {uploadType === "complex" && (
-        <aside className="hidden min-w-0 flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950 md:sticky md:top-20 md:flex md:flex-1 md:max-w-[560px]">
-          <span className={darkLabel}>미리보기</span>
-          {!complexFile && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              영상 또는 음원 파일을 선택하면 여기에 미리보기가 표시돼요.
-            </p>
-          )}
-          {complexFile && complexKind === "video" && complexObjectUrl && (
-            <video src={complexObjectUrl} controls muted className="w-full rounded-xl" />
-          )}
-          {complexFile && complexKind === "audio" && (
-            <>
-              {complexCoverUrl ? (
-                <img src={complexCoverUrl} alt="커버 이미지" className="w-full rounded-xl object-cover" />
-              ) : (
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  커버 이미지를 첨부하면 여기에 표시돼요.
-                </p>
-              )}
-            </>
-          )}
+      {previewVideoSrc && (
+        <aside
+          className={`hidden shrink-0 overflow-hidden transition-all duration-300 ease-in-out md:sticky md:top-20 md:flex ${
+            previewOpen ? "md:w-[560px] md:opacity-100" : "md:w-0 md:opacity-0"
+          }`}
+        >
+          <div className="flex w-[560px] shrink-0 flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+            <span className={darkLabel}>미리보기</span>
+            <video src={previewVideoSrc} controls muted className="w-full rounded-xl" />
+          </div>
         </aside>
       )}
     </div>

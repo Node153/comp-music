@@ -14,7 +14,12 @@ export function DeletePostButton({ postId, mediaPath }: { postId: string; mediaP
     if (!window.confirm("삭제하면 복구할 수 없습니다. 정말 삭제하시겠어요?")) return;
 
     setLoading(true);
-    await supabase.storage.from("posts").remove([mediaPath]);
+    // R2는 클라이언트에서 직접 못 지워서(자격증명 노출 방지) 서버 라우트를 거친다.
+    await fetch("/api/storage/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: mediaPath }),
+    });
     const { error } = await supabase.from("posts").delete().eq("id", postId);
     setLoading(false);
 

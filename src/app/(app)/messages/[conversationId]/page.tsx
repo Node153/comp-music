@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getR2SignedUrl } from "@/lib/r2/storage";
 import { MarkMessagesRead } from "./MarkMessagesRead";
 import { ConversationView } from "./ConversationView";
 
@@ -45,21 +46,26 @@ export default async function ConversationPage({
     .order("created_at", { ascending: true });
 
   const pinnedPostId = (messages ?? []).find((m) => m.source_post_id)?.source_post_id ?? null;
-  let pinnedPost: { videoSrc: string | null; caption: string | null; isImage: boolean } | null = null;
+  let pinnedPost: {
+    videoSrc: string | null;
+    caption: string | null;
+    isImage: boolean;
+    isAudio: boolean;
+  } | null = null;
   if (pinnedPostId) {
     const { data: post } = await supabase
       .from("posts")
-      .select("video_url, image_url, media_type, caption")
+      .select("video_url, image_url, audio_url, media_type, caption")
       .eq("id", pinnedPostId)
       .maybeSingle();
     if (post) {
-      const { data: signed } = await supabase.storage
-        .from("posts")
-        .createSignedUrl(post.video_url ?? post.image_url ?? "", SIGNED_URL_EXPIRY_SECONDS);
+      const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
+      const videoSrc = mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
       pinnedPost = {
-        videoSrc: signed?.signedUrl ?? null,
+        videoSrc,
         caption: post.caption,
         isImage: post.media_type === "image",
+        isAudio: post.media_type === "audio",
       };
     }
   }
@@ -78,6 +84,10 @@ export default async function ConversationPage({
         <div className="mb-2 flex items-center gap-3 rounded-xl border border-gray-200 p-2">
           {pinnedPost.isImage ? (
             <img src={pinnedPost.videoSrc} alt="" className="h-14 w-8 rounded-lg object-cover" />
+          ) : pinnedPost.isAudio ? (
+            <div className="flex h-14 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-800 text-sm">
+              🎵
+            </div>
           ) : (
             <video src={pinnedPost.videoSrc} muted className="h-14 w-8 rounded-lg object-cover" />
           )}

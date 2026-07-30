@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getR2SignedUrl } from "@/lib/r2/storage";
 import { MessageButton } from "@/components/MessageButton";
 import { EngagementMeter } from "@/components/EngagementMeter";
 import { PostEngagementProvider } from "@/components/PostEngagementContext";
@@ -382,16 +383,14 @@ export default async function FeedPage({
   const postsWithVideo = await Promise.all(
     (posts ?? []).map(async (post) => {
       const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
-      const { data } = await supabase.storage
-        .from("posts")
-        .createSignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS);
-      const { data: posterData } = post.thumbnail_url
-        ? await supabase.storage.from("posts").createSignedUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS)
-        : { data: null };
+      const videoSrc = mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
+      const posterSrc = post.thumbnail_url
+        ? await getR2SignedUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS)
+        : null;
       return {
         ...post,
-        videoSrc: data?.signedUrl ?? null,
-        posterSrc: posterData?.signedUrl ?? null,
+        videoSrc,
+        posterSrc,
         isMock: false as const,
         gradient: "",
         emoji: "",

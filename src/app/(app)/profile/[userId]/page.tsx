@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getR2SignedUrl } from "@/lib/r2/storage";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { MessageButton } from "@/components/MessageButton";
 import { LogoutButton } from "@/components/LogoutButton";
@@ -35,17 +36,16 @@ export default async function ProfilePage({
 
   const { data: posts } = await supabase
     .from("posts")
-    .select("id, video_url, image_url, media_type, content_type, status")
+    .select("id, video_url, image_url, audio_url, media_type, content_type, status")
     .eq("user_id", userId)
     .in("status", ["published", "expired"])
     .order("created_at", { ascending: false });
 
   const postsWithVideo = await Promise.all(
     (posts ?? []).map(async (post) => {
-      const { data } = await supabase.storage
-        .from("posts")
-        .createSignedUrl(post.video_url ?? post.image_url ?? "", SIGNED_URL_EXPIRY_SECONDS);
-      return { ...post, videoSrc: data?.signedUrl ?? null };
+      const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
+      const videoSrc = mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
+      return { ...post, videoSrc };
     }),
   );
 
@@ -146,6 +146,8 @@ export default async function ProfilePage({
           <div key={post.id} className="relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
             {post.videoSrc && post.media_type === "image" ? (
               <img src={post.videoSrc} alt="" className="h-full w-full object-cover" />
+            ) : post.videoSrc && post.media_type === "audio" ? (
+              <div className="flex h-full w-full items-center justify-center bg-gray-800 text-2xl">🎵</div>
             ) : post.videoSrc ? (
               <video src={post.videoSrc} className="h-full w-full object-cover" muted preload="metadata" />
             ) : null}
