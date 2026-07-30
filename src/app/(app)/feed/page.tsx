@@ -472,6 +472,7 @@ export default async function FeedPage({
                 <ComplexAccessGate
                   postId={post.id}
                   authorName={author?.name ?? "알 수 없음"}
+                  isOwnPost={isOwnPost}
                   expiresAt={post.expires_at}
                   initialInvitedNames={post.invitedNames ?? []}
                   initialPendingNames={post.pendingKnockNames ?? []}

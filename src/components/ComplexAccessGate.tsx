@@ -3,9 +3,11 @@
 // Complex "특정인 초대" 게시물의 노크(열람 요청) 흐름.
 // - 초대 안 된 사람에게는 존재(헤더/캡션/태그)는 보이되 미디어+채팅은 락으로 가려지고, 노크 버튼만 노출.
 // - 노크하면 "요청 보냄" 상태로 바뀌고(연타 방지), 게시물 카드 안의 "노크 요청 N개" 펼치기에 반영된다.
-// - "노크 요청" 펼치기는 원래 작성자 전용 화면이어야 하지만, 이번 단계는 실제 로그인 사용자 분리 없이
-//   한 화면 안에서 전체 흐름(노크 → 요청 목록 → 수락/거절 → 잠금 해제)을 확인하기 위한 UI 목업이라
-//   같은 카드 안에 그대로 노출한다. 전부 로컬 state — 새로고침하면 초기화되고 실제 DB 연동은 없음.
+// - "노크 요청" 펼치기(수락/거절)는 isOwnPost(작성자 본인)일 때만 보임. 현재 mock 게시물 3개는
+//   user_id가 가짜 문자열이라 실제 로그인 계정과 절대 일치하지 않으므로, 어떤 계정으로 로그인해도
+//   이 mock 게시물들에서는 이 섹션이 보이지 않는다 — 의도된 동작. 작성자 시점 수락/거절 데모는
+//   실제 로그인 사용자를 작성자로 다루는 mock 시나리오가 생기면 별도로 다룬다.
+// 전부 로컬 state — 새로고침하면 초기화되고 실제 DB 연동은 없음.
 import { useState } from "react";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { ComplexPostChat } from "@/components/ComplexPostChat";
@@ -17,6 +19,7 @@ const ME = "나";
 export function ComplexAccessGate({
   postId,
   authorName,
+  isOwnPost,
   expiresAt,
   initialInvitedNames,
   initialPendingNames,
@@ -29,6 +32,7 @@ export function ComplexAccessGate({
 }: {
   postId: string;
   authorName: string;
+  isOwnPost: boolean;
   expiresAt: string | null;
   initialInvitedNames: string[];
   initialPendingNames: string[];
@@ -44,7 +48,18 @@ export function ComplexAccessGate({
   const [knocked, setKnocked] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
 
-  const iAmInvited = invited.includes(ME);
+  // 작성자는 초대 목록 소속 여부와 무관하게 항상 자기 게시물을 볼 수 있어야 한다 — isOwnPost로 우회.
+  const iAmInvited = invited.includes(ME) || isOwnPost;
+
+  // 락 걸린 상태(미초대)에서 보여줄 대표자+인원수 표기. 대표자는 invitedNames의 첫 번째 사람으로
+  // 고정 — 보는 사람이 누구든 항상 같은 사람이 대표로 뜬다. "내가 팔로우하는 사람을 대표로 보여주기"
+  // 같은 동적 매칭은 실제 팔로우 데이터 연동 단계(Phase 1)에서 다룰 예정.
+  const [representative, ...otherInvited] = invited;
+  const inviteSummary = representative
+    ? otherInvited.length > 0
+      ? `${representative} 외 ${otherInvited.length}명에게만 공개된 게시물`
+      : `${representative}에게만 공개된 게시물`
+    : "특정 인원에게만 공개된 게시물";
 
   function knock() {
     if (knocked || iAmInvited) return;
@@ -74,7 +89,7 @@ export function ComplexAccessGate({
         )
       ) : (
         <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-          <span>🔒 특정 인원에게만 공개된 게시물</span>
+          <span>🔒 {inviteSummary}</span>
         </div>
       )}
 
@@ -131,7 +146,7 @@ export function ComplexAccessGate({
         )}
       </div>
 
-      {pending.length > 0 && (
+      {isOwnPost && pending.length > 0 && (
         <div className="border-t border-gray-100 dark:border-gray-800">
           <button
             type="button"
