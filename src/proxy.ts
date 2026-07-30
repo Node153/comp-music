@@ -72,6 +72,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // /api는 제외 — cron(expire-posts) 등 API 라우트는 Supabase 세션 쿠키가 없는 서버-서버 호출이라
+    // 여기 걸리면 항상 /login으로 리다이렉트되어 라우트 핸들러 자체(Bearer 토큰 검사)가 실행되지 않는다.
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
