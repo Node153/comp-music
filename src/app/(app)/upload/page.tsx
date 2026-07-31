@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
 import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
+import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { field, label as labelClass, errorText, pageTitle, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
 import type { ExpireHours } from "@/types/database";
@@ -17,8 +18,8 @@ const MIN_TAGS = 3;
 const EXPIRE_HOURS_OPTIONS: ExpireHours[] = [6, 12, 24, 48];
 
 // TopNav의 피드 탭(♾️ demo / 🌀 Complex)과 동일한 개념 — 어느 피드로 게시할지 선택.
-// Complex는 초대·채팅·비공개 게시물이 아직 실제 DB에 없어(feed/page.tsx 참고, 100% mock)
-// 여기서도 실제 저장 없이 미리보기만 제공한다. 실제 연동은 데이터 연결 단계에서 진행.
+// 둘 다 실제 posts에 저장됨(0012_complex_access_and_chat) — Complex는 visibility로 구분되고
+// 초대는 post_access, 채팅은 post_chat_messages에 별도로 쌓인다.
 type UploadType = "demo" | "complex";
 
 const UPLOAD_TYPE_OPTIONS: { value: UploadType; label: string; icon: string }[] = [
@@ -28,8 +29,8 @@ const UPLOAD_TYPE_OPTIONS: { value: UploadType; label: string; icon: string }[] 
 
 // demo = 전체공개·노출시간 영구(만료 없음) / Complex = 팔로워공개 or 특정 사람 초대공개·노출시간 필수설정.
 // demo는 그래서 노출 시간 UI 자체가 없고, Complex만 아래 공개범위+노출시간을 요구한다.
-// feed/page.tsx MockSample.visibility("followers" | "specific")와 동일한 값 이름을 사용 —
-// 실제 DB 연동 시 두 화면이 같은 값을 주고받아야 하므로 이름을 맞춰둔다.
+// "specific"은 화면 표시용 값이고 실제 posts.visibility에는 "invite_only"로 저장한다(0012 —
+// Phase 1의 "private"는 "나만 보기"에 가까운 다른 의미라 값을 분리해뒀음).
 type ComplexVisibility = "followers" | "specific";
 const COMPLEX_VISIBILITY_OPTIONS: { value: ComplexVisibility; label: string; icon: string }[] = [
   { value: "followers", label: "팔로워 공개", icon: "👥" },
@@ -113,7 +114,7 @@ export default function UploadPage() {
   const [customTagInput, setCustomTagInput] = useState("");
   const [expireHours, setExpireHours] = useState<ExpireHours>(24);
   const [complexVisibility, setComplexVisibility] = useState<ComplexVisibility>("followers");
-  const [inviteNames, setInviteNames] = useState("");
+  const [inviteUsers, setInviteUsers] = useState<PickedUser[]>([]);
   // 협업 기능은 Complex 전용 — demo는 해시태그로 대체(사용자 지시: "complex에서는 해시태그 삭제 대신 협업기능 추가")
   const [collabAvailable, setCollabAvailable] = useState(false);
   const [collabRoleNeeded, setCollabRoleNeeded] = useState("");
@@ -129,6 +130,13 @@ export default function UploadPage() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", uploadType === "complex");
   }, [uploadType]);
+
+  // InviteUserPicker가 검색 결과에서 본인을 제외하는 데만 씀(초대 자체는 post_access RLS가
+  // user_id<>auth.uid()로 어차피 막지만, 검색 결과에서부터 안 보이는 게 자연스럽다).
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, [supabase]);
 
   // demo 음원 파일의 사운드바 재생용 object URL — Complex와 동일한 useMemo+cleanup-effect 패턴.
   const mediaObjectUrl = useMemo(() => (mediaFile ? URL.createObjectURL(mediaFile) : null), [mediaFile]);
@@ -217,17 +225,79 @@ export default function UploadPage() {
         setError("음원(mp3/wav) 또는 영상 파일을 업로드해주세요.");
         return;
       }
-      if (complexVisibility === "specific") {
-        const invited = inviteNames
-          .split(",")
-          .map((name) => name.trim())
-          .filter(Boolean);
-        if (invited.length === 0) {
-          setError("초대할 사람을 최소 1명 입력해주세요.");
+      if (complexVisibility === "specific" && inviteUsers.length === 0) {
+        setError("초대할 사람을 최소 1명 선택해주세요.");
+        return;
+      }
+
+      setLoading(true);
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setLoading(false);
+        router.push("/login");
+        return;
+      }
+
+      let complexMediaPath: string;
+      try {
+        complexMediaPath = await uploadFileToR2(complexFile);
+      } catch (err) {
+        setError(`업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
+        setLoading(false);
+        return;
+      }
+
+      const publishedAt = new Date();
+      const expiresAt = new Date(publishedAt.getTime() + expireHours * 60 * 60 * 1000);
+
+      const { data: complexPost, error: complexInsertError } = await supabase
+        .from("posts")
+        .insert({
+          user_id: user.id,
+          media_type: complexKind,
+          video_url: complexKind === "video" ? complexMediaPath : null,
+          image_url: null,
+          audio_url: complexKind === "audio" ? complexMediaPath : null,
+          caption: caption || null,
+          visibility: complexVisibility === "specific" ? "invite_only" : "followers",
+          collab_available: collabAvailable,
+          collab_role_needed: collabAvailable ? collabRoleNeeded || null : null,
+          status: "published",
+          published_at: publishedAt.toISOString(),
+          expire_hours: expireHours,
+          expires_at: expiresAt.toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (complexInsertError || !complexPost) {
+        setError(`게시 실패: ${complexInsertError?.message ?? "알 수 없는 오류"}`);
+        setLoading(false);
+        return;
+      }
+
+      // 특정인 초대 — post_access에 invited 상태로 일괄 등록(0012). 초대 인원별로 DB row 하나씩,
+      // (post_id,user_id) unique라 중복 선택은 InviteUserPicker에서 이미 걸러짐.
+      if (complexVisibility === "specific" && inviteUsers.length > 0) {
+        const { error: accessError } = await supabase.from("post_access").insert(
+          inviteUsers.map((invitee) => ({
+            post_id: complexPost.id,
+            user_id: invitee.id,
+            status: "invited" as const,
+          })),
+        );
+        if (accessError) {
+          setError(`게시는 됐지만 초대 등록에 실패했어요: ${accessError.message}`);
+          setLoading(false);
           return;
         }
       }
-      // Complex는 아직 실제 DB(초대·비공개 범위·채팅 테이블)가 없어 저장하지 않고 미리보기 피드로 이동만 시킨다.
+
+      setLoading(false);
       router.push("/feed?feed=complex");
       return;
     }
@@ -332,7 +402,8 @@ export default function UploadPage() {
             </div>
             {uploadType === "complex" && (
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                Complex는 아직 미리보기 단계라 실제 게시물로 저장되지 않고, 게시 시 Complex 피드로 이동만 해요.
+                Complex는 팔로워공개 또는 특정인초대로만 게시돼요. 노출 시간이 지나면 자동으로
+                피드에서 사라집니다.
               </p>
             )}
           </div>
@@ -529,12 +600,10 @@ export default function UploadPage() {
               {complexVisibility === "specific" && (
                 <div className="flex flex-col gap-1.5">
                   <span className={darkLabel}>초대할 사람</span>
-                  <input
-                    type="text"
-                    placeholder="이름을 쉼표로 구분해서 입력 (예: 오세준, 한지민)"
-                    value={inviteNames}
-                    onChange={(e) => setInviteNames(e.target.value)}
-                    className={darkField}
+                  <InviteUserPicker
+                    currentUserId={currentUserId ?? ""}
+                    value={inviteUsers}
+                    onChange={setInviteUsers}
                   />
                 </div>
               )}

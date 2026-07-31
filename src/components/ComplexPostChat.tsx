@@ -3,22 +3,25 @@
 // Complex 게시물 전용 — 좋아요/댓글 대신 Discord 스타일 실시간 채팅으로 구성.
 // 영상/이미지/오디오/텍스트 무엇이든 "작업물"로 올릴 수 있고, 올릴 때마다 원본(1차)을 이어받은
 // 재창작물(2차, 3차...)로 취급해 스택처럼 쌓아 보여준다. 가벼운 잡담(채팅)과는 구분됨.
-// 아직 로컬 state만 쓰는 UI 목업 — 실제 Realtime/Storage 연동은 이후 작업.
+// 0012_complex_access_and_chat로 실제 DB(post_chat_messages) 연동됨 — Realtime 구독은 이번
+// 범위에서 보류(전송/새로고침 시에만 반영). 파일 업로드는 기존 R2 파이프라인(uploadFileToR2)을
+// 그대로 재사용.
 import { useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { uploadFileToR2 } from "@/lib/uploadToR2";
+import type { MediaType } from "@/types/database";
 
-type ChatMessage = {
+export type ChatMessage = {
   id: string;
-  author: string;
-  isMe: boolean;
+  senderId: string;
+  senderName: string;
   type: "text" | "image" | "video" | "audio";
-  text?: string;
-  fileName?: string;
-  objectUrl?: string;
-  isWork?: boolean; // 작업물 스택에 들어가는 메시지인지 여부 — 잡담 채팅과 구분
-  generation?: number; // isWork일 때만 사용 — 2차, 3차...
+  content?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  isWork: boolean;
+  createdAt: string;
 };
-
-const AUTO_REPLIES = ["오 이거 좋은데요?", "저도 껴도 돼요?", "ㅋㅋㅋ 미쳤다", "이 버전 저장할게요"];
 
 const WORK_TYPE_LABEL: Record<ChatMessage["type"], string> = {
   text: "✍️",
@@ -27,138 +30,149 @@ const WORK_TYPE_LABEL: Record<ChatMessage["type"], string> = {
   audio: "🎵",
 };
 
-let nextId = 1;
-
 export function ComplexPostChat({
   postId,
-  authorName,
-  participants,
-  originalGradient,
-  originalEmoji,
+  currentUserId,
+  currentUserName,
+  originalMediaType,
+  initialMessages,
   collabAvailable,
 }: {
   postId: string;
-  authorName: string;
-  participants: string[];
-  originalGradient: string;
-  originalEmoji: string;
-  // 협업 구함(post.collab_available)이 켜진 게시물에서만 이미지/오디오 작업물 업로드 버튼을 쓸 수 있음.
-  // 이 컴포넌트는 실제 로그인 사용자 구분 없이 채팅 참여자를 전부 "나"로 취급하는 목업이라
-  // "작성자 본인은 항상 가능" 같은 작성자 예외는 없음 — 꺼져 있으면 채팅 참여자 전원(작성자 시점 포함) 업로드 불가.
+  currentUserId: string;
+  currentUserName: string;
+  originalMediaType: MediaType;
+  initialMessages: ChatMessage[];
+  // 협업 구함(post.collab_available)이 켜진 게시물에서만 이미지/오디오 작업물 업로드 버튼을 쓸 수
+  // 있음(video/text는 항상 허용) — RLS(post_chat_messages_insert_participant)에서도 동일하게
+  // 강제되므로 여기 disabled는 UX 힌트일 뿐, 실제 보안 경계는 서버에 있음.
   collabAvailable: boolean;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    {
-      id: `seed-${postId}`,
-      author: participants[0] ?? authorName,
-      isMe: false,
-      type: "text",
-      text: "우와 이거 듣자마자 아이디어 떠올랐어요 ㅋㅋ",
-    },
-  ]);
+  const supabase = createClient();
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   const workMessages = messages.filter((m) => m.isWork);
-  const generationCount = workMessages.length;
 
-  // 스택 카드 목록 — 원본(1차)을 맨 아래, 이후 올라온 작업물(영상/이미지/오디오/텍스트)을 위로 쌓아
-  // 최신 것이 맨 위에 오도록 구성.
+  // 스택 카드 목록 — 원본(1차)을 맨 아래, 이후 올라온 작업물을 위로 쌓아 최신 것이 맨 위에 오도록.
   const stackCards = [
-    { generation: 1, author: authorName, work: null as ChatMessage | null },
-    ...workMessages.map((m) => ({ generation: m.generation ?? 2, author: m.author, work: m })),
+    { generation: 1, work: null as ChatMessage | null },
+    ...workMessages.map((m, i) => ({ generation: i + 2, work: m })),
   ].reverse();
 
-  function pushAutoReply() {
-    const reply = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)];
-    const replyAuthor = participants[Math.floor(Math.random() * participants.length)] ?? authorName;
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { id: `${nextId++}`, author: replyAuthor, isMe: false, type: "text", text: reply },
-      ]);
-    }, 1000 + Math.random() * 800);
-  }
-
-  function sendText() {
+  async function sendText(asWork: boolean) {
     const text = draft.trim();
-    if (!text) return;
-    setMessages((prev) => [...prev, { id: `${nextId++}`, author: "나", isMe: true, type: "text", text }]);
-    setDraft("");
-    pushAutoReply();
-  }
-
-  function sendTextAsWork() {
-    const text = draft.trim();
-    if (!text) return;
+    if (!text || sending) return;
+    setSending(true);
+    const { data, error } = await supabase
+      .from("post_chat_messages")
+      .insert({ post_id: postId, sender_id: currentUserId, type: "text", content: text, is_work: asWork })
+      .select("id, created_at")
+      .single();
+    setSending(false);
+    if (error || !data) return;
     setMessages((prev) => [
       ...prev,
       {
-        id: `${nextId++}`,
-        author: "나",
-        isMe: true,
+        id: data.id,
+        senderId: currentUserId,
+        senderName: currentUserName,
         type: "text",
-        text,
-        isWork: true,
-        generation: generationCount + 2,
+        content: text,
+        isWork: asWork,
+        createdAt: data.created_at,
       },
     ]);
     setDraft("");
-    pushAutoReply();
   }
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video" | "audio") {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video" | "audio") {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `${nextId++}`,
-        author: "나",
-        isMe: true,
-        type,
-        fileName: file.name,
-        objectUrl,
-        isWork: true,
-        generation: generationCount + 2,
-      },
-    ]);
-    pushAutoReply();
+    if (!file || sending) return;
+    setSending(true);
+    try {
+      const fileKey = await uploadFileToR2(file);
+      const { data, error } = await supabase
+        .from("post_chat_messages")
+        .insert({ post_id: postId, sender_id: currentUserId, type, file_key: fileKey, is_work: true })
+        .select("id, created_at")
+        .single();
+      if (error || !data) return;
+      // 방금 올린 파일은 이미 로컬에 있으니 signed URL 왕복 없이 blob URL로 바로 미리보기.
+      const localUrl = URL.createObjectURL(file);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: data.id,
+          senderId: currentUserId,
+          senderName: currentUserName,
+          type,
+          fileUrl: localUrl,
+          fileName: file.name,
+          isWork: true,
+          createdAt: data.created_at,
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function refreshMessages() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const res = await fetch(`/api/complex/chat?postId=${postId}`);
+      if (res.ok) {
+        const { messages: fetched } = (await res.json()) as { messages: ChatMessage[] };
+        setMessages(fetched);
+      }
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   function renderWorkContent(work: ChatMessage | null) {
     if (!work) {
-      return (
-        <span className="truncate text-xs text-gray-400 dark:text-gray-500">원곡</span>
-      );
+      return <span className="truncate text-xs text-gray-400 dark:text-gray-500">원곡</span>;
     }
-    if (work.type === "video" && work.objectUrl) {
-      // eslint-disable-next-line jsx-a11y/media-has-caption
-      return <video src={work.objectUrl} controls className="max-h-40 w-full max-w-xs rounded-lg" />;
+    if (work.type === "video" && work.fileUrl) {
+      return <video src={work.fileUrl} controls className="max-h-40 w-full max-w-xs rounded-lg" />;
     }
-    if (work.type === "image" && work.objectUrl) {
-      // eslint-disable-next-line @next/next/no-img-element
+    if (work.type === "image" && work.fileUrl) {
       return (
         <img
-          src={work.objectUrl}
+          src={work.fileUrl}
           alt={work.fileName ?? "첨부 이미지"}
           className="max-h-40 max-w-xs rounded-lg object-cover"
         />
       );
     }
-    if (work.type === "audio" && work.objectUrl) {
-      // eslint-disable-next-line jsx-a11y/media-has-caption
-      return <audio src={work.objectUrl} controls className="h-8 w-full max-w-xs" />;
+    if (work.type === "audio" && work.fileUrl) {
+      return <audio src={work.fileUrl} controls className="h-8 w-full max-w-xs" />;
     }
-    return <span className="truncate text-xs text-gray-600 dark:text-gray-300">{work.text}</span>;
+    return <span className="truncate text-xs text-gray-600 dark:text-gray-300">{work.content}</span>;
   }
 
   return (
     <div className="border-t border-gray-100 dark:border-gray-800">
+      <div className="flex items-center justify-between px-4 pt-3">
+        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">재창작물 스택</span>
+        <button
+          type="button"
+          onClick={refreshMessages}
+          disabled={refreshing}
+          className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-50 dark:text-gray-500 dark:hover:text-gray-200"
+        >
+          {refreshing ? "새로고침 중..." : "🔄 새로고침"}
+        </button>
+      </div>
       <div className="flex flex-col gap-2 px-4 py-3">
         {stackCards.map((card, i) => (
           <div
@@ -169,29 +183,23 @@ export function ComplexPostChat({
                 : "border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/40"
             }`}
           >
-            {card.work ? (
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${
-                  i === 0 ? "bg-violet-100 dark:bg-violet-900/50" : "bg-gray-100 dark:bg-gray-800"
-                }`}
-              >
-                {WORK_TYPE_LABEL[card.work.type]}
-              </div>
-            ) : (
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-xl ${originalGradient}`}
-              >
-                {originalEmoji}
-              </div>
-            )}
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${
+                i === 0 ? "bg-violet-100 dark:bg-violet-900/50" : "bg-gray-100 dark:bg-gray-800"
+              }`}
+            >
+              {card.work ? WORK_TYPE_LABEL[card.work.type] : WORK_TYPE_LABEL[originalMediaType]}
+            </div>
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <span
                 className={`text-xs font-semibold ${
                   i === 0 ? "text-violet-600 dark:text-violet-300" : "text-gray-500 dark:text-gray-400"
                 }`}
               >
-                {card.generation === 1 ? "🎼 1차 (원본)" : `${WORK_TYPE_LABEL[card.work!.type]} ${card.generation}차 창작물`}{" "}
-                · {card.author}
+                {card.generation === 1
+                  ? "🎼 1차 (원본)"
+                  : `${WORK_TYPE_LABEL[card.work!.type]} ${card.generation}차 창작물`}{" "}
+                · {card.work?.senderName ?? "작성자"}
               </span>
               {renderWorkContent(card.work)}
             </div>
@@ -202,65 +210,64 @@ export function ComplexPostChat({
       <div className="border-t border-gray-100 dark:border-gray-800" />
 
       <div className="flex max-h-72 flex-col gap-2 overflow-y-auto px-4 py-3">
-        {messages.map((m) => (
-          <div key={m.id} className={`flex flex-col gap-0.5 ${m.isMe ? "items-end" : "items-start"}`}>
-            <span className="text-[11px] text-gray-400">{m.author}</span>
-            {m.type === "text" && (
-              <span
-                className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-sm ${
-                  m.isMe
-                    ? "bg-black text-white dark:bg-white dark:text-black"
-                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                }`}
-              >
-                {m.isWork && <span className="mr-1 text-xs text-violet-300">✍️ {m.generation}차</span>}
-                {m.text}
-              </span>
-            )}
-            {m.type === "image" && m.objectUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={m.objectUrl}
-                alt={m.fileName ?? "첨부 이미지"}
-                className="max-h-48 max-w-[70%] rounded-xl object-cover"
-              />
-            )}
-            {m.type === "video" && m.objectUrl && (
-              <div className="flex flex-col gap-1 rounded-xl bg-violet-50 p-2 dark:bg-violet-950/30">
-                <span className="text-xs font-semibold text-violet-600 dark:text-violet-300">
-                  🎬 {m.generation}차 창작물 · {m.fileName}
+        {messages.map((m) => {
+          const isMe = m.senderId === currentUserId;
+          return (
+            <div key={m.id} className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
+              <span className="text-[11px] text-gray-400">{m.senderName}</span>
+              {m.type === "text" && (
+                <span
+                  className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-sm ${
+                    isMe
+                      ? "bg-black text-white dark:bg-white dark:text-black"
+                      : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                  }`}
+                >
+                  {m.isWork && <span className="mr-1 text-xs text-violet-300">✍️ 작업물</span>}
+                  {m.content}
                 </span>
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                <video src={m.objectUrl} controls className="max-h-48 w-64 rounded-lg" />
-              </div>
-            )}
-            {m.type === "audio" && m.objectUrl && (
-              <div className="flex flex-col gap-1 rounded-xl bg-violet-50 p-2 dark:bg-violet-950/30">
-                <span className="text-xs font-semibold text-violet-600 dark:text-violet-300">
-                  🎵 {m.generation}차 창작물 · {m.fileName}
-                </span>
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                <audio src={m.objectUrl} controls className="h-8 w-56" />
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+              {m.type === "image" && m.fileUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={m.fileUrl}
+                  alt={m.fileName ?? "첨부 이미지"}
+                  className="max-h-48 max-w-[70%] rounded-xl object-cover"
+                />
+              )}
+              {m.type === "video" && m.fileUrl && (
+                <div className="flex flex-col gap-1 rounded-xl bg-violet-50 p-2 dark:bg-violet-950/30">
+                  <span className="text-xs font-semibold text-violet-600 dark:text-violet-300">
+                    🎬 {m.fileName}
+                  </span>
+                  <video src={m.fileUrl} controls className="max-h-48 w-64 rounded-lg" />
+                </div>
+              )}
+              {m.type === "audio" && m.fileUrl && (
+                <div className="flex flex-col gap-1 rounded-xl bg-violet-50 p-2 dark:bg-violet-950/30">
+                  <span className="text-xs font-semibold text-violet-600 dark:text-violet-300">
+                    🎵 {m.fileName}
+                  </span>
+                  <audio src={m.fileUrl} controls className="h-8 w-56" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {messages.length === 0 && (
+          <p className="py-4 text-center text-xs text-gray-400 dark:text-gray-500">
+            아직 채팅이 없어요. 첫 메시지를 남겨보세요.
+          </p>
+        )}
       </div>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          sendText();
+          sendText(false);
         }}
         className="flex items-center gap-1.5 border-t border-gray-100 p-2 dark:border-gray-800"
       >
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => handleFile(e, "image")}
-        />
         <input
           ref={videoInputRef}
           type="file"
@@ -269,23 +276,33 @@ export function ComplexPostChat({
           onChange={(e) => handleFile(e, "video")}
         />
         <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          disabled={!collabAvailable}
+          onChange={(e) => handleFile(e, "image")}
+        />
+        <input
           ref={audioInputRef}
           type="file"
           accept="audio/mpeg,audio/mp3,audio/wav"
           className="hidden"
+          disabled={!collabAvailable}
           onChange={(e) => handleFile(e, "audio")}
         />
         <button
           type="button"
           title="영상 작업물 올리기"
+          disabled={sending}
           onClick={() => videoInputRef.current?.click()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
         >
           🎬
         </button>
         <button
           type="button"
-          disabled={!collabAvailable}
+          disabled={!collabAvailable || sending}
           title={collabAvailable ? "이미지 작업물 올리기" : "협업 구함 게시물에서만 이미지를 올릴 수 있어요"}
           onClick={() => imageInputRef.current?.click()}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
@@ -294,7 +311,7 @@ export function ComplexPostChat({
         </button>
         <button
           type="button"
-          disabled={!collabAvailable}
+          disabled={!collabAvailable || sending}
           title={collabAvailable ? "오디오 작업물 올리기" : "협업 구함 게시물에서만 오디오를 올릴 수 있어요"}
           onClick={() => audioInputRef.current?.click()}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
@@ -304,8 +321,9 @@ export function ComplexPostChat({
         <button
           type="button"
           title="입력한 텍스트를 작업물로 남기기"
-          onClick={sendTextAsWork}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 dark:hover:bg-gray-800"
+          disabled={sending}
+          onClick={() => sendText(true)}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
         >
           ✍️
         </button>
@@ -318,7 +336,8 @@ export function ComplexPostChat({
         />
         <button
           type="submit"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          disabled={sending}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
         >
           ➤
         </button>

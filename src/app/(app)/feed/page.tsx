@@ -6,7 +6,7 @@ import { PostEngagementProvider } from "@/components/PostEngagementContext";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { PostVideo } from "@/components/PostVideo";
 import { MockPlayOverlay } from "@/components/MockPlayOverlay";
-import { ComplexPostChat } from "@/components/ComplexPostChat";
+import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
 import { ComplexAccessGate } from "@/components/ComplexAccessGate";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
@@ -39,10 +39,10 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hours / 24)}일 전`;
 }
 
-// 샘플 게시물 — 실제 업로드 없이 볼륨미터/PEAK/타임리밋 UI를 바로 확인할 수 있도록 넣은 데모 데이터.
-// isMock 게시물은 DB에 실제 row가 없어 좋아요/댓글 버튼을 누를 수 없고 숫자만 정적으로 보여준다.
-// Demo(전체공개, 노출영구·완성작) / Complex(비공개, 노출시간필수·raw — 공개범위는 팔로워공개
-// 또는 특정인 초대 중 하나) 두 세트로 분리.
+// Demo(전체공개) 전용 샘플 게시물 — 실제 업로드 없이 볼륨미터/PEAK/타임리밋 UI를 바로 확인할 수
+// 있도록 넣은 데모 데이터. isMock 게시물은 DB에 실제 row가 없어 좋아요/댓글 버튼을 누를 수 없고
+// 숫자만 정적으로 보여준다. Complex(팔로워공개/특정인초대)는 0012_complex_access_and_chat부터
+// 실제 posts/post_access/post_chat_messages로 연동돼서 더 이상 mock 샘플이 없다.
 type MockSample = {
   postId: string;
   userId: string;
@@ -61,11 +61,6 @@ type MockSample = {
   gradient: string;
   emoji: string;
   demoVideoSrc?: string;
-  // Complex 전용 — 공개범위 두 옵션. "followers"는 팔로워 전체 공개, "specific"은 invitedNames로
-  // 지정한 특정 인원만 공개. 초대 UI 자체는 아직 없고 이 필드로 두 옵션을 구분해서 보여주는 단계.
-  visibility?: "followers" | "specific";
-  invitedNames?: string[]; // visibility가 "specific"일 때만 사용 — 초대된 특정 인원 이름 목록
-  pendingKnockNames?: string[]; // visibility가 "specific"일 때만 사용 — 이미 노크(열람 요청)를 보낸 미초대 인원 데모용 시드
 };
 
 const DEMO_MOCK_SAMPLES: MockSample[] = [
@@ -218,71 +213,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
   },
 ];
 
-const COMPLEX_MOCK_SAMPLES: MockSample[] = [
-  {
-    postId: "mock-complex-1",
-    userId: "mock-user-1",
-    name: "정하늘",
-    school: "서울대",
-    major: "작곡과",
-    caption: "새벽에 혼자 연습하다 녹음한 거... 친한 사람들만 들어줘 ㅠㅠ",
-    contentType: "practice",
-    tags: ["피아노"],
-    collab: false,
-    collabRole: null,
-    likes: 4,
-    comments: 2,
-    publishedHoursAgo: 1,
-    expireHours: 6,
-    gradient: "from-neutral-600 to-neutral-800",
-    emoji: "😳",
-    visibility: "specific",
-    invitedNames: ["오세준", "한지민"],
-    // 노크(열람 요청)가 이미 하나 와있는 상태를 데모하기 위한 시드 — 개별 수락/거절 UI 확인용.
-    pendingKnockNames: ["강태오"],
-  },
-  {
-    postId: "mock-complex-2",
-    userId: "mock-user-2",
-    name: "오세준",
-    school: "한예종",
-    major: "실용음악과",
-    caption: "리허설 날것 그대로임, 팔로워들한테만 공개할게요",
-    contentType: "rehearsal",
-    tags: ["기타"],
-    collab: true,
-    collabRole: "베이스",
-    likes: 9,
-    comments: 5,
-    publishedHoursAgo: 2,
-    expireHours: 3,
-    gradient: "from-violet-800 to-fuchsia-900",
-    emoji: "🙈",
-    visibility: "followers",
-  },
-  {
-    postId: "mock-complex-3",
-    userId: "mock-user-3",
-    name: "한지민",
-    school: "활동자",
-    major: "보컬",
-    caption: "가사 쓰다 막혀서 넋두리... 아무한테도 말 안 했던 얘기",
-    contentType: "practice",
-    tags: ["보컬"],
-    collab: false,
-    collabRole: null,
-    likes: 6,
-    comments: 3,
-    publishedHoursAgo: 4,
-    expireHours: 12,
-    gradient: "from-red-800 to-neutral-900",
-    emoji: "🫣",
-    visibility: "specific",
-    invitedNames: ["정하늘", "오세준"],
-  },
-];
-
-function buildMockPosts(
+function buildDemoMockPosts(
   samples: MockSample[],
   userMap: Map<string, { id: string; name: string }>,
   profileMap: Map<string, { user_id: string; school: string | null; major: string | null }>,
@@ -302,18 +233,19 @@ function buildMockPosts(
       caption: m.caption,
       content_type: m.contentType,
       instrument_tags: m.tags,
+      visibility: "public" as const,
       collab_available: m.collab,
       collab_role_needed: m.collabRole,
       published_at: new Date(now - m.publishedHoursAgo * 3600 * 1000).toISOString(),
       expires_at: m.expireHours == null ? null : new Date(now + m.expireHours * 3600 * 1000).toISOString(),
+      media_type: "video" as const,
       videoSrc: null,
+      posterSrc: null,
+      canViewMedia: true,
       isMock: true as const,
       gradient: m.gradient,
       emoji: m.emoji,
       demoVideoSrc: m.demoVideoSrc ?? null,
-      visibility: m.visibility ?? null,
-      invitedNames: m.invitedNames ?? null,
-      pendingKnockNames: m.pendingKnockNames ?? null,
     };
   });
 }
@@ -325,7 +257,8 @@ export default async function FeedPage({
 }) {
   const { feed: feedParam } = await searchParams;
   // Demo(전체공개, 노출영구) 기본값 · Complex(비공개, 노출시간필수 — 팔로워공개 또는 특정인 초대)는
-  // 아직 실제 비공개 게시물이 없어서(초대 UI·DB 연동은 Phase 1 예정) 샘플 게시물로만 UI를 보여준다.
+  // 0012_complex_access_and_chat부터 실제 posts에 저장됨. visibility='public'이 demo, 그 외
+  // ('followers'/'invite_only')가 Complex — 같은 posts 테이블을 이 컬럼으로 나눠서 쓴다.
   const isComplex = feedParam === "complex";
 
   const supabase = await createClient();
@@ -334,17 +267,22 @@ export default async function FeedPage({
     data: { user: currentUser },
   } = await supabase.auth.getUser();
 
-  const { data: posts } = isComplex
-    ? { data: [] }
-    : await supabase
-        .from("posts")
-        .select(
-          "id, user_id, video_url, image_url, audio_url, media_type, thumbnail_url, caption, content_type, instrument_tags, collab_available, collab_role_needed, published_at, expires_at",
-        )
-        .eq("status", "published")
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .order("published_at", { ascending: false })
-        .limit(FEED_LIMIT);
+  let currentUserName = "나";
+  if (currentUser) {
+    const { data: me } = await supabase.from("users").select("name").eq("id", currentUser.id).single();
+    if (me?.name) currentUserName = me.name;
+  }
+
+  const postsSelect =
+    "id, user_id, video_url, image_url, audio_url, media_type, thumbnail_url, caption, content_type, instrument_tags, visibility, collab_available, collab_role_needed, published_at, expires_at";
+  const postsQuery = supabase
+    .from("posts")
+    .select(postsSelect)
+    .eq("status", "published")
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+  const { data: posts } = await (isComplex ? postsQuery.neq("visibility", "public") : postsQuery.eq("visibility", "public"))
+    .order("published_at", { ascending: false })
+    .limit(FEED_LIMIT);
 
   const postIds = (posts ?? []).map((p) => p.id);
   const userIds = [...new Set((posts ?? []).map((p) => p.user_id))];
@@ -380,35 +318,121 @@ export default async function FeedPage({
     commentCountMap.set(row.post_id, (commentCountMap.get(row.post_id) ?? 0) + 1);
   }
 
+  // Complex 전용 접근 제어 — followers/invite_only 게시물의 실제 열람 가능 여부를 계산한다.
+  // posts 행 자체는(캡션/작성자/태그/노크 버튼) 모두에게 보이지만, 미디어 signed URL과 채팅은
+  // 여기서 계산한 canViewMedia가 true일 때만 발급한다(0012 설계 — R2는 버킷 RLS가 없어서
+  // 이 조건부 서명이 실제 프라이버시 경계).
+  const followersPostAuthorIds = [
+    ...new Set((posts ?? []).filter((p) => p.visibility === "followers").map((p) => p.user_id)),
+  ];
+  const inviteOnlyPostIds = (posts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
+
+  let followingAuthorIds = new Set<string>();
+  if (currentUser && followersPostAuthorIds.length > 0) {
+    const { data: followRows } = await supabase
+      .from("follows")
+      .select("followee_id")
+      .eq("follower_id", currentUser.id)
+      .in("followee_id", followersPostAuthorIds);
+    followingAuthorIds = new Set((followRows ?? []).map((f) => f.followee_id));
+  }
+
+  // post_access_select_self_or_author RLS 덕분에 이 한 번의 조회로 (a) 내 열람 권한 판정과
+  // (b) 내가 작성자인 글의 초대자/대기 노크 명단이 동시에 채워진다 — 내 행은 항상 보이고,
+  // 내가 쓴 글이면 그 글의 모든 행이 보이지만, 남의 글의 다른 사람 행은 안 보인다.
+  let accessRows: { post_id: string; user_id: string; status: string }[] = [];
+  if (currentUser && inviteOnlyPostIds.length > 0) {
+    const { data } = await supabase
+      .from("post_access")
+      .select("post_id, user_id, status")
+      .in("post_id", inviteOnlyPostIds);
+    accessRows = data ?? [];
+  }
+  const accessUserIds = [...new Set(accessRows.map((r) => r.user_id))];
+  const { data: accessUsers } =
+    accessUserIds.length > 0
+      ? await supabase.from("users").select("id, name").in("id", accessUserIds)
+      : { data: [] };
+  const accessNameMap = new Map((accessUsers ?? []).map((u) => [u.id, u.name]));
+
+  function canViewMediaFor(post: { id: string; user_id: string; visibility: string }): boolean {
+    if (!isComplex) return true;
+    if (post.visibility === "public") return true;
+    if (!currentUser) return false;
+    if (post.user_id === currentUser.id) return true;
+    if (post.visibility === "followers") return followingAuthorIds.has(post.user_id);
+    if (post.visibility === "invite_only") {
+      return accessRows.some(
+        (r) =>
+          r.post_id === post.id &&
+          r.user_id === currentUser.id &&
+          (r.status === "invited" || r.status === "accepted"),
+      );
+    }
+    return false;
+  }
+
+  // 열람 가능한 Complex 게시물의 채팅+재창작물 스택을 서버에서 미리 가져온다(초기 렌더용 —
+  // ComplexPostChat의 "새로고침" 버튼만 /api/complex/chat을 다시 부른다).
+  const accessiblePostIds = isComplex ? (posts ?? []).filter((p) => canViewMediaFor(p)).map((p) => p.id) : [];
+  const { data: chatRows } =
+    accessiblePostIds.length > 0
+      ? await supabase
+          .from("post_chat_messages")
+          .select("id, post_id, sender_id, type, content, file_key, is_work, created_at")
+          .in("post_id", accessiblePostIds)
+          .order("created_at", { ascending: true })
+      : { data: [] };
+
+  const chatSenderIds = [...new Set((chatRows ?? []).map((r) => r.sender_id))];
+  const { data: chatSenders } =
+    chatSenderIds.length > 0
+      ? await supabase.from("users").select("id, name").in("id", chatSenderIds)
+      : { data: [] };
+  const chatSenderNameMap = new Map((chatSenders ?? []).map((u) => [u.id, u.name]));
+
+  const chatMessagesByPost = new Map<string, ChatMessage[]>();
+  for (const row of chatRows ?? []) {
+    const fileUrl = row.file_key ? await getR2SignedUrl(row.file_key, SIGNED_URL_EXPIRY_SECONDS) : null;
+    const message: ChatMessage = {
+      id: row.id,
+      senderId: row.sender_id,
+      senderName: chatSenderNameMap.get(row.sender_id) ?? "알 수 없음",
+      type: row.type,
+      content: row.content,
+      fileUrl,
+      fileName: row.file_key ? (row.file_key.split("/").pop() ?? null) : null,
+      isWork: row.is_work,
+      createdAt: row.created_at,
+    };
+    const list = chatMessagesByPost.get(row.post_id) ?? [];
+    list.push(message);
+    chatMessagesByPost.set(row.post_id, list);
+  }
+
   const postsWithVideo = await Promise.all(
     (posts ?? []).map(async (post) => {
+      const canView = canViewMediaFor(post);
       const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
-      const videoSrc = mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
-      const posterSrc = post.thumbnail_url
-        ? await getR2SignedUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS)
-        : null;
+      const videoSrc = canView && mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
+      const posterSrc =
+        canView && post.thumbnail_url ? await getR2SignedUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS) : null;
       return {
         ...post,
         videoSrc,
         posterSrc,
+        canViewMedia: canView,
         isMock: false as const,
         gradient: "",
         emoji: "",
         demoVideoSrc: null,
-        visibility: null,
-        invitedNames: null,
-        pendingKnockNames: null,
       };
     }),
   );
 
-  const mockPosts = buildMockPosts(
-    isComplex ? COMPLEX_MOCK_SAMPLES : DEMO_MOCK_SAMPLES,
-    userMap,
-    profileMap,
-    likeCountMap,
-    commentCountMap,
-  );
+  const mockPosts = isComplex
+    ? []
+    : buildDemoMockPosts(DEMO_MOCK_SAMPLES, userMap, profileMap, likeCountMap, commentCountMap);
 
   const allPosts = [...postsWithVideo, ...mockPosts].sort(
     (a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime(),
@@ -431,6 +455,7 @@ export default async function FeedPage({
           const buttonBasis = isOwnPost ? "basis-1/2" : "basis-1/3";
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
+          const followersLocked = isComplex && post.visibility === "followers" && !post.canViewMedia;
 
           return (
             <article
@@ -468,20 +493,46 @@ export default async function FeedPage({
                 <p className="px-3 pb-2 text-sm text-gray-700 dark:text-gray-300">{post.caption}</p>
               )}
 
-              {isComplex && post.visibility === "specific" && post.isMock ? (
+              {isComplex && post.visibility === "invite_only" ? (
                 <ComplexAccessGate
                   postId={post.id}
                   authorName={author?.name ?? "알 수 없음"}
                   isOwnPost={isOwnPost}
+                  currentUserId={currentUser?.id ?? ""}
+                  currentUserName={currentUserName}
                   expiresAt={post.expires_at}
-                  initialInvitedNames={post.invitedNames ?? []}
-                  initialPendingNames={post.pendingKnockNames ?? []}
-                  gradient={post.gradient}
-                  emoji={post.emoji}
+                  canViewMedia={post.canViewMedia}
+                  videoSrc={post.videoSrc}
+                  posterSrc={post.posterSrc}
+                  mediaType={post.media_type}
+                  invitedNames={
+                    isOwnPost
+                      ? accessRows
+                          .filter(
+                            (r) =>
+                              r.post_id === post.id && (r.status === "invited" || r.status === "accepted"),
+                          )
+                          .map((r) => accessNameMap.get(r.user_id) ?? "알 수 없음")
+                      : []
+                  }
+                  initialKnocked={
+                    !!currentUser &&
+                    accessRows.some(
+                      (r) => r.post_id === post.id && r.user_id === currentUser.id && r.status === "pending",
+                    )
+                  }
+                  initialPendingRequests={
+                    isOwnPost
+                      ? accessRows
+                          .filter((r) => r.post_id === post.id && r.status === "pending")
+                          .map((r) => ({ userId: r.user_id, name: accessNameMap.get(r.user_id) ?? "알 수 없음" }))
+                      : []
+                  }
                   contentTypeLabel={post.content_type ? CONTENT_TYPE_LABEL[post.content_type] : null}
                   tags={post.instrument_tags ?? []}
                   collabAvailable={post.collab_available}
                   collabRoleNeeded={post.collab_role_needed}
+                  initialChatMessages={chatMessagesByPost.get(post.id) ?? []}
                 />
               ) : (
                 <>
@@ -503,7 +554,14 @@ export default async function FeedPage({
                       </div>
                     )}
 
-                    {post.isMock ? (
+                    {followersLocked ? (
+                      <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
+                        <span className="text-4xl">🔒</span>
+                        <p className="max-w-xs text-sm text-gray-300">
+                          {author?.name ?? "작성자"}님을 팔로우하면 이 게시물을 볼 수 있어요.
+                        </p>
+                      </div>
+                    ) : post.isMock ? (
                       <div
                         className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
                       >
@@ -572,13 +630,17 @@ export default async function FeedPage({
                     )}
                   </div>
 
-                  {isComplex && post.isMock ? (
+                  {followersLocked ? (
+                    <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
+                      🔒 팔로우한 사람만 채팅과 작업물을 볼 수 있어요
+                    </div>
+                  ) : isComplex ? (
                     <ComplexPostChat
                       postId={post.id}
-                      authorName={author?.name ?? "알 수 없음"}
-                      participants={post.invitedNames ?? []}
-                      originalGradient={post.gradient}
-                      originalEmoji={post.emoji}
+                      currentUserId={currentUser?.id ?? ""}
+                      currentUserName={currentUserName}
+                      originalMediaType={post.media_type}
+                      initialMessages={chatMessagesByPost.get(post.id) ?? []}
                       collabAvailable={post.collab_available}
                     />
                   ) : post.isMock ? (

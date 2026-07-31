@@ -14,13 +14,21 @@ export type ContentType =
   | "rehearsal"
   | "improv"
   | "ensemble";
-// Phase 0: visibility는 'public' 고정 (FEED-03 5단계 UI 없음). 컬럼/타입은 Phase 1 대비 유지.
-export type PostVisibility = "public" | "major" | "school" | "followers" | "private";
+// demo는 'public' 고정. Complex(0012_complex_access_and_chat)가 'followers'/'invite_only'를 실제로
+// 씀 — 'invite_only'는 Complex의 특정인초대 공개범위 전용 값이고, 'major'/'school'/'private'은
+// 여전히 Phase 1 대비로만 남겨둠(0012의 posts_visibility_check 제약과 값 목록을 맞출 것).
+export type PostVisibility = "public" | "major" | "school" | "followers" | "invite_only" | "private";
 export type PostStatus = "scheduled" | "published" | "expired" | "deleted";
 export type ExpireHours = 6 | 12 | 24 | 48;
 // 0010_posts_media_type + 0011_posts_audio_media_type: 업로드 화면에서 영상/이미지/음원 중
 // 하나를 고르며, 고른 쪽 컬럼(video_url/image_url/audio_url)만 채워진다.
 export type MediaType = "video" | "image" | "audio";
+// 0012_complex_access_and_chat: post_access.status — invited(작성자가 초대) / pending(노크,
+// 열람 요청) / accepted(노크 수락됨). 거절은 행 삭제로 처리해서 별도 rejected 값은 없다.
+export type PostAccessStatus = "invited" | "pending" | "accepted";
+// post_chat_messages.type — Complex 채팅 + 재창작물 스택 공용. text만 content를 쓰고
+// 나머지는 file_key(R2 오브젝트 키)를 쓴다(0012의 content_matches_type 체크와 대응).
+export type ChatMessageType = "text" | "image" | "video" | "audio";
 
 export interface Database {
   public: {
@@ -241,6 +249,48 @@ export interface Database {
           read_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
+        Relationships: [];
+      };
+      post_access: {
+        Row: {
+          id: string;
+          post_id: string;
+          user_id: string;
+          status: PostAccessStatus;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          user_id: string;
+          status: PostAccessStatus;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_access"]["Insert"]>;
+        Relationships: [];
+      };
+      post_chat_messages: {
+        Row: {
+          id: string;
+          post_id: string;
+          sender_id: string;
+          type: ChatMessageType;
+          content: string | null;
+          file_key: string | null;
+          is_work: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          sender_id: string;
+          type: ChatMessageType;
+          content?: string | null;
+          file_key?: string | null;
+          is_work?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_chat_messages"]["Insert"]>;
         Relationships: [];
       };
     };
