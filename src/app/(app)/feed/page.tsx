@@ -13,6 +13,7 @@ import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import type { ContentType } from "@/types/database";
 import { tagColorClass } from "@/lib/feedConstants";
+import { timeAgo } from "@/lib/timeAgo";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -29,16 +30,6 @@ const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
 
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 30;
 const FEED_LIMIT = 20;
-
-function timeAgo(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return "방금 전";
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
-}
 
 // Demo(전체공개) 전용 샘플 게시물 — 실제 업로드 없이 볼륨미터/PEAK/타임리밋 UI를 바로 확인할 수
 // 있도록 넣은 데모 데이터. isMock 게시물은 DB에 실제 row가 없어 좋아요/댓글 버튼을 누를 수 없고
@@ -457,6 +448,13 @@ export default async function FeedPage({
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
           const followersLocked = isComplex && post.visibility === "followers" && !post.canViewMedia;
+          // memo(complex) 탭의 음원 게시물은 미디어 박스를 따로 안 쓰고 ComplexPostChat의
+          // mediaSlot으로 넘겨서 사운드바 옆에 재창작물 스택을 붙여 보여준다.
+          const isAudioInlineChat = isComplex && post.media_type === "audio" && !!post.videoSrc;
+          const audioMediaEl =
+            isAudioInlineChat && post.videoSrc ? (
+              <SoundbarPlayer src={post.videoSrc} title={post.caption || "음원"} posterSrc={post.posterSrc} />
+            ) : null;
 
           return (
             <article
@@ -479,6 +477,7 @@ export default async function FeedPage({
                     {timeAgo(post.published_at ?? new Date().toISOString())}
                   </span>
                 </div>
+                {post.expires_at && <TimeLimitBadge expiresAt={post.expires_at} />}
                 <span
                   className={`shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-bold ${
                     isComplex
@@ -501,7 +500,6 @@ export default async function FeedPage({
                   isOwnPost={isOwnPost}
                   currentUserId={currentUser?.id ?? ""}
                   currentUserName={currentUserName}
-                  expiresAt={post.expires_at}
                   canViewMedia={post.canViewMedia}
                   videoSrc={post.videoSrc}
                   posterSrc={post.posterSrc}
@@ -543,65 +541,62 @@ export default async function FeedPage({
                     </div>
                   )}
 
-                  <div className="relative flex items-center justify-center bg-black">
-                    {post.expires_at && (
-                      <div className="absolute left-3 top-3 z-10">
-                        <TimeLimitBadge expiresAt={post.expires_at} />
-                      </div>
-                    )}
-                    {!isComplex && (
-                      <div className="absolute right-3 top-3 z-10">
-                        <EngagementMeter />
-                      </div>
-                    )}
+                  {isAudioInlineChat ? null : (
+                    <div className="relative flex items-center justify-center bg-black">
+                      {!isComplex && (
+                        <div className="absolute right-3 top-3 z-10">
+                          <EngagementMeter />
+                        </div>
+                      )}
 
-                    {followersLocked ? (
-                      <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
-                        <span className="text-4xl">🔒</span>
-                        <p className="max-w-xs text-sm text-gray-300">
-                          {author?.name ?? "작성자"}님을 팔로우하면 이 게시물을 볼 수 있어요.
-                        </p>
-                      </div>
-                    ) : post.isMock ? (
-                      <div
-                        className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
-                      >
-                        {post.emoji}
-                        {post.demoVideoSrc && (
-                          <MockPlayOverlay
-                            postId={post.id}
-                            title={post.caption}
-                            author={author?.name ?? "알 수 없음"}
-                            videoSrc={post.demoVideoSrc}
-                          />
-                        )}
-                      </div>
-                    ) : post.videoSrc && post.media_type === "image" ? (
-                      <img
-                        src={post.videoSrc}
-                        alt={post.caption ?? "이미지 게시물"}
-                        className="max-h-[780px] w-auto object-contain"
-                      />
-                    ) : post.videoSrc && post.media_type === "audio" ? (
-                      <div className="flex w-full flex-col items-center gap-3 p-4">
-                        <SoundbarPlayer
+                      {followersLocked ? (
+                        <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
+                          <span className="text-4xl">🔒</span>
+                          <p className="max-w-xs text-sm text-gray-300">
+                            {author?.name ?? "작성자"}님을 팔로우하면 이 게시물을 볼 수 있어요.
+                          </p>
+                        </div>
+                      ) : post.isMock ? (
+                        <div
+                          className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
+                        >
+                          {post.emoji}
+                          {post.demoVideoSrc && (
+                            <MockPlayOverlay
+                              postId={post.id}
+                              title={post.caption}
+                              author={author?.name ?? "알 수 없음"}
+                              videoSrc={post.demoVideoSrc}
+                            />
+                          )}
+                        </div>
+                      ) : post.videoSrc && post.media_type === "image" ? (
+                        <img
                           src={post.videoSrc}
-                          title={post.caption || "음원"}
+                          alt={post.caption ?? "이미지 게시물"}
+                          className="max-h-[780px] w-auto object-contain"
+                        />
+                      ) : post.videoSrc && post.media_type === "audio" ? (
+                        <div className="flex w-full flex-col items-center gap-3 p-4">
+                          <SoundbarPlayer
+                            src={post.videoSrc}
+                            title={post.caption || "음원"}
+                            posterSrc={post.posterSrc}
+                          />
+                        </div>
+                      ) : post.videoSrc ? (
+                        <PostVideo
+                          postId={post.id}
+                          title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
+                          author={author?.name ?? "알 수 없음"}
+                          videoSrc={post.videoSrc}
                           posterSrc={post.posterSrc}
                         />
-                      </div>
-                    ) : post.videoSrc ? (
-                      <PostVideo
-                        postId={post.id}
-                        title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
-                        author={author?.name ?? "알 수 없음"}
-                        videoSrc={post.videoSrc}
-                        posterSrc={post.posterSrc}
-                      />
-                    ) : (
-                      <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
-                    )}
-                  </div>
+                      ) : (
+                        <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
                     {post.content_type && (
@@ -636,6 +631,7 @@ export default async function FeedPage({
                       originalMediaType={post.media_type}
                       initialMessages={chatMessagesByPost.get(post.id) ?? []}
                       collabAvailable={post.collab_available}
+                      mediaSlot={audioMediaEl ?? undefined}
                     />
                   ) : post.isMock ? (
                     <div

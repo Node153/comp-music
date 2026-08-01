@@ -10,7 +10,6 @@
 //   없음 — 예전 mock의 "대표자 외 N명" 장식 문구는 그래서 뺌).
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { PostVideo } from "@/components/PostVideo";
 import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
@@ -25,7 +24,6 @@ export function ComplexAccessGate({
   isOwnPost,
   currentUserId,
   currentUserName,
-  expiresAt,
   canViewMedia,
   videoSrc,
   posterSrc,
@@ -44,7 +42,6 @@ export function ComplexAccessGate({
   isOwnPost: boolean;
   currentUserId: string;
   currentUserName: string;
-  expiresAt: string | null;
   canViewMedia: boolean;
   videoSrc: string | null;
   posterSrc: string | null;
@@ -59,6 +56,13 @@ export function ComplexAccessGate({
   initialChatMessages: ChatMessage[];
 }) {
   const supabase = createClient();
+  // 음원 게시물은 미디어 박스를 안 쓰고 ComplexPostChat의 mediaSlot으로 넘겨서 사운드바 옆에
+  // 재창작물 스택을 붙여 보여준다(feed/page.tsx의 followers 공개 게시물과 동일한 패턴).
+  const isAudioInlineChat = canViewMedia && mediaType === "audio" && !!videoSrc;
+  const audioMediaEl =
+    isAudioInlineChat && videoSrc ? (
+      <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} posterSrc={posterSrc} />
+    ) : null;
   const [knocked, setKnocked] = useState(initialKnocked);
   const [knockPending, setKnockPending] = useState(false);
   const [pending, setPending] = useState<PendingRequest[]>(initialPendingRequests);
@@ -109,52 +113,44 @@ export function ComplexAccessGate({
         </div>
       )}
 
-      <div className="relative flex items-center justify-center bg-black">
-        {expiresAt && (
-          <div className="absolute left-3 top-3 z-10">
-            <TimeLimitBadge expiresAt={expiresAt} />
-          </div>
-        )}
-
-        {canViewMedia ? (
-          mediaType === "image" && videoSrc ? (
-            <img src={videoSrc} alt="" className="max-h-[780px] w-auto object-contain" />
-          ) : mediaType === "audio" && videoSrc ? (
-            <div className="flex w-full flex-col items-center gap-3 p-4">
-              <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} posterSrc={posterSrc} />
-            </div>
-          ) : videoSrc ? (
-            <PostVideo
-              postId={postId}
-              title={contentTypeLabel ?? "영상"}
-              author={authorName}
-              videoSrc={videoSrc}
-              posterSrc={posterSrc}
-            />
+      {isAudioInlineChat ? null : (
+        <div className="relative flex items-center justify-center bg-black">
+          {canViewMedia ? (
+            mediaType === "image" && videoSrc ? (
+              <img src={videoSrc} alt="" className="max-h-[780px] w-auto object-contain" />
+            ) : videoSrc ? (
+              <PostVideo
+                postId={postId}
+                title={contentTypeLabel ?? "영상"}
+                author={authorName}
+                videoSrc={videoSrc}
+                posterSrc={posterSrc}
+              />
+            ) : (
+              <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
+            )
           ) : (
-            <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
-          )
-        ) : (
-          <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
-            <span className="text-4xl">🔒</span>
-            <p className="max-w-xs text-sm text-gray-300">
-              {authorName}님이 특정 인원에게만 공개한 게시물이에요. 노크하면 열람을 요청할 수 있어요.
-            </p>
-            <button
-              type="button"
-              onClick={knock}
-              disabled={knocked || knockPending}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                knocked
-                  ? "cursor-default bg-gray-700 text-gray-300"
-                  : "bg-white text-black hover:bg-gray-200"
-              }`}
-            >
-              {knocked ? "✅ 요청 보냄" : "🚪 노크해서 열람 요청"}
-            </button>
-          </div>
-        )}
-      </div>
+            <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
+              <span className="text-4xl">🔒</span>
+              <p className="max-w-xs text-sm text-gray-300">
+                {authorName}님이 특정 인원에게만 공개한 게시물이에요. 노크하면 열람을 요청할 수 있어요.
+              </p>
+              <button
+                type="button"
+                onClick={knock}
+                disabled={knocked || knockPending}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  knocked
+                    ? "cursor-default bg-gray-700 text-gray-300"
+                    : "bg-white text-black hover:bg-gray-200"
+                }`}
+              >
+                {knocked ? "✅ 요청 보냄" : "🚪 노크해서 열람 요청"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
         {contentTypeLabel && (
@@ -223,6 +219,7 @@ export function ComplexAccessGate({
           originalMediaType={mediaType}
           initialMessages={initialChatMessages}
           collabAvailable={collabAvailable}
+          mediaSlot={audioMediaEl ?? undefined}
         />
       ) : (
         <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">

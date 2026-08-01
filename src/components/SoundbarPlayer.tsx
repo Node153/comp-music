@@ -96,7 +96,7 @@ export function SoundbarPlayer({
   }
 
   return (
-    <div className="flex w-full max-w-md flex-col gap-2 rounded-xl bg-neutral-900 p-3">
+    <div className="flex w-full flex-col gap-2 rounded-xl bg-neutral-900 p-3">
       {audioEl}
 
       <div className="flex items-center gap-2.5">

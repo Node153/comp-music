@@ -65,7 +65,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
             <LeftSidebar />
             <div>{children}</div>
-            <RightSidebar />
+            <RightSidebar currentUserId={user.id} />
           </div>
         ) : (
           children
