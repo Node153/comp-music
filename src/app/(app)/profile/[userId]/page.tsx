@@ -6,7 +6,7 @@ import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { MessageButton } from "@/components/MessageButton";
 import { LogoutButton } from "@/components/LogoutButton";
 import { badge, badgeDark, pageCard } from "@/components/ui/styles";
-import { FollowButton } from "./FollowButton";
+import { CompanionButton, type CompanionRelation } from "./CompanionButton";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
 // Phase 0: visibility가 public 고정이라 타인도 published/expired 게시물을 전부 볼 수 있음(0-2, 0-7)
@@ -25,7 +25,12 @@ export default async function ProfilePage({
   } = await supabase.auth.getUser();
   const isOwnProfile = currentUser?.id === userId;
 
-  const { data: user } = await supabase.from("users").select("name").eq("id", userId).single();
+  // 표시 이름은 user_display 뷰(0018) — 본인/Companion이면 실명, 아니면 닉네임.
+  const { data: user } = await supabase
+    .from("user_display")
+    .select("display_name")
+    .eq("id", userId)
+    .single();
   if (!user) notFound();
 
   const { data: profile } = await supabase
@@ -49,24 +54,30 @@ export default async function ProfilePage({
     }),
   );
 
-  const { count: followerCount } = await supabase
-    .from("follows")
+  // Companion(0017) — 팔로워/팔로잉 두 숫자 대신 "Companion n명" 하나만 센다(accepted만).
+  const { count: companionCount } = await supabase
+    .from("companions")
     .select("id", { count: "exact", head: true })
-    .eq("followee_id", userId);
-  const { count: followingCount } = await supabase
-    .from("follows")
-    .select("id", { count: "exact", head: true })
-    .eq("follower_id", userId);
+    .eq("status", "accepted")
+    .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
 
-  let isFollowing = false;
+  let relation: CompanionRelation = "none";
   if (currentUser && !isOwnProfile) {
-    const { data: existingFollow } = await supabase
-      .from("follows")
-      .select("id")
-      .eq("follower_id", currentUser.id)
-      .eq("followee_id", userId)
+    const { data: pairRow } = await supabase
+      .from("companions")
+      .select("requester_id, status")
+      .or(
+        `and(requester_id.eq.${currentUser.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${currentUser.id})`,
+      )
       .maybeSingle();
-    isFollowing = !!existingFollow;
+    if (pairRow) {
+      relation =
+        pairRow.status === "accepted"
+          ? "companions"
+          : pairRow.requester_id === currentUser.id
+            ? "outgoing"
+            : "incoming";
+    }
   }
 
   return (
@@ -75,19 +86,17 @@ export default async function ProfilePage({
 
       <div className="flex items-start gap-4">
         <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gray-100 text-2xl font-semibold text-gray-500">
-          {user.name.slice(0, 1)}
+          {user.display_name.slice(0, 1)}
         </span>
         <div className="flex flex-1 flex-col gap-1 pt-1">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">{user.name}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{user.display_name}</h1>
             {isOwnProfile && <LogoutButton />}
           </div>
           <div className="flex gap-4 text-sm text-gray-600">
-            <Link href={`/profile/${userId}/follows?tab=followers`} className="hover:text-gray-900">
-              팔로워 <span className="font-semibold text-gray-900">{followerCount ?? 0}</span>
-            </Link>
-            <Link href={`/profile/${userId}/follows?tab=following`} className="hover:text-gray-900">
-              팔로잉 <span className="font-semibold text-gray-900">{followingCount ?? 0}</span>
+            <Link href={`/profile/${userId}/companions`} className="hover:text-gray-900">
+              {isOwnProfile ? "나의 Companion" : "Companion"}{" "}
+              <span className="font-semibold text-gray-900">{companionCount ?? 0}명</span>
             </Link>
           </div>
         </div>
@@ -124,10 +133,10 @@ export default async function ProfilePage({
         ) : (
           currentUser && (
             <>
-              <FollowButton
+              <CompanionButton
                 currentUserId={currentUser.id}
                 targetUserId={userId}
-                initialFollowing={isFollowing}
+                initialRelation={relation}
               />
               <MessageButton
                 currentUserId={currentUser.id}

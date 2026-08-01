@@ -29,6 +29,9 @@ export type PostAccessStatus = "invited" | "pending" | "accepted";
 // post_chat_messages.type — Complex 채팅 + 재창작물 스택 공용. text만 content를 쓰고
 // 나머지는 file_key(R2 오브젝트 키)를 쓴다(0012의 content_matches_type 체크와 대응).
 export type ChatMessageType = "text" | "image" | "video" | "audio";
+// 0017_companions: companions.status — pending(신청 대기) / accepted(맞팔 성립).
+// 거절·취소·해제는 전부 행 삭제로 처리해서 별도 값이 없다(post_access와 같은 원칙).
+export type CompanionStatus = "pending" | "accepted";
 
 export interface Database {
   public: {
@@ -39,6 +42,7 @@ export interface Database {
           email: string;
           password_hash: string | null;
           name: string;
+          nickname: string;
           status: UserStatus;
           role: UserRole;
           notifications_seen_at: string;
@@ -50,6 +54,7 @@ export interface Database {
           email: string;
           password_hash?: string | null;
           name: string;
+          nickname: string;
           status?: UserStatus;
           role?: UserRole;
           notifications_seen_at?: string;
@@ -195,20 +200,25 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["comments"]["Insert"]>;
         Relationships: [];
       };
-      follows: {
+      // 0017_companions — 팔로우를 대체하는 맞팔 전용 관계. 쌍당 행 하나, pending → accepted.
+      companions: {
         Row: {
           id: string;
-          follower_id: string;
-          followee_id: string;
+          requester_id: string;
+          addressee_id: string;
+          status: CompanionStatus;
           created_at: string;
+          accepted_at: string | null;
         };
         Insert: {
           id?: string;
-          follower_id: string;
-          followee_id: string;
+          requester_id: string;
+          addressee_id: string;
+          status?: CompanionStatus;
           created_at?: string;
+          accepted_at?: string | null;
         };
-        Update: Partial<Database["public"]["Tables"]["follows"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["companions"]["Insert"]>;
         Relationships: [];
       };
       conversations: {
@@ -294,8 +304,25 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Views: {
+      // 0018 — 뷰어 기준 표시 이름: 본인/Companion이면 실명(users.name), 아니면 닉네임.
+      // 이름을 화면에 표시할 때는 users 대신 반드시 이 뷰를 조회한다.
+      user_display: {
+        Row: {
+          id: string;
+          display_name: string;
+          shows_real_name: boolean;
+        };
+        Relationships: [];
+      };
+    };
+    Functions: {
+      // 0017_companions: invite_only 게시물 노크 UI용 — 참여자 중 내 Companion 이름 + 그 외 인원수.
+      knock_context: {
+        Args: { pid: string };
+        Returns: { companion_names: string[]; other_count: number }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

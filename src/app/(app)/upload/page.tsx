@@ -47,7 +47,8 @@ const UPLOAD_TYPE_OPTIONS: { value: UploadType; label: string; icon: string }[] 
 // Phase 1의 "private"는 "나만 보기"에 가까운 다른 의미라 값을 분리해뒀음).
 type ComplexVisibility = "followers" | "specific";
 const COMPLEX_VISIBILITY_OPTIONS: { value: ComplexVisibility; label: string; icon: string }[] = [
-  { value: "followers", label: "팔로워 공개", icon: "👥" },
+  // "followers" 저장값은 0012 그대로 두고 의미만 Companion 공개로 재정의(0017_companions).
+  { value: "followers", label: "Companion 공개", icon: "👥" },
   { value: "specific", label: "초대한 사람만", icon: "🔒" },
 ];
 // posts.expire_hours는 not null 컬럼이라 demo(영구노출)에도 값이 필요하지만,
@@ -501,10 +502,14 @@ export default function UploadPage() {
                 </button>
               ))}
             </div>
-            {uploadType === "complex" && (
+            {uploadType === "complex" ? (
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                memo는 팔로워공개 또는 특정인초대로만 게시돼요. 노출 시간이 지나면 자동으로
+                memo는 Companion공개 또는 특정인초대로만 게시돼요. 노출 시간이 지나면 자동으로
                 피드에서 사라집니다.
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                DEMO는 전체공개로 게시돼요. 노출 시간 제한 없이 피드에 영구 노출됩니다.
               </p>
             )}
           </div>
@@ -676,11 +681,8 @@ export default function UploadPage() {
             </div>
           )}
 
-          {uploadType === "demo" ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              DEMO는 전체공개 게시물이라 노출 시간이 영구예요.
-            </p>
-          ) : (
+          {/* DEMO 안내는 게시 유형 바로 아래 설명글로 통합 — 여기는 memo 전용 설정만 남김. */}
+          {uploadType === "complex" && (
             <>
               <div className="flex flex-col gap-1.5">
                 <span className={darkLabel}>공개 범위</span>

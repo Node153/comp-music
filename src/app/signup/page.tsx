@@ -6,11 +6,16 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, errorText, pageTitle } from "@/components/ui/styles";
+import { randomNicknameExample } from "@/lib/nicknameExamples";
 
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState("");
+  // 실명/닉네임 이원화(0018) — Companion에게는 실명, 그 외에게는 닉네임이 보이므로 둘 다 필수.
+  const [nickname, setNickname] = useState("");
+  // placeholder 예시는 mount마다 랜덤 — SSR과 달라질 수 있어 input에 suppressHydrationWarning.
+  const [nicknameExample] = useState(randomNicknameExample);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,12 +30,16 @@ export default function SignupPage() {
       setError("비밀번호는 8자 이상이어야 합니다.");
       return;
     }
+    if (!nickname.trim()) {
+      setError("닉네임을 입력해주세요.");
+      return;
+    }
 
     setLoading(true);
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } },
+      options: { data: { name, nickname: nickname.trim() } },
     });
     setLoading(false);
 
@@ -74,12 +83,27 @@ export default function SignupPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           type="text"
-          placeholder="이름"
+          placeholder="실명 (Companion에게만 보여요)"
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
           className={field}
         />
+        <div className="flex flex-col gap-1">
+          <input
+            type="text"
+            placeholder={`닉네임 예: ${nicknameExample}`}
+            suppressHydrationWarning
+            required
+            maxLength={30}
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            className={field}
+          />
+          <p className="px-1 text-xs text-gray-400">
+            Companion이 아닌 사람에게는 실명 대신 닉네임이 보여요.
+          </p>
+        </div>
         <input
           type="email"
           placeholder="이메일"

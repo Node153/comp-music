@@ -42,12 +42,13 @@ export function CommentPanel({
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
 
+    // 이름은 user_display 뷰(0018) — 내가 Companion인 작성자만 실명, 나머지는 닉네임.
     const userIds = [...new Set((rows ?? []).map((r) => r.user_id))];
     const { data: users } =
       userIds.length > 0
-        ? await supabase.from("users").select("id, name").in("id", userIds)
+        ? await supabase.from("user_display").select("id, display_name").in("id", userIds)
         : { data: [] };
-    const nameMap = new Map((users ?? []).map((u) => [u.id, u.name]));
+    const nameMap = new Map((users ?? []).map((u) => [u.id, u.display_name]));
 
     setComments(
       (rows ?? []).map((r) => ({ ...r, authorName: nameMap.get(r.user_id) ?? "알 수 없음" })),

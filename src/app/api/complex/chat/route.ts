@@ -33,12 +33,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // 이름은 user_display 뷰(0018) — 요청자가 Companion이면 실명, 아니면 닉네임.
   const senderIds = [...new Set((rows ?? []).map((row) => row.sender_id))];
   const { data: senders } =
     senderIds.length > 0
-      ? await supabase.from("users").select("id, name").in("id", senderIds)
+      ? await supabase.from("user_display").select("id, display_name").in("id", senderIds)
       : { data: [] };
-  const senderNameMap = new Map((senders ?? []).map((s) => [s.id, s.name]));
+  const senderNameMap = new Map((senders ?? []).map((s) => [s.id, s.display_name]));
 
   const messages = await Promise.all(
     (rows ?? []).map(async (row) => ({

@@ -63,7 +63,7 @@ export function TopNav({
               title={
                 tab.value === "completion"
                   ? "전체공개 게시물 · 노출 시간 영구"
-                  : "팔로워 공개 게시물 · 노출 시간 설정 필수"
+                  : "Companion 공개 게시물 · 노출 시간 설정 필수"
               }
               className={`flex h-full items-center gap-1.5 border-b-2 px-4 text-sm font-bold transition ${
                 isActive

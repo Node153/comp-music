@@ -83,11 +83,11 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
 
       const [{ data: access }, { data: authors }] = await Promise.all([
         supabase.from("post_access").select("post_id, status").eq("user_id", currentUserId).in("post_id", postIds),
-        supabase.from("users").select("id, name").in("id", authorIds),
+        supabase.from("user_display").select("id, display_name").in("id", authorIds),
       ]);
 
       const accessMap = new Map((access ?? []).map((a) => [a.post_id, a.status]));
-      const authorMap = new Map((authors ?? []).map((u) => [u.id, u.name]));
+      const authorMap = new Map((authors ?? []).map((u) => [u.id, u.display_name]));
 
       const knockable: KnockablePost[] = posts
         .filter((p) => accessMap.get(p.id) !== "invited" && accessMap.get(p.id) !== "accepted")

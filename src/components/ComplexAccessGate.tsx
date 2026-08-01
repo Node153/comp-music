@@ -6,8 +6,10 @@
 //   이 "티저" 동작 때문에 posts 행 자체의 RLS는 visibility로 좁히지 않고, 실제 프라이버시 경계는
 //   feed/page.tsx가 뷰어별로 미디어 signed URL을 조건부 발급하는 데서 생긴다 — canViewMedia prop이
 //   그 결과다.
-// - 비초대 방문자에게는 초대자 명단을 보여주지 않는다(초대 안 된 사람에게 초대 목록을 노출할 이유가
-//   없음 — 예전 mock의 "대표자 외 N명" 장식 문구는 그래서 뺌).
+// - 비초대 방문자에게는 초대자 전체 명단 대신 부분 공개만(0017_companions): 참여자 중 나의
+//   Companion 이름 + 그 외 "외 n명"(knock_context 함수가 서버에서 계산 — feed/page.tsx).
+// - 노크는 방장과 Companion인 사람만 가능(canKnock) — RLS(post_access_insert_knock_self)에서도
+//   동일하게 강제되므로 여기 disabled는 UX 힌트일 뿐.
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PostVideo } from "@/components/PostVideo";
@@ -30,6 +32,9 @@ export function ComplexAccessGate({
   mediaType,
   invitedNames,
   initialKnocked,
+  canKnock,
+  companionParticipantNames,
+  otherParticipantCount,
   initialPendingRequests,
   contentTypeLabel,
   tags,
@@ -48,6 +53,11 @@ export function ComplexAccessGate({
   mediaType: MediaType;
   invitedNames: string[];
   initialKnocked: boolean;
+  // 방장과 내가 Companion인가 — 노크 버튼 활성 조건(서버 RLS가 실제 경계).
+  canKnock: boolean;
+  // 잠긴 게시물의 참여자 중 나의 Companion 이름들 / Companion이 아닌 참여자 수("외 n명").
+  companionParticipantNames: string[];
+  otherParticipantCount: number;
   initialPendingRequests: PendingRequest[];
   contentTypeLabel: string | null;
   tags: string[];
@@ -79,8 +89,18 @@ export function ComplexAccessGate({
   const [pending, setPending] = useState<PendingRequest[]>(initialPendingRequests);
   const [requestsOpen, setRequestsOpen] = useState(false);
 
+  // "OO, XX 외 3명 참여 중" — Companion 이름 우선, 비Companion은 인원수만(부분 공개).
+  const participantSummary =
+    companionParticipantNames.length > 0
+      ? `${companionParticipantNames.join(", ")}${
+          otherParticipantCount > 0 ? ` 외 ${otherParticipantCount}명` : ""
+        } 참여 중`
+      : otherParticipantCount > 0
+        ? `${otherParticipantCount}명 참여 중`
+        : null;
+
   async function knock() {
-    if (knockPending || knocked) return;
+    if (knockPending || knocked || !canKnock) return;
     setKnockPending(true);
     setKnocked(true); // optimistic
     const { error } = await supabase
@@ -132,20 +152,28 @@ export function ComplexAccessGate({
             <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
               <span className="text-4xl">🔒</span>
               <p className="max-w-xs text-sm text-gray-300">
-                {authorName}님이 특정 인원에게만 공개한 게시물이에요. 노크하면 열람을 요청할 수 있어요.
+                {authorName}님이 특정 인원에게만 공개한 게시물이에요.
+                {canKnock
+                  ? " 노크하면 열람을 요청할 수 있어요."
+                  : ` ${authorName}님과 Companion이 되면 노크할 수 있어요.`}
               </p>
-              <button
-                type="button"
-                onClick={knock}
-                disabled={knocked || knockPending}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  knocked
-                    ? "cursor-default bg-gray-700 text-gray-300"
-                    : "bg-white text-black hover:bg-gray-200"
-                }`}
-              >
-                {knocked ? "✅ 요청 보냄" : "🚪 노크해서 열람 요청"}
-              </button>
+              {participantSummary && (
+                <p className="max-w-xs text-xs text-gray-400">👥 {participantSummary}</p>
+              )}
+              {canKnock && (
+                <button
+                  type="button"
+                  onClick={knock}
+                  disabled={knocked || knockPending}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    knocked
+                      ? "cursor-default bg-gray-700 text-gray-300"
+                      : "bg-white text-black hover:bg-gray-200"
+                  }`}
+                >
+                  {knocked ? "✅ 요청 보냄" : "🚪 노크해서 열람 요청"}
+                </button>
+              )}
             </div>
           )}
         </div>

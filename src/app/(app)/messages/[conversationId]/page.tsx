@@ -33,11 +33,13 @@ export default async function ConversationPage({
 
   const otherUserId =
     conversation.user_a_id === currentUser.id ? conversation.user_b_id : conversation.user_a_id;
-  const { data: otherUser } = await supabase
-    .from("users")
-    .select("name")
+  // 이름은 user_display 뷰(0018) — Companion이면 실명, 아니면 닉네임.
+  const { data: otherUserRow } = await supabase
+    .from("user_display")
+    .select("display_name")
     .eq("id", otherUserId)
     .single();
+  const otherUser = otherUserRow ? { name: otherUserRow.display_name } : null;
 
   const { data: messages } = await supabase
     .from("messages")

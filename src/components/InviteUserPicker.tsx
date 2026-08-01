@@ -2,8 +2,8 @@
 
 // Complex 업로드에서 "초대한 사람만" 선택 시 쓰는 실제 사용자 검색+선택 UI.
 // 이름 자유 입력(예전 inviteNames 텍스트박스)은 실제 user_id로 매핑이 안 돼서 post_access에
-// 넣을 수 없었음 — users_select_self_or_approved_peers RLS가 이미 "승인된 사용자는 서로의
-// id/name을 볼 수 있음"을 허용하므로 별도 API 없이 클라이언트에서 바로 검색 가능.
+// 넣을 수 없었음. 검색은 user_display 뷰(0018)를 쓰므로 Companion은 실명으로, 그 외에는
+// 닉네임으로 검색·표시된다(실명 노출 정책과 자동으로 일치).
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -34,13 +34,12 @@ export function InviteUserPicker({
       }
       setLoading(true);
       const { data } = await supabase
-        .from("users")
-        .select("id, name")
-        .eq("status", "approved")
+        .from("user_display")
+        .select("id, display_name")
         .neq("id", currentUserId)
-        .ilike("name", `%${trimmed}%`)
+        .ilike("display_name", `%${trimmed}%`)
         .limit(8);
-      setResults(data ?? []);
+      setResults((data ?? []).map((u) => ({ id: u.id, name: u.display_name })));
       setLoading(false);
     }, 300);
     return () => {

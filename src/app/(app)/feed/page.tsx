@@ -279,15 +279,16 @@ export default async function FeedPage({
   const postIds = (posts ?? []).map((p) => p.id);
   const userIds = [...new Set((posts ?? []).map((p) => p.user_id))];
 
+  // 이름 표시는 전부 user_display 뷰(0018) — 뷰어가 Companion이면 실명, 아니면 닉네임이 내려온다.
   const { data: users } =
     userIds.length > 0
-      ? await supabase.from("users").select("id, name").in("id", userIds)
+      ? await supabase.from("user_display").select("id, display_name").in("id", userIds)
       : { data: [] };
   const { data: profiles } =
     userIds.length > 0
       ? await supabase.from("profiles").select("user_id, school, major").in("user_id", userIds)
       : { data: [] };
-  const userMap = new Map((users ?? []).map((u) => [u.id, u]));
+  const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
   const { data: likeRows } =
@@ -314,19 +315,22 @@ export default async function FeedPage({
   // posts 행 자체는(캡션/작성자/태그/노크 버튼) 모두에게 보이지만, 미디어 signed URL과 채팅은
   // 여기서 계산한 canViewMedia가 true일 때만 발급한다(0012 설계 — R2는 버킷 RLS가 없어서
   // 이 조건부 서명이 실제 프라이버시 경계).
-  const followersPostAuthorIds = [
-    ...new Set((posts ?? []).filter((p) => p.visibility === "followers").map((p) => p.user_id)),
-  ];
   const inviteOnlyPostIds = (posts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
 
-  let followingAuthorIds = new Set<string>();
-  if (currentUser && followersPostAuthorIds.length > 0) {
-    const { data: followRows } = await supabase
-      .from("follows")
-      .select("followee_id")
-      .eq("follower_id", currentUser.id)
-      .in("followee_id", followersPostAuthorIds);
-    followingAuthorIds = new Set((followRows ?? []).map((f) => f.followee_id));
+  // 내 Companion(맞팔, 0017) 전체 — followers(=Companion 공개) 게시물 열람 판정과
+  // invite_only 노크 가능 여부(방장과 Companion인가) 판정에 함께 쓴다.
+  let myCompanionIds = new Set<string>();
+  if (currentUser && isComplex) {
+    const { data: companionRows } = await supabase
+      .from("companions")
+      .select("requester_id, addressee_id")
+      .eq("status", "accepted")
+      .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`);
+    myCompanionIds = new Set(
+      (companionRows ?? []).map((r) =>
+        r.requester_id === currentUser.id ? r.addressee_id : r.requester_id,
+      ),
+    );
   }
 
   // post_access_select_self_or_author RLS 덕분에 이 한 번의 조회로 (a) 내 열람 권한 판정과
@@ -343,16 +347,16 @@ export default async function FeedPage({
   const accessUserIds = [...new Set(accessRows.map((r) => r.user_id))];
   const { data: accessUsers } =
     accessUserIds.length > 0
-      ? await supabase.from("users").select("id, name").in("id", accessUserIds)
+      ? await supabase.from("user_display").select("id, display_name").in("id", accessUserIds)
       : { data: [] };
-  const accessNameMap = new Map((accessUsers ?? []).map((u) => [u.id, u.name]));
+  const accessNameMap = new Map((accessUsers ?? []).map((u) => [u.id, u.display_name]));
 
   function canViewMediaFor(post: { id: string; user_id: string; visibility: string }): boolean {
     if (!isComplex) return true;
     if (post.visibility === "public") return true;
     if (!currentUser) return false;
     if (post.user_id === currentUser.id) return true;
-    if (post.visibility === "followers") return followingAuthorIds.has(post.user_id);
+    if (post.visibility === "followers") return myCompanionIds.has(post.user_id);
     if (post.visibility === "invite_only") {
       return accessRows.some(
         (r) =>
@@ -362,6 +366,28 @@ export default async function FeedPage({
       );
     }
     return false;
+  }
+
+  // 노크 UI 컨텍스트(0017) — 내가 열람 못 하는 invite_only 게시물의 참여자 중 내 Companion
+  // 이름과 그 외 인원수. post_access select RLS는 비참여자에게 명단을 숨기므로, 부분 공개
+  // 전용 security definer 함수(knock_context)로만 가져온다.
+  const knockContextByPost = new Map<string, { companionNames: string[]; otherCount: number }>();
+  if (currentUser && isComplex) {
+    const lockedInviteOnly = (posts ?? []).filter(
+      (p) => p.visibility === "invite_only" && p.user_id !== currentUser.id && !canViewMediaFor(p),
+    );
+    await Promise.all(
+      lockedInviteOnly.map(async (p) => {
+        const { data } = await supabase.rpc("knock_context", { pid: p.id });
+        const row = data?.[0];
+        if (row) {
+          knockContextByPost.set(p.id, {
+            companionNames: row.companion_names ?? [],
+            otherCount: row.other_count ?? 0,
+          });
+        }
+      }),
+    );
   }
 
   // 열람 가능한 Complex 게시물의 채팅+재창작물 스택을 서버에서 미리 가져온다(초기 렌더용 —
@@ -379,9 +405,9 @@ export default async function FeedPage({
   const chatSenderIds = [...new Set((chatRows ?? []).map((r) => r.sender_id))];
   const { data: chatSenders } =
     chatSenderIds.length > 0
-      ? await supabase.from("users").select("id, name").in("id", chatSenderIds)
+      ? await supabase.from("user_display").select("id, display_name").in("id", chatSenderIds)
       : { data: [] };
-  const chatSenderNameMap = new Map((chatSenders ?? []).map((u) => [u.id, u.name]));
+  const chatSenderNameMap = new Map((chatSenders ?? []).map((u) => [u.id, u.display_name]));
 
   const chatMessagesByPost = new Map<string, ChatMessage[]>();
   for (const row of chatRows ?? []) {
@@ -519,6 +545,9 @@ export default async function FeedPage({
                       (r) => r.post_id === post.id && r.user_id === currentUser.id && r.status === "pending",
                     )
                   }
+                  canKnock={!isOwnPost && !!currentUser && myCompanionIds.has(post.user_id)}
+                  companionParticipantNames={knockContextByPost.get(post.id)?.companionNames ?? []}
+                  otherParticipantCount={knockContextByPost.get(post.id)?.otherCount ?? 0}
                   initialPendingRequests={
                     isOwnPost
                       ? accessRows
@@ -536,7 +565,7 @@ export default async function FeedPage({
                 <>
                   {isComplex && post.visibility === "followers" && (
                     <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-                      <span>🔒 팔로워 공개</span>
+                      <span>🔒 Companion 공개</span>
                     </div>
                   )}
 
@@ -552,7 +581,7 @@ export default async function FeedPage({
                         <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
                           <span className="text-4xl">🔒</span>
                           <p className="max-w-xs text-sm text-gray-300">
-                            {author?.name ?? "작성자"}님을 팔로우하면 이 게시물을 볼 수 있어요.
+                            {author?.name ?? "작성자"}님과 Companion이 되면 이 게시물을 볼 수 있어요.
                           </p>
                         </div>
                       ) : post.isMock ? (
@@ -620,7 +649,7 @@ export default async function FeedPage({
 
                   {followersLocked ? (
                     <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
-                      🔒 팔로우한 사람만 채팅과 작업물을 볼 수 있어요
+                      🔒 Companion만 채팅과 작업물을 볼 수 있어요
                     </div>
                   ) : isComplex ? (
                     <ComplexPostChat

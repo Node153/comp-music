@@ -25,9 +25,9 @@ export default async function MessagesPage() {
 
   const { data: users } =
     otherUserIds.length > 0
-      ? await supabase.from("users").select("id, name").in("id", otherUserIds)
+      ? await supabase.from("user_display").select("id, display_name").in("id", otherUserIds)
       : { data: [] };
-  const userMap = new Map((users ?? []).map((u) => [u.id, u.name]));
+  const userMap = new Map((users ?? []).map((u) => [u.id, u.display_name]));
 
   const { data: lastMessages } =
     conversationIds.length > 0
