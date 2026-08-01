@@ -78,7 +78,7 @@ export function SidebarChatPanel() {
             </span>
           )}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-gray-600 dark:text-gray-300">메시지</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-gray-600 dark:text-gray-300">DM</span>
         <span className="shrink-0 text-xs text-gray-400">{panelOpen ? "▲" : "▼"}</span>
       </button>
 
