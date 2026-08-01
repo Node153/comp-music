@@ -4,6 +4,8 @@
 // 재창작물(작업물)은 음원 파일만 올릴 수 있다(0015_work_uploads_audio_only) — 올릴 때마다
 // 원본(1차)을 이어받은 재창작물(2차, 3차...)로 취급해 스택처럼 쌓아 보여준다. 일반 텍스트
 // 채팅과는 구분됨(텍스트는 항상 잡담일 뿐 재창작물이 될 수 없음).
+// 이미지는 재창작물로는 못 쓰지만 일반 채팅 메시지(is_work=false)로는 업로드 가능
+// (0016_allow_image_chat_messages) — 협업 구함 여부와 무관하게 참여자 누구나.
 // 0012_complex_access_and_chat로 실제 DB(post_chat_messages) 연동됨 — Realtime 구독은 이번
 // 범위에서 보류(전송/새로고침 시에만 반영). 파일 업로드는 기존 R2 파이프라인(uploadFileToR2)을
 // 그대로 재사용.
@@ -63,6 +65,7 @@ export function ComplexPostChat({
   const [refreshing, setRefreshing] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const workMessages = messages.filter((m) => m.isWork);
 
@@ -95,16 +98,16 @@ export function ComplexPostChat({
     setDraft("");
   }
 
-  async function handleAudioFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || sending) return;
+  // 음원은 재창작물(is_work=true), 이미지는 일반 채팅(is_work=false) — RLS(0016)에서도 동일하게 강제.
+  async function sendFile(file: File, type: "audio" | "image") {
+    if (sending) return;
     setSending(true);
     try {
+      const isWork = type === "audio";
       const fileKey = await uploadFileToR2(file);
       const { data, error } = await supabase
         .from("post_chat_messages")
-        .insert({ post_id: postId, sender_id: currentUserId, type: "audio", file_key: fileKey, is_work: true })
+        .insert({ post_id: postId, sender_id: currentUserId, type, file_key: fileKey, is_work: isWork })
         .select("id, created_at")
         .single();
       if (error || !data) return;
@@ -116,16 +119,24 @@ export function ComplexPostChat({
           id: data.id,
           senderId: currentUserId,
           senderName: currentUserName,
-          type: "audio",
+          type,
           fileUrl: localUrl,
           fileName: file.name,
-          isWork: true,
+          isWork,
           createdAt: data.created_at,
         },
       ]);
     } finally {
       setSending(false);
     }
+  }
+
+  function handleFileInput(type: "audio" | "image") {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (file) void sendFile(file, type);
+    };
   }
 
   async function refreshMessages() {
@@ -268,7 +279,7 @@ export function ComplexPostChat({
           accept="audio/mpeg,audio/mp3,audio/wav"
           className="hidden"
           disabled={!canUploadWork}
-          onChange={handleAudioFile}
+          onChange={handleFileInput("audio")}
         />
         <button
           type="button"
@@ -278,6 +289,23 @@ export function ComplexPostChat({
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
         >
           🎵
+        </button>
+        {/* 이미지는 재창작물이 아닌 일반 채팅이라 협업 구함 게이트(canUploadWork) 없이 누구나. */}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileInput("image")}
+        />
+        <button
+          type="button"
+          disabled={sending}
+          title="이미지 올리기 (일반 채팅 — 재창작물 아님)"
+          onClick={() => imageInputRef.current?.click()}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+        >
+          🖼️
         </button>
         <input
           type="text"
