@@ -744,8 +744,9 @@ export default function UploadPage() {
                 Compilation
               </label>
               <p className="-mt-1 px-1 text-xs text-gray-400 dark:text-gray-500">
-                켜두면 방장 외 참여자도 채팅에서 음원 작업물을 올릴 수 있어요. 같이 곡을
-                채워나갈 사람을 구할 때 사용하세요.
+                켜두면 방장 외 참여자도 채팅에서 음원 작업물을 올릴 수 있어요. 올린 음원은
+                원본을 이어받은 재창작물로 스택처럼 쌓여요. 같이 곡을 채워나갈 사람을 구할 때
+                사용하세요.
               </p>
               {collabAvailable && (
                 <input
