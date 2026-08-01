@@ -14,22 +14,30 @@ import { createClient } from "@/lib/supabase/client";
 import { SidebarChatPanel } from "@/components/SidebarChatPanel";
 import { timeAgo } from "@/lib/timeAgo";
 
-type OnlineCompanion = {
+type Companion = {
+  id: string;
   name: string;
+  role: string;
   status: "online" | "idle";
   activity?: string;
   color: string;
 };
 
-const MOCK_ONLINE: OnlineCompanion[] = [
-  { name: "이도윤", status: "online", color: "bg-amber-700" },
-  { name: "강민서", status: "online", activity: "온라인 게임 중", color: "bg-sky-700" },
-  { name: "윤소이", status: "idle", color: "bg-fuchsia-900" },
-  { name: "배지훈", status: "idle", color: "bg-orange-400" },
+const COMPANIONS: Companion[] = [
+  { id: "c1", name: "이도윤", role: "보컬", status: "online", color: "bg-amber-700" },
+  {
+    id: "c2",
+    name: "강민서",
+    role: "드럼",
+    status: "online",
+    activity: "온라인 게임 중",
+    color: "bg-sky-700",
+  },
+  { id: "c3", name: "윤소이", role: "신스", status: "idle", color: "bg-fuchsia-900" },
+  { id: "c4", name: "배지훈", role: "프로듀서", status: "idle", color: "bg-orange-400" },
 ];
 
-type DmMessage = { from: "me" | "them"; text: string };
-const DM_AUTO_REPLIES = ["ㅋㅋㅋ 맞아요", "오 좋은데요?", "넵 확인했어요!", "잠시만요, 확인 중"];
+const ONLINE_VISIBLE_LIMIT = 3;
 
 // 실시간 PEAK 게시물 = 지금 핫한 게시물(좋아요+댓글 합이 PEAK_THRESHOLD를 넘은 게시물).
 // postId는 feed/page.tsx의 DEMO_MOCK_SAMPLES와 같은 값 — 클릭하면 해당 게시물로 이동(#앵커).
@@ -72,26 +80,16 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
 
   const [knockablePosts, setKnockablePosts] = useState<KnockablePost[] | null>(null);
 
-  const [openDmFor, setOpenDmFor] = useState<string | null>(null);
-  const [dmMessagesByName, setDmMessagesByName] = useState<Record<string, DmMessage[]>>({});
-  const [dmDraft, setDmDraft] = useState("");
+  const [showAllOnline, setShowAllOnline] = useState(false);
+  const [dmPanelOpen, setDmPanelOpen] = useState(false);
+  const [selectedDmId, setSelectedDmId] = useState<string | null>(null);
 
-  function toggleDm(name: string) {
-    setOpenDmFor((prev) => (prev === name ? null : name));
-    setDmDraft("");
+  function openDmWith(id: string) {
+    setSelectedDmId(id);
+    setDmPanelOpen(true);
   }
 
-  function sendDm(name: string) {
-    const text = dmDraft.trim();
-    if (!text) return;
-    setDmMessagesByName((prev) => ({ ...prev, [name]: [...(prev[name] ?? []), { from: "me", text }] }));
-    setDmDraft("");
-
-    const reply = DM_AUTO_REPLIES[Math.floor(Math.random() * DM_AUTO_REPLIES.length)];
-    setTimeout(() => {
-      setDmMessagesByName((prev) => ({ ...prev, [name]: [...(prev[name] ?? []), { from: "them", text: reply }] }));
-    }, 1000);
-  }
+  const visibleCompanions = showAllOnline ? COMPANIONS : COMPANIONS.slice(0, ONLINE_VISIBLE_LIMIT);
 
   useEffect(() => {
     if (!isMemoTab) return;
@@ -166,108 +164,67 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
     <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-4 md:flex">
       <section>
         <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          온라인 — {MOCK_ONLINE.length}명
+          온라인 — {COMPANIONS.length}명
         </h2>
         <div className="mt-1 flex flex-col gap-0.5">
-          {MOCK_ONLINE.map((person) => (
-            <div key={person.name}>
-              <div className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-gray-200/60 dark:hover:bg-gray-900">
+          {visibleCompanions.map((person) => (
+            <div
+              key={person.id}
+              className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-gray-200/60 dark:hover:bg-gray-900"
+            >
+              <span
+                className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${person.color}`}
+              >
+                {person.name.slice(0, 1)}
                 <span
-                  className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${person.color}`}
-                >
-                  {person.name.slice(0, 1)}
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-black ${
-                      person.status === "online" ? "bg-emerald-500" : "bg-amber-400"
-                    }`}
-                  />
+                  className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-black ${
+                    person.status === "online" ? "bg-emerald-500" : "bg-amber-400"
+                  }`}
+                />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
+                  {person.name}
                 </span>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
-                    {person.name}
-                  </span>
-                  <span className="truncate text-xs text-gray-400 dark:text-gray-500">
-                    {person.activity ? `🎮 ${person.activity}` : person.status === "online" ? "온라인" : "자리 비움"}
-                  </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
-                  <button
-                    onClick={() => toggleDm(person.name)}
-                    aria-label="DM 보내기"
-                    className={`flex h-6 w-6 items-center justify-center rounded-full hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${
-                      openDmFor === person.name ? "text-gray-700 dark:text-gray-200" : "text-gray-400"
-                    }`}
-                  >
-                    💬
-                  </button>
-                  <button
-                    aria-label="더 보기"
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                  >
-                    ⋮
-                  </button>
-                </div>
+                <span className="truncate text-xs text-gray-400 dark:text-gray-500">
+                  {person.activity ? `🎮 ${person.activity}` : person.status === "online" ? "온라인" : "자리 비움"}
+                </span>
               </div>
-
-              {openDmFor === person.name && (
-                <div className="mb-1 ml-2 flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-                  <div className="flex items-center justify-between border-b border-gray-100 px-2.5 py-1.5 dark:border-gray-800">
-                    <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
-                      {person.name}님에게 DM
-                    </span>
-                    <button
-                      onClick={() => setOpenDmFor(null)}
-                      aria-label="닫기"
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="flex max-h-32 flex-col gap-1.5 overflow-y-auto px-2.5 py-2">
-                    {(dmMessagesByName[person.name] ?? []).length === 0 ? (
-                      <p className="text-xs text-gray-400 dark:text-gray-500">아직 대화가 없어요</p>
-                    ) : (
-                      (dmMessagesByName[person.name] ?? []).map((m, i) => (
-                        <span
-                          key={i}
-                          className={`max-w-[85%] rounded-2xl px-2.5 py-1 text-xs ${
-                            m.from === "me"
-                              ? "self-end bg-black text-white dark:bg-white dark:text-black"
-                              : "self-start bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                          }`}
-                        >
-                          {m.text}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      sendDm(person.name);
-                    }}
-                    className="flex items-center gap-1.5 border-t border-gray-100 p-1.5 dark:border-gray-800"
-                  >
-                    <input
-                      type="text"
-                      value={dmDraft}
-                      onChange={(e) => setDmDraft(e.target.value)}
-                      placeholder="DM 보내기..."
-                      className="w-full flex-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-800 placeholder:text-gray-400 dark:bg-gray-800 dark:text-gray-200"
-                    />
-                    <button
-                      type="submit"
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-200"
-                    >
-                      ➤
-                    </button>
-                  </form>
-                </div>
-              )}
+              <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                <button
+                  onClick={() => openDmWith(person.id)}
+                  aria-label="DM 보내기"
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  💬
+                </button>
+                <button
+                  aria-label="더 보기"
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  ⋮
+                </button>
+              </div>
             </div>
           ))}
         </div>
+        {COMPANIONS.length > ONLINE_VISIBLE_LIMIT && (
+          <button
+            onClick={() => setShowAllOnline((v) => !v)}
+            className="mt-0.5 w-full rounded-md px-2 py-1 text-left text-xs text-gray-400 transition hover:bg-gray-200/60 hover:text-gray-600 dark:hover:bg-gray-900 dark:hover:text-gray-300"
+          >
+            {showAllOnline ? "접기" : `더 보기 (+${COMPANIONS.length - ONLINE_VISIBLE_LIMIT})`}
+          </button>
+        )}
       </section>
+
+      <SidebarChatPanel
+        contacts={COMPANIONS.map((c) => ({ id: c.id, name: c.name, meta: c.role }))}
+        open={dmPanelOpen}
+        onOpenChange={setDmPanelOpen}
+        selectedId={selectedDmId}
+        onSelectedIdChange={setSelectedDmId}
+      />
 
       <section>
         <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
@@ -333,8 +290,6 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
           )}
         </div>
       </section>
-
-      <SidebarChatPanel />
     </aside>
   );
 }
