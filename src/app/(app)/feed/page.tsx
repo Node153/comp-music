@@ -486,7 +486,7 @@ export default async function FeedPage({
                       : "border-yellow-400 bg-white text-yellow-600"
                   }`}
                 >
-                  {isComplex ? "☾ complex" : "☀ DEMO"}
+                  {isComplex ? "☾ memo" : "☀ DEMO"}
                 </span>
               </div>
 

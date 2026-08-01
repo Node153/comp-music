@@ -24,7 +24,7 @@ type UploadType = "demo" | "complex";
 
 const UPLOAD_TYPE_OPTIONS: { value: UploadType; label: string; icon: string }[] = [
   { value: "demo", label: "DEMO", icon: "☀" },
-  { value: "complex", label: "complex", icon: "☾" },
+  { value: "complex", label: "memo", icon: "☾" },
 ];
 
 // demo = 전체공개·노출시간 영구(만료 없음) / Complex = 팔로워공개 or 특정 사람 초대공개·노출시간 필수설정.
@@ -416,7 +416,7 @@ export default function UploadPage() {
             </div>
             {uploadType === "complex" && (
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                complex는 팔로워공개 또는 특정인초대로만 게시돼요. 노출 시간이 지나면 자동으로
+                memo는 팔로워공개 또는 특정인초대로만 게시돼요. 노출 시간이 지나면 자동으로
                 피드에서 사라집니다.
               </p>
             )}
