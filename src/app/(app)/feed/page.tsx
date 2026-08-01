@@ -3,12 +3,12 @@ import { getR2SignedUrl } from "@/lib/r2/storage";
 import { MessageButton } from "@/components/MessageButton";
 import { EngagementMeter } from "@/components/EngagementMeter";
 import { PostEngagementProvider } from "@/components/PostEngagementContext";
-import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { PostVideo } from "@/components/PostVideo";
 import { MockPlayOverlay } from "@/components/MockPlayOverlay";
 import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
 import { ComplexAccessGate } from "@/components/ComplexAccessGate";
+import { PostFocusToggle } from "@/components/PostFocusToggle";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import type { ContentType } from "@/types/database";
@@ -447,6 +447,8 @@ export default async function FeedPage({
           const buttonBasis = isOwnPost ? "basis-1/2" : "basis-1/3";
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
+          const schoolMajor = [profile?.school, profile?.major].filter(Boolean).join(" · ");
+          const headerMetaLine = `${schoolMajor}${schoolMajor ? " · " : ""}${timeAgo(post.published_at ?? new Date().toISOString())}`;
           const followersLocked = isComplex && post.visibility === "followers" && !post.canViewMedia;
           // memo(complex) 탭 게시물(미디어 접근 가능한 경우)은 미디어 박스를 따로 안 쓰고
           // ComplexPostChat의 mediaSlot으로 넘겨서 재창작물 스택 + 실시간 채팅과 나란히 보여준다.
@@ -479,32 +481,13 @@ export default async function FeedPage({
               className="scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border md:shadow-sm dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400"
             >
               <PostEngagementProvider initialLikeCount={likeCount} initialCommentCount={commentCount}>
-              <div className="flex items-center gap-2 p-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500 dark:bg-gray-900 dark:text-gray-400">
-                  {(author?.name ?? "?").slice(0, 1)}
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {author?.name ?? "알 수 없음"}
-                  </span>
-                  <span className="truncate text-xs text-gray-400 dark:text-gray-500">
-                    {[profile?.school, profile?.major].filter(Boolean).join(" · ")}
-                    {(profile?.school || profile?.major) && " · "}
-                    {timeAgo(post.published_at ?? new Date().toISOString())}
-                  </span>
-                </div>
-                {post.expires_at && <TimeLimitBadge expiresAt={post.expires_at} />}
-                <span
-                  className={`shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                    isComplex
-                      ? "border-violet-500 bg-black text-violet-300"
-                      : "border-yellow-400 bg-white text-yellow-600"
-                  }`}
-                >
-                  {isComplex ? "☾ memo" : "☀ DEMO"}
-                </span>
-              </div>
-
+              <PostFocusToggle
+                authorInitial={(author?.name ?? "?").slice(0, 1)}
+                authorName={author?.name ?? "알 수 없음"}
+                metaLine={headerMetaLine}
+                expiresAt={post.expires_at}
+                isComplex={isComplex}
+              >
               {post.caption && (
                 <p className="px-3 pb-2 text-sm text-gray-700 dark:text-gray-300">{post.caption}</p>
               )}
@@ -683,6 +666,7 @@ export default async function FeedPage({
               )}
                 </>
               )}
+              </PostFocusToggle>
               </PostEngagementProvider>
             </article>
           );

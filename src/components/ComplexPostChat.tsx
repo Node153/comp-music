@@ -1,8 +1,9 @@
 "use client";
 
 // Complex 게시물 전용 — 좋아요/댓글 대신 Discord 스타일 실시간 채팅으로 구성.
-// 영상/이미지/오디오/텍스트 무엇이든 "작업물"로 올릴 수 있고, 올릴 때마다 원본(1차)을 이어받은
-// 재창작물(2차, 3차...)로 취급해 스택처럼 쌓아 보여준다. 가벼운 잡담(채팅)과는 구분됨.
+// 재창작물(작업물)은 음원 파일만 올릴 수 있다(0015_work_uploads_audio_only) — 올릴 때마다
+// 원본(1차)을 이어받은 재창작물(2차, 3차...)로 취급해 스택처럼 쌓아 보여준다. 일반 텍스트
+// 채팅과는 구분됨(텍스트는 항상 잡담일 뿐 재창작물이 될 수 없음).
 // 0012_complex_access_and_chat로 실제 DB(post_chat_messages) 연동됨 — Realtime 구독은 이번
 // 범위에서 보류(전송/새로고침 시에만 반영). 파일 업로드는 기존 R2 파이프라인(uploadFileToR2)을
 // 그대로 재사용.
@@ -41,13 +42,13 @@ export function ComplexPostChat({
   postId: string;
   currentUserId: string;
   currentUserName: string;
-  // 방장(작성자)은 협업 구함 여부와 무관하게 언제나 이미지/오디오 작업물을 올릴 수 있다 —
+  // 방장(작성자)은 협업 구함 여부와 무관하게 언제나 음원 작업물을 올릴 수 있다 —
   // 협업 구함은 "방장 외" 참여자에게만 적용되는 게이트(0013_owner_can_always_upload_work).
   isOwnPost: boolean;
   initialMessages: ChatMessage[];
-  // 협업 구함(post.collab_available)이 켜진 게시물에서만 방장 외 사용자가 이미지/오디오 작업물
-  // 업로드 버튼을 쓸 수 있음(video/text는 항상 허용) — RLS(post_chat_messages_insert_participant)
-  // 에서도 동일하게 강제되므로 여기 disabled는 UX 힌트일 뿐, 실제 보안 경계는 서버에 있음.
+  // 협업 구함(post.collab_available)이 켜진 게시물에서만 방장 외 사용자가 음원 작업물 업로드
+  // 버튼을 쓸 수 있음 — RLS(post_chat_messages_insert_participant)에서도 동일하게 강제되므로
+  // 여기 disabled는 UX 힌트일 뿐, 실제 보안 경계는 서버에 있음.
   collabAvailable: boolean;
   // 부모(feed/page.tsx, ComplexAccessGate)가 미디어(사운드바/영상/이미지)를 렌더해서 넘겨준다 —
   // 1차(원본)는 이 미디어 자체로 보여지고, 그 아래 2차+ 재창작물 스택(접기 가능), 오른쪽엔
@@ -61,7 +62,6 @@ export function ComplexPostChat({
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   const workMessages = messages.filter((m) => m.isWork);
@@ -69,13 +69,13 @@ export function ComplexPostChat({
   // 1차(원본)는 mediaSlot 자체로 이미 보여지니 2차+만 스택에 담는다.
   const secondaryStack = workMessages.map((m, i) => ({ generation: i + 2, work: m })).reverse();
 
-  async function sendText(asWork: boolean) {
+  async function sendText() {
     const text = draft.trim();
     if (!text || sending) return;
     setSending(true);
     const { data, error } = await supabase
       .from("post_chat_messages")
-      .insert({ post_id: postId, sender_id: currentUserId, type: "text", content: text, is_work: asWork })
+      .insert({ post_id: postId, sender_id: currentUserId, type: "text", content: text, is_work: false })
       .select("id, created_at")
       .single();
     setSending(false);
@@ -88,14 +88,14 @@ export function ComplexPostChat({
         senderName: currentUserName,
         type: "text",
         content: text,
-        isWork: asWork,
+        isWork: false,
         createdAt: data.created_at,
       },
     ]);
     setDraft("");
   }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>, type: "image" | "audio") {
+  async function handleAudioFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || sending) return;
@@ -104,7 +104,7 @@ export function ComplexPostChat({
       const fileKey = await uploadFileToR2(file);
       const { data, error } = await supabase
         .from("post_chat_messages")
-        .insert({ post_id: postId, sender_id: currentUserId, type, file_key: fileKey, is_work: true })
+        .insert({ post_id: postId, sender_id: currentUserId, type: "audio", file_key: fileKey, is_work: true })
         .select("id, created_at")
         .single();
       if (error || !data) return;
@@ -116,7 +116,7 @@ export function ComplexPostChat({
           id: data.id,
           senderId: currentUserId,
           senderName: currentUserName,
-          type,
+          type: "audio",
           fileUrl: localUrl,
           fileName: file.name,
           isWork: true,
@@ -258,52 +258,26 @@ export function ComplexPostChat({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          sendText(false);
+          sendText();
         }}
         className="flex items-center gap-1.5 border-t border-gray-100 p-2 dark:border-gray-800"
       >
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          disabled={!canUploadWork}
-          onChange={(e) => handleFile(e, "image")}
-        />
         <input
           ref={audioInputRef}
           type="file"
           accept="audio/mpeg,audio/mp3,audio/wav"
           className="hidden"
           disabled={!canUploadWork}
-          onChange={(e) => handleFile(e, "audio")}
+          onChange={handleAudioFile}
         />
         <button
           type="button"
           disabled={!canUploadWork || sending}
-          title={canUploadWork ? "이미지 작업물 올리기" : "협업 구함 게시물에서만 방장 외 사용자가 이미지를 올릴 수 있어요"}
-          onClick={() => imageInputRef.current?.click()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
-        >
-          🖼️
-        </button>
-        <button
-          type="button"
-          disabled={!canUploadWork || sending}
-          title={canUploadWork ? "오디오 작업물 올리기" : "협업 구함 게시물에서만 방장 외 사용자가 오디오를 올릴 수 있어요"}
+          title={canUploadWork ? "음원 작업물 올리기" : "협업 구함 게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
           onClick={() => audioInputRef.current?.click()}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
         >
           🎵
-        </button>
-        <button
-          type="button"
-          title="입력한 텍스트를 작업물로 남기기"
-          disabled={sending}
-          onClick={() => sendText(true)}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-        >
-          ✍️
         </button>
         <input
           type="text"
