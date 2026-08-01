@@ -317,10 +317,11 @@ export interface Database {
       };
     };
     Functions: {
-      // 0017_companions: invite_only 게시물 노크 UI용 — 참여자 중 내 Companion 이름 + 그 외 인원수.
+      // 0019_knock_context_nickname: invite_only 게시물 노크 UI용 — 참여자 전원의 표시 이름
+      // (뷰어와 Companion이면 실명, 아니면 닉네임), 참여자 한 명당 한 행.
       knock_context: {
         Args: { pid: string };
-        Returns: { companion_names: string[]; other_count: number }[];
+        Returns: { display_name: string }[];
       };
     };
     Enums: Record<string, never>;

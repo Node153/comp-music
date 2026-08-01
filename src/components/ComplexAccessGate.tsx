@@ -6,8 +6,10 @@
 //   이 "티저" 동작 때문에 posts 행 자체의 RLS는 visibility로 좁히지 않고, 실제 프라이버시 경계는
 //   feed/page.tsx가 뷰어별로 미디어 signed URL을 조건부 발급하는 데서 생긴다 — canViewMedia prop이
 //   그 결과다.
-// - 비초대 방문자에게는 초대자 전체 명단 대신 부분 공개만(0017_companions): 참여자 중 나의
-//   Companion 이름 + 그 외 "외 n명"(knock_context 함수가 서버에서 계산 — feed/page.tsx).
+// - 비초대 방문자에게도 참여자 전원을 이름으로 보여준다(0019_knock_context_nickname) — 나와
+//   Companion인 참여자는 실명, 아닌 참여자는 닉네임(knock_context 함수가 서버에서 계산 —
+//   feed/page.tsx). 실명 자체를 감추는 게 목적이라 닉네임까지 숨길 필요는 없음(user_display와
+//   동일한 실명/닉네임 정책, 0018).
 // - 노크는 방장과 Companion인 사람만 가능(canKnock) — RLS(post_access_insert_knock_self)에서도
 //   동일하게 강제되므로 여기 disabled는 UX 힌트일 뿐.
 import { useState } from "react";
@@ -33,8 +35,7 @@ export function ComplexAccessGate({
   invitedNames,
   initialKnocked,
   canKnock,
-  companionParticipantNames,
-  otherParticipantCount,
+  participantNames,
   initialPendingRequests,
   contentTypeLabel,
   tags,
@@ -55,9 +56,8 @@ export function ComplexAccessGate({
   initialKnocked: boolean;
   // 방장과 내가 Companion인가 — 노크 버튼 활성 조건(서버 RLS가 실제 경계).
   canKnock: boolean;
-  // 잠긴 게시물의 참여자 중 나의 Companion 이름들 / Companion이 아닌 참여자 수("외 n명").
-  companionParticipantNames: string[];
-  otherParticipantCount: number;
+  // 잠긴 게시물의 참여자 전원 표시 이름(내 Companion이면 실명, 아니면 닉네임).
+  participantNames: string[];
   initialPendingRequests: PendingRequest[];
   contentTypeLabel: string | null;
   tags: string[];
@@ -89,15 +89,9 @@ export function ComplexAccessGate({
   const [pending, setPending] = useState<PendingRequest[]>(initialPendingRequests);
   const [requestsOpen, setRequestsOpen] = useState(false);
 
-  // "OO, XX 외 3명 참여 중" — Companion 이름 우선, 비Companion은 인원수만(부분 공개).
+  // "OO, XX 참여 중" — 각 이름은 이미 서버에서 뷰어 기준 실명/닉네임으로 계산돼 온다.
   const participantSummary =
-    companionParticipantNames.length > 0
-      ? `${companionParticipantNames.join(", ")}${
-          otherParticipantCount > 0 ? ` 외 ${otherParticipantCount}명` : ""
-        } 참여 중`
-      : otherParticipantCount > 0
-        ? `${otherParticipantCount}명 참여 중`
-        : null;
+    participantNames.length > 0 ? `${participantNames.join(", ")} 참여 중` : null;
 
   async function knock() {
     if (knockPending || knocked || !canKnock) return;

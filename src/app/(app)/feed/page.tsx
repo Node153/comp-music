@@ -272,12 +272,38 @@ export default async function FeedPage({
     .select(postsSelect)
     .eq("status", "published")
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
-  const { data: posts } = await (isComplex ? postsQuery.neq("visibility", "public") : postsQuery.eq("visibility", "public"))
+  const { data: rawPosts } = await (isComplex ? postsQuery.neq("visibility", "public") : postsQuery.eq("visibility", "public"))
     .order("published_at", { ascending: false })
     .limit(FEED_LIMIT);
 
-  const postIds = (posts ?? []).map((p) => p.id);
-  const userIds = [...new Set((posts ?? []).map((p) => p.user_id))];
+  // 내 Companion(맞팔, 0017) 전체 — 아래 "Companion 공개" 필터와 invite_only 노크 가능
+  // 여부(방장과 Companion인가) 판정에 함께 쓴다.
+  let myCompanionIds = new Set<string>();
+  if (currentUser && isComplex) {
+    const { data: companionRows } = await supabase
+      .from("companions")
+      .select("requester_id, addressee_id")
+      .eq("status", "accepted")
+      .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`);
+    myCompanionIds = new Set(
+      (companionRows ?? []).map((r) =>
+        r.requester_id === currentUser.id ? r.addressee_id : r.requester_id,
+      ),
+    );
+  }
+
+  // "Companion 공개"(followers) 게시물은 Companion에게만 노출 — memo 원래 취지("팔로우한
+  // 사람의 게시물만 보임")대로, 아닌 사람에게는 잠긴 티저조차 보여주지 않고 피드에서 아예
+  // 뺀다. "특정인 초대"(invite_only)는 반대로 누구에게나 존재는 보이고 노크로 열람을
+  // 요청하는 게 핵심 UX라 그대로 둔다(아래 ComplexAccessGate).
+  const posts = (rawPosts ?? []).filter((p) => {
+    if (p.visibility !== "followers") return true;
+    if (currentUser?.id === p.user_id) return true;
+    return myCompanionIds.has(p.user_id);
+  });
+
+  const postIds = posts.map((p) => p.id);
+  const userIds = [...new Set(posts.map((p) => p.user_id))];
 
   // 이름 표시는 전부 user_display 뷰(0018) — 뷰어가 Companion이면 실명, 아니면 닉네임이 내려온다.
   const { data: users } =
@@ -315,23 +341,7 @@ export default async function FeedPage({
   // posts 행 자체는(캡션/작성자/태그/노크 버튼) 모두에게 보이지만, 미디어 signed URL과 채팅은
   // 여기서 계산한 canViewMedia가 true일 때만 발급한다(0012 설계 — R2는 버킷 RLS가 없어서
   // 이 조건부 서명이 실제 프라이버시 경계).
-  const inviteOnlyPostIds = (posts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
-
-  // 내 Companion(맞팔, 0017) 전체 — followers(=Companion 공개) 게시물 열람 판정과
-  // invite_only 노크 가능 여부(방장과 Companion인가) 판정에 함께 쓴다.
-  let myCompanionIds = new Set<string>();
-  if (currentUser && isComplex) {
-    const { data: companionRows } = await supabase
-      .from("companions")
-      .select("requester_id, addressee_id")
-      .eq("status", "accepted")
-      .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`);
-    myCompanionIds = new Set(
-      (companionRows ?? []).map((r) =>
-        r.requester_id === currentUser.id ? r.addressee_id : r.requester_id,
-      ),
-    );
-  }
+  const inviteOnlyPostIds = posts.filter((p) => p.visibility === "invite_only").map((p) => p.id);
 
   // post_access_select_self_or_author RLS 덕분에 이 한 번의 조회로 (a) 내 열람 권한 판정과
   // (b) 내가 작성자인 글의 초대자/대기 노크 명단이 동시에 채워진다 — 내 행은 항상 보이고,
@@ -368,31 +378,25 @@ export default async function FeedPage({
     return false;
   }
 
-  // 노크 UI 컨텍스트(0017) — 내가 열람 못 하는 invite_only 게시물의 참여자 중 내 Companion
-  // 이름과 그 외 인원수. post_access select RLS는 비참여자에게 명단을 숨기므로, 부분 공개
-  // 전용 security definer 함수(knock_context)로만 가져온다.
-  const knockContextByPost = new Map<string, { companionNames: string[]; otherCount: number }>();
+  // 노크 UI 컨텍스트(0019) — 내가 열람 못 하는 invite_only 게시물의 참여자 전원을 표시
+  // 이름(내 Companion이면 실명, 아니면 닉네임)으로. post_access select RLS는 비참여자에게
+  // 명단을 숨기므로, 이 목적 전용 security definer 함수(knock_context)로만 가져온다.
+  const knockContextByPost = new Map<string, string[]>();
   if (currentUser && isComplex) {
-    const lockedInviteOnly = (posts ?? []).filter(
+    const lockedInviteOnly = posts.filter(
       (p) => p.visibility === "invite_only" && p.user_id !== currentUser.id && !canViewMediaFor(p),
     );
     await Promise.all(
       lockedInviteOnly.map(async (p) => {
         const { data } = await supabase.rpc("knock_context", { pid: p.id });
-        const row = data?.[0];
-        if (row) {
-          knockContextByPost.set(p.id, {
-            companionNames: row.companion_names ?? [],
-            otherCount: row.other_count ?? 0,
-          });
-        }
+        knockContextByPost.set(p.id, (data ?? []).map((row) => row.display_name));
       }),
     );
   }
 
   // 열람 가능한 Complex 게시물의 채팅+재창작물 스택을 서버에서 미리 가져온다(초기 렌더용 —
   // ComplexPostChat의 "새로고침" 버튼만 /api/complex/chat을 다시 부른다).
-  const accessiblePostIds = isComplex ? (posts ?? []).filter((p) => canViewMediaFor(p)).map((p) => p.id) : [];
+  const accessiblePostIds = isComplex ? posts.filter((p) => canViewMediaFor(p)).map((p) => p.id) : [];
   const { data: chatRows } =
     accessiblePostIds.length > 0
       ? await supabase
@@ -429,7 +433,7 @@ export default async function FeedPage({
   }
 
   const postsWithVideo = await Promise.all(
-    (posts ?? []).map(async (post) => {
+    posts.map(async (post) => {
       const canView = canViewMediaFor(post);
       const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
       const videoSrc = canView && mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
@@ -475,10 +479,10 @@ export default async function FeedPage({
           const commentCount = commentCountMap.get(post.id) ?? 0;
           const schoolMajor = [profile?.school, profile?.major].filter(Boolean).join(" · ");
           const headerMetaLine = `${schoolMajor}${schoolMajor ? " · " : ""}${timeAgo(post.published_at ?? new Date().toISOString())}`;
-          const followersLocked = isComplex && post.visibility === "followers" && !post.canViewMedia;
-          // memo(complex) 탭 게시물(미디어 접근 가능한 경우)은 미디어 박스를 따로 안 쓰고
-          // ComplexPostChat의 mediaSlot으로 넘겨서 재창작물 스택 + 실시간 채팅과 나란히 보여준다.
-          const useInlineChatLayout = isComplex && !followersLocked;
+          // memo(complex) 탭 게시물은 미디어 박스를 따로 안 쓰고 ComplexPostChat의 mediaSlot으로
+          // 넘겨서 재창작물 스택 + 실시간 채팅과 나란히 보여준다. "Companion 공개"(followers)
+          // 게시물은 피드 쿼리 단계에서 이미 Companion만 걸러진 상태라(위 posts 필터) 항상 열람 가능.
+          const useInlineChatLayout = isComplex;
           const inlineMediaEl =
             useInlineChatLayout && post.videoSrc ? (
               post.media_type === "audio" ? (
@@ -546,8 +550,7 @@ export default async function FeedPage({
                     )
                   }
                   canKnock={!isOwnPost && !!currentUser && myCompanionIds.has(post.user_id)}
-                  companionParticipantNames={knockContextByPost.get(post.id)?.companionNames ?? []}
-                  otherParticipantCount={knockContextByPost.get(post.id)?.otherCount ?? 0}
+                  participantNames={knockContextByPost.get(post.id) ?? []}
                   initialPendingRequests={
                     isOwnPost
                       ? accessRows
@@ -577,14 +580,7 @@ export default async function FeedPage({
                         </div>
                       )}
 
-                      {followersLocked ? (
-                        <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
-                          <span className="text-4xl">🔒</span>
-                          <p className="max-w-xs text-sm text-gray-300">
-                            {author?.name ?? "작성자"}님과 Companion이 되면 이 게시물을 볼 수 있어요.
-                          </p>
-                        </div>
-                      ) : post.isMock ? (
+                      {post.isMock ? (
                         <div
                           className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
                         >
@@ -647,11 +643,7 @@ export default async function FeedPage({
                     )}
                   </div>
 
-                  {followersLocked ? (
-                    <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
-                      🔒 Companion만 채팅과 작업물을 볼 수 있어요
-                    </div>
-                  ) : isComplex ? (
+                  {isComplex ? (
                     <ComplexPostChat
                       postId={post.id}
                       currentUserId={currentUser?.id ?? ""}
