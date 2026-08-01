@@ -210,7 +210,6 @@ export default function UploadPage() {
   const [inviteUsers, setInviteUsers] = useState<PickedUser[]>([]);
   // 협업 기능은 Complex 전용 — demo는 해시태그로 대체(사용자 지시: "complex에서는 해시태그 삭제 대신 협업기능 추가")
   const [collabAvailable, setCollabAvailable] = useState(false);
-  const [collabRoleNeeded, setCollabRoleNeeded] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // 미리보기 aside는 영상 업로드일 때만 나타나고, 버튼으로 접었다 폈다 할 수 있음(음원은 폼 안
@@ -361,7 +360,7 @@ export default function UploadPage() {
           caption: caption || null,
           visibility: complexVisibility === "specific" ? "invite_only" : "followers",
           collab_available: collabAvailable,
-          collab_role_needed: collabAvailable ? collabRoleNeeded || null : null,
+          collab_role_needed: null,
           status: "published",
           published_at: publishedAt.toISOString(),
           expire_hours: expireHours,
@@ -744,19 +743,8 @@ export default function UploadPage() {
                 Compilation
               </label>
               <p className="-mt-1 px-1 text-xs text-gray-400 dark:text-gray-500">
-                켜두면 방장 외 참여자도 채팅에서 음원 작업물을 올릴 수 있어요. 올린 음원은
-                원본을 이어받은 재창작물로 스택처럼 쌓여요. 같이 곡을 채워나갈 사람을 구할 때
-                사용하세요.
+                Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요.
               </p>
-              {collabAvailable && (
-                <input
-                  type="text"
-                  placeholder="찾는 역할 (예: 보컬)"
-                  value={collabRoleNeeded}
-                  onChange={(e) => setCollabRoleNeeded(e.target.value)}
-                  className={darkField}
-                />
-              )}
             </>
           )}
 
