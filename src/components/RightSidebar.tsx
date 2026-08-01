@@ -14,10 +14,19 @@ import { createClient } from "@/lib/supabase/client";
 import { SidebarChatPanel } from "@/components/SidebarChatPanel";
 import { timeAgo } from "@/lib/timeAgo";
 
-const MOCK_ONLINE = [
-  { name: "정하늘", meta: "베이스" },
-  { name: "오세준", meta: "기타" },
-  { name: "한지민", meta: "작곡" },
+type OnlineCompanion = {
+  name: string;
+  status: "online" | "idle";
+  activity?: string;
+  badge?: string;
+  color: string;
+};
+
+const MOCK_ONLINE: OnlineCompanion[] = [
+  { name: "김령래", status: "online", color: "bg-amber-700" },
+  { name: "박종인", status: "online", activity: "The Last of Us Part II Remastered", badge: "🎮T1", color: "bg-gray-300 dark:bg-gray-700" },
+  { name: "백승준", status: "idle", color: "bg-fuchsia-900" },
+  { name: "유미노", status: "idle", color: "bg-orange-300" },
 ];
 
 // 실시간 PEAK 게시물 = 지금 핫한 게시물(좋아요+댓글 합이 PEAK_THRESHOLD를 넘은 게시물).
@@ -134,6 +143,56 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
     <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-4 md:flex">
       <section>
         <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+          온라인 — {MOCK_ONLINE.length}명
+        </h2>
+        <div className="mt-1 flex flex-col gap-0.5">
+          {MOCK_ONLINE.map((person) => (
+            <div
+              key={person.name}
+              className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-gray-200/60 dark:hover:bg-gray-900"
+            >
+              <span
+                className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${person.color}`}
+              >
+                {person.name.slice(0, 1)}
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-black ${
+                    person.status === "online" ? "bg-emerald-500" : "bg-amber-400"
+                  }`}
+                />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex items-center gap-1">
+                  <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    {person.name}
+                  </span>
+                  {person.badge && <span className="shrink-0 text-xs">{person.badge}</span>}
+                </div>
+                <span className="truncate text-xs text-gray-400 dark:text-gray-500">
+                  {person.activity ? `🎮 ${person.activity}` : person.status === "online" ? "온라인" : "자리 비움"}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                <button
+                  aria-label="메시지 보내기"
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  💬
+                </button>
+                <button
+                  aria-label="더 보기"
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  ⋮
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           {isMemoTab ? "🔒 노크 가능한 게시물" : "실시간 PEAK"}
         </h2>
         <div className="mt-1 flex flex-col gap-1">
@@ -194,28 +253,6 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
               </Link>
             ))
           )}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          접속 중 · {MOCK_ONLINE.length}
-        </h2>
-        <div
-          className="mt-1.5 flex items-center px-2"
-          title={`${MOCK_ONLINE.map((p) => `${p.name}(${p.meta})`).join(", ")} — 실시간 접속 상태는 준비 중이에요`}
-        >
-          {MOCK_ONLINE.map((person, i) => (
-            <span
-              key={person.name}
-              style={{ zIndex: MOCK_ONLINE.length - i, marginLeft: i === 0 ? 0 : "-0.5rem" }}
-              className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-[10px] font-semibold text-gray-500 dark:border-black dark:bg-gray-800 dark:text-gray-400"
-            >
-              {person.name.slice(0, 1)}
-              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white bg-emerald-500 dark:border-black" />
-            </span>
-          ))}
-          <span className="ml-2 truncate text-xs text-gray-400">지금 {MOCK_ONLINE.length}명 활동 중</span>
         </div>
       </section>
 
