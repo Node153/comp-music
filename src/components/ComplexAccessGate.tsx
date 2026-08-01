@@ -121,14 +121,7 @@ export function ComplexAccessGate({
             <img src={videoSrc} alt="" className="max-h-[780px] w-auto object-contain" />
           ) : mediaType === "audio" && videoSrc ? (
             <div className="flex w-full flex-col items-center gap-3 p-4">
-              {posterSrc ? (
-                <img src={posterSrc} alt="" className="max-h-[420px] w-auto rounded-xl object-contain" />
-              ) : (
-                <div className="flex h-56 w-56 items-center justify-center rounded-xl bg-gray-800 text-5xl">
-                  🎵
-                </div>
-              )}
-              <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} />
+              <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} posterSrc={posterSrc} />
             </div>
           ) : videoSrc ? (
             <PostVideo

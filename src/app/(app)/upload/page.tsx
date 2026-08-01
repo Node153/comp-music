@@ -23,8 +23,8 @@ const EXPIRE_HOURS_OPTIONS: ExpireHours[] = [6, 12, 24, 48];
 type UploadType = "demo" | "complex";
 
 const UPLOAD_TYPE_OPTIONS: { value: UploadType; label: string; icon: string }[] = [
-  { value: "demo", label: "demo", icon: "♾️" },
-  { value: "complex", label: "Complex", icon: "🌀" },
+  { value: "demo", label: "DEMO", icon: "☀" },
+  { value: "complex", label: "complex", icon: "☾" },
 ];
 
 // demo = 전체공개·노출시간 영구(만료 없음) / Complex = 팔로워공개 or 특정 사람 초대공개·노출시간 필수설정.
@@ -81,6 +81,19 @@ function selectableButtonClass(active: boolean, base: string) {
   const colors = active
     ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
     : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800";
+  return `${base} ${colors}`;
+}
+
+// 게시 유형 토글 전용 — DEMO(메인 화이트/포인트 옐로우) vs complex(메인 블랙/포인트 퍼플)를
+// 다른 selectableButtonClass 사용처와 다르게 각자 고유 색으로 구분한다.
+function uploadTypeButtonClass(value: UploadType, active: boolean, base: string) {
+  if (!active) {
+    return `${base} border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800`;
+  }
+  const colors =
+    value === "complex"
+      ? "border-violet-500 bg-black text-violet-300"
+      : "border-yellow-400 bg-white text-yellow-600";
   return `${base} ${colors}`;
 }
 
@@ -390,9 +403,10 @@ export default function UploadPage() {
                   key={option.value}
                   type="button"
                   onClick={() => handleUploadTypeChange(option.value)}
-                  className={selectableButtonClass(
+                  className={uploadTypeButtonClass(
+                    option.value,
                     uploadType === option.value,
-                    "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition",
+                    "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-bold transition",
                   )}
                 >
                   <span className="text-base">{option.icon}</span>
@@ -402,7 +416,7 @@ export default function UploadPage() {
             </div>
             {uploadType === "complex" && (
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                Complex는 팔로워공개 또는 특정인초대로만 게시돼요. 노출 시간이 지나면 자동으로
+                complex는 팔로워공개 또는 특정인초대로만 게시돼요. 노출 시간이 지나면 자동으로
                 피드에서 사라집니다.
               </p>
             )}
@@ -573,7 +587,7 @@ export default function UploadPage() {
 
           {uploadType === "demo" ? (
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              demo는 전체공개 게시물이라 노출 시간이 영구예요.
+              DEMO는 전체공개 게시물이라 노출 시간이 영구예요.
             </p>
           ) : (
             <>

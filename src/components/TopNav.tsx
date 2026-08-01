@@ -13,8 +13,8 @@ const ICON_ACTIONS = [{ href: "/messages", label: "DM", icon: "✉️", unread: 
 // 특정인 초대) 두 피드 탭.
 // 아직 UI만 있고 실제 필터링·업로드 연동은 데이터 연결 단계에서 진행 예정.
 const FEED_TABS = [
-  { value: "completion", label: "demo", icon: "♾️" },
-  { value: "complex", label: "Complex", icon: "🌀" },
+  { value: "completion", label: "DEMO", icon: "☀" },
+  { value: "complex", label: "complex", icon: "☾" },
 ];
 
 export function TopNav({
@@ -65,9 +65,11 @@ export function TopNav({
                   ? "전체공개 게시물 · 노출 시간 영구"
                   : "팔로워 공개 게시물 · 노출 시간 설정 필수"
               }
-              className={`flex h-full items-center gap-1.5 border-b-2 px-4 text-sm font-medium transition ${
+              className={`flex h-full items-center gap-1.5 border-b-2 px-4 text-sm font-bold transition ${
                 isActive
-                  ? "border-gray-400 text-gray-800 dark:border-gray-500 dark:text-gray-200"
+                  ? tab.value === "complex"
+                    ? "border-violet-500 text-violet-600 dark:text-violet-300"
+                    : "border-yellow-400 text-yellow-600 dark:text-yellow-300"
                   : "border-transparent text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900"
               }`}
             >

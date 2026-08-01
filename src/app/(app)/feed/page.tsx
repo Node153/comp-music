@@ -480,13 +480,13 @@ export default async function FeedPage({
                   </span>
                 </div>
                 <span
-                  className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  className={`shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-bold ${
                     isComplex
-                      ? "bg-violet-900/50 text-violet-300"
-                      : "bg-gray-100 text-gray-400 dark:bg-gray-900 dark:text-gray-500"
+                      ? "border-violet-500 bg-black text-violet-300"
+                      : "border-yellow-400 bg-white text-yellow-600"
                   }`}
                 >
-                  {isComplex ? "🌀 Complex" : "♾️ demo"}
+                  {isComplex ? "☾ complex" : "☀ DEMO"}
                 </span>
               </div>
 
@@ -584,18 +584,11 @@ export default async function FeedPage({
                       />
                     ) : post.videoSrc && post.media_type === "audio" ? (
                       <div className="flex w-full flex-col items-center gap-3 p-4">
-                        {post.posterSrc ? (
-                          <img
-                            src={post.posterSrc}
-                            alt={post.caption ?? "커버 이미지"}
-                            className="max-h-[420px] w-auto rounded-xl object-contain"
-                          />
-                        ) : (
-                          <div className="flex h-56 w-56 items-center justify-center rounded-xl bg-gray-800 text-5xl">
-                            🎵
-                          </div>
-                        )}
-                        <SoundbarPlayer src={post.videoSrc} title={post.caption || "음원"} />
+                        <SoundbarPlayer
+                          src={post.videoSrc}
+                          title={post.caption || "음원"}
+                          posterSrc={post.posterSrc}
+                        />
                       </div>
                     ) : post.videoSrc ? (
                       <PostVideo

@@ -4,10 +4,20 @@
 // 업로드 쪽은 File을 바로 갖고 있지만 피드는 R2 signed URL만 있어서, fetch로 받아온 뒤
 // 같은 computeWaveformBars로 분석한다. signed URL이 만료되기 전(발급 후 30분)에만 유효 —
 // 이미 <audio src>가 같은 URL을 쓰고 있어서 새로운 제약은 아니다.
+// posterSrc(커버 이미지)가 있으면 파형 대신 이미지 위에 재생 버튼을 얹은 형태로 바뀐다 —
+// 둘을 동시에 보여주지 않는다(커버를 넣은 이유가 파형 대신 앨범아트를 보여주려는 것이므로).
 import { useEffect, useRef, useState } from "react";
 import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
 
-export function SoundbarPlayer({ src, title }: { src: string; title: string }) {
+export function SoundbarPlayer({
+  src,
+  title,
+  posterSrc,
+}: {
+  src: string;
+  title: string;
+  posterSrc?: string | null;
+}) {
   const [bars, setBars] = useState<number[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -16,6 +26,7 @@ export function SoundbarPlayer({ src, title }: { src: string; title: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
+    if (posterSrc) return; // 커버 이미지 모드에서는 파형을 안 그리니 분석 자체를 건너뛴다.
     let cancelled = false;
     // <audio src>는 태그라 CORS 영향 없이 바로 재생되지만, 파형 분석을 위한 fetch()는
     // R2 도메인에 대한 브라우저 CORS 처리가 불안정해서 우리 서버 프록시(같은 출처)를 거친다.
@@ -31,7 +42,7 @@ export function SoundbarPlayer({ src, title }: { src: string; title: string }) {
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [src, posterSrc]);
 
   function togglePlay() {
     const audio = audioRef.current;
@@ -50,17 +61,43 @@ export function SoundbarPlayer({ src, title }: { src: string; title: string }) {
   const playedRatio = duration > 0 ? currentTime / duration : 0;
   const playedBarCount = bars ? Math.round(playedRatio * bars.length) : 0;
 
+  const audioEl = (
+    <audio
+      ref={audioRef}
+      src={src}
+      onPlay={() => setIsPlaying(true)}
+      onPause={() => setIsPlaying(false)}
+      onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+      onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+      className="hidden"
+    />
+  );
+
+  if (posterSrc) {
+    return (
+      <button
+        type="button"
+        onClick={togglePlay}
+        className="group relative block max-h-[420px] w-auto overflow-hidden rounded-xl"
+      >
+        {audioEl}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={posterSrc} alt={title} className="max-h-[420px] w-auto object-contain" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition group-hover:bg-black/45">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-2xl text-black">
+            {isPlaying ? "⏸" : "▶"}
+          </span>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
+          <div className="h-full bg-violet-400" style={{ width: `${playedRatio * 100}%` }} />
+        </div>
+      </button>
+    );
+  }
+
   return (
     <div className="flex w-full max-w-md flex-col gap-2 rounded-xl bg-neutral-900 p-3">
-      <audio
-        ref={audioRef}
-        src={src}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        className="hidden"
-      />
+      {audioEl}
 
       <div className="flex items-center gap-2.5">
         <button
