@@ -17,7 +17,6 @@ import { createClient } from "@/lib/supabase/client";
 import { PostVideo } from "@/components/PostVideo";
 import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
-import { tagColorClass } from "@/lib/feedConstants";
 import type { MediaType } from "@/types/database";
 
 type PendingRequest = { userId: string; name: string };
@@ -38,7 +37,6 @@ export function ComplexAccessGate({
   participantNames,
   initialPendingRequests,
   contentTypeLabel,
-  tags,
   collabAvailable,
   collabRoleNeeded,
   initialChatMessages,
@@ -60,7 +58,6 @@ export function ComplexAccessGate({
   participantNames: string[];
   initialPendingRequests: PendingRequest[];
   contentTypeLabel: string | null;
-  tags: string[];
   collabAvailable: boolean;
   collabRoleNeeded: string | null;
   initialChatMessages: ChatMessage[];
@@ -179,11 +176,6 @@ export function ComplexAccessGate({
             {contentTypeLabel}
           </span>
         )}
-        {tags.map((tag) => (
-          <span key={tag} className={`rounded-full px-2 py-1 text-xs font-medium ${tagColorClass(tag)}`}>
-            #{tag}
-          </span>
-        ))}
         {collabAvailable && (
           <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
             🤝 협업 구함{collabRoleNeeded ? `: ${collabRoleNeeded}` : ""}

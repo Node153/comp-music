@@ -559,7 +559,6 @@ export default async function FeedPage({
                       : []
                   }
                   contentTypeLabel={post.content_type ? CONTENT_TYPE_LABEL[post.content_type] : null}
-                  tags={post.instrument_tags ?? []}
                   collabAvailable={post.collab_available}
                   collabRoleNeeded={post.collab_role_needed}
                   initialChatMessages={chatMessagesByPost.get(post.id) ?? []}
@@ -628,14 +627,17 @@ export default async function FeedPage({
                         {CONTENT_TYPE_LABEL[post.content_type]}
                       </span>
                     )}
-                    {(post.instrument_tags ?? []).map((tag) => (
-                      <span
-                        key={tag}
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${tagColorClass(tag)}`}
-                      >
-                        #{tag}
-                      </span>
-                    ))}
+                    {/* 해시태그는 demo 전용 개념(업로드 폼에도 memo 쪽엔 태그 입력 자체가 없음) —
+                        memo(Companion)는 태그로 탐색하는 구조가 아니라 여기서는 표시하지 않는다. */}
+                    {!isComplex &&
+                      (post.instrument_tags ?? []).map((tag) => (
+                        <span
+                          key={tag}
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${tagColorClass(tag)}`}
+                        >
+                          #{tag}
+                        </span>
+                      ))}
                     {post.collab_available && (
                       <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
                         🤝 협업 구함{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
