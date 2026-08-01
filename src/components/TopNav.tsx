@@ -83,9 +83,13 @@ export function TopNav({
       <div className="flex flex-1 items-center justify-end gap-3">
         <Link
           href="/upload"
-          className="flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-base font-bold text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+          className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+            pathname === "/upload"
+              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
+          }`}
         >
-          <span className="text-lg">➕</span>
+          <span className="text-base">☂</span>
           Drop
         </Link>
         <ProfileMenu userId={currentUserId} userName={userName} unseenCount={unseenNotifications} />
@@ -97,7 +101,7 @@ export function TopNav({
               : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
           }`}
         >
-          <span className="text-base">📣</span>
+          <span className="text-base">☁</span>
           Away
         </Link>
       </div>
