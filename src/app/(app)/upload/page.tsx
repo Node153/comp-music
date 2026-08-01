@@ -741,7 +741,7 @@ export default function UploadPage() {
                   onChange={(e) => setCollabAvailable(e.target.checked)}
                   className="h-4 w-4 accent-black dark:accent-white"
                 />
-                협업 구함
+                Compilation
               </label>
               {collabAvailable && (
                 <input
