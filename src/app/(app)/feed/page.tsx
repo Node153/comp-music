@@ -379,18 +379,37 @@ export default async function FeedPage({
     return false;
   }
 
-  // 노크 UI 컨텍스트(0019) — 내가 열람 못 하는 invite_only 게시물의 참여자 전원을 표시
-  // 이름(내 Companion이면 실명, 아니면 닉네임)으로. post_access select RLS는 비참여자에게
-  // 명단을 숨기므로, 이 목적 전용 security definer 함수(knock_context)로만 가져온다.
-  const knockContextByPost = new Map<string, string[]>();
+  // 노크 UI 참여자 요약(0020) — 방장 본인이 아닌 뷰어에게 "OO, XX...에게 공개" 문구.
+  // 아직 참여자가 아니면(!canViewMedia, 아직 초대/노크 안 됨) 내 Companion 이름만 밝히고
+  // 나머지는 "외 n명"으로 뭉뚱그린다 — 아직 못 들어간 방의 손님 명단을 함부로 공개하지 않기
+  // 위해서다. 이미 참여자면(canViewMedia) 전원을 이름(Companion=실명, 아니면 닉네임)으로
+  // 보여준다. knock_context는 항상 전체 참여자+Companion 여부를 반환하지만, 어느 형태로
+  // 보여줄지는 여기 서버에서 결정해 최종 문자열만 클라이언트로 내려보낸다 — 그래야 아직
+  // 참여 전인 뷰어에게 비Companion 참여자의 닉네임이 응답 페이로드로라도 새지 않는다.
+  // 방장 본인은 별도의 invitedNames 경로로 이미 전체 명단을 보고 있어 대상에서 제외.
+  const participantSummaryByPost = new Map<string, string>();
   if (currentUser && isComplex) {
-    const lockedInviteOnly = posts.filter(
-      (p) => p.visibility === "invite_only" && p.user_id !== currentUser.id && !canViewMediaFor(p),
+    const inviteOnlyForOthers = posts.filter(
+      (p) => p.visibility === "invite_only" && p.user_id !== currentUser.id,
     );
     await Promise.all(
-      lockedInviteOnly.map(async (p) => {
+      inviteOnlyForOthers.map(async (p) => {
         const { data } = await supabase.rpc("knock_context", { pid: p.id });
-        knockContextByPost.set(p.id, (data ?? []).map((row) => row.display_name));
+        const rows = data ?? [];
+        if (rows.length === 0) return;
+
+        if (canViewMediaFor(p)) {
+          participantSummaryByPost.set(p.id, `${rows.map((r) => r.display_name).join(", ")}에게 공개`);
+          return;
+        }
+
+        const companionNames = rows.filter((r) => r.is_companion).map((r) => r.display_name);
+        const otherCount = rows.length - companionNames.length;
+        const summary =
+          companionNames.length > 0
+            ? `${companionNames.join(", ")}${otherCount > 0 ? ` 외 ${otherCount}명` : ""}에게 공개`
+            : `${otherCount}명에게 공개`;
+        participantSummaryByPost.set(p.id, summary);
       }),
     );
   }
@@ -551,7 +570,7 @@ export default async function FeedPage({
                     )
                   }
                   canKnock={!isOwnPost && !!currentUser && myCompanionIds.has(post.user_id)}
-                  participantNames={knockContextByPost.get(post.id) ?? []}
+                  participantSummary={participantSummaryByPost.get(post.id) ?? null}
                   initialPendingRequests={
                     isOwnPost
                       ? accessRows
@@ -566,12 +585,9 @@ export default async function FeedPage({
                 />
               ) : (
                 <>
-                  {isComplex && post.visibility === "followers" && (
-                    <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-                      <span>🔒 Companion 공개</span>
-                    </div>
-                  )}
-
+                  {/* "Companion 공개"(followers) 라벨은 없앰 — memo 피드에 뜨는 글은 이제
+                      전부(followers/invite_only 가리지 않고) 방장과 Companion인 사람에게만
+                      보이므로, 굳이 이 유형만 따로 표시할 이유가 없다(위 posts 필터 참고). */}
                   {useInlineChatLayout ? null : (
                     <div className="relative flex items-center justify-center bg-black">
                       {!isComplex && (

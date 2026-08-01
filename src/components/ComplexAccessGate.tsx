@@ -7,9 +7,12 @@
 //   "팔로우한 사람 게시물만 보임"이 특정인 초대에도 그대로 적용되고, 초대 안 된 사람에게는
 //   존재 자체를 보여주지 않는다. 노크는 그 안에서 "아직 이 게시물에 초대 안 된 Companion"이
 //   미디어/채팅에 대한 접근을 요청하는 더 좁은 두 번째 게이트일 뿐이다.
-// - 참여자 전원을 이름으로 보여준다(0019_knock_context_nickname) — 나와 Companion인 참여자는
-//   실명, 아닌 참여자는 닉네임(knock_context 함수가 서버에서 계산 — feed/page.tsx). 실명
-//   자체를 감추는 게 목적이라 닉네임까지 숨길 필요는 없음(user_display와 동일한 정책, 0018).
+// - 참여자 요약 문구(participantSummary, 0020)는 서버(feed/page.tsx)가 완성해서 내려준다 —
+//   아직 참여자가 아니면(!canViewMedia) "내 Companion 이름 + 외 n명", 이미 참여자면
+//   (canViewMedia) 참여자 전원(Companion=실명, 아니면 닉네임)으로 형태가 다르다. 이 조립을
+//   서버에서 하는 이유는, 클라이언트 컴포넌트로 넘기는 props는 전부 페이로드에 실리기 때문에
+//   "아직 참여 전엔 비Companion 닉네임 감춤" 규칙을 여기(클라이언트)서 흉내만 내면 실제로는
+//   새어나간다 — 참여 여부에 맞는 최종 문자열만 받는다.
 // - canKnock은 방장과 Companion인가를 그대로 넘겨받는 값 — 위 피드 필터 덕분에 이 컴포넌트가
 //   렌더되는 시점엔 사실상 항상 true지만(본인 글 제외), RLS(post_access_insert_knock_self)와
 //   같은 조건을 컴포넌트 계약으로도 명시해두는 방어적 prop이다.
@@ -35,7 +38,7 @@ export function ComplexAccessGate({
   invitedNames,
   initialKnocked,
   canKnock,
-  participantNames,
+  participantSummary,
   initialPendingRequests,
   contentTypeLabel,
   collabAvailable,
@@ -55,8 +58,8 @@ export function ComplexAccessGate({
   initialKnocked: boolean;
   // 방장과 내가 Companion인가 — 노크 버튼 활성 조건(서버 RLS가 실제 경계).
   canKnock: boolean;
-  // 잠긴 게시물의 참여자 전원 표시 이름(내 Companion이면 실명, 아니면 닉네임).
-  participantNames: string[];
+  // "OO, XX...에게 공개" — 서버에서 이미 완성해 내려주는 참여자 요약 문구(방장 본인에겐 null).
+  participantSummary: string | null;
   initialPendingRequests: PendingRequest[];
   contentTypeLabel: string | null;
   collabAvailable: boolean;
@@ -86,10 +89,6 @@ export function ComplexAccessGate({
   const [knockPending, setKnockPending] = useState(false);
   const [pending, setPending] = useState<PendingRequest[]>(initialPendingRequests);
   const [requestsOpen, setRequestsOpen] = useState(false);
-
-  // "OO, XX 참여 중" — 각 이름은 이미 서버에서 뷰어 기준 실명/닉네임으로 계산돼 온다.
-  const participantSummary =
-    participantNames.length > 0 ? `${participantNames.join(", ")} 참여 중` : null;
 
   async function knock() {
     if (knockPending || knocked || !canKnock) return;
@@ -128,6 +127,14 @@ export function ComplexAccessGate({
         <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
           <span>🔒 초대됨:</span>
           <span className="truncate">{invitedNames.join(", ")}</span>
+        </div>
+      )}
+      {/* 방장 본인이 아닌 참여자에게는 위 "초대됨" 대신 참여자 전원 요약을 보여준다
+          (서버에서 이미 "OO, XX...에게 공개" 형태로 완성해서 내려옴). */}
+      {canViewMedia && !isOwnPost && participantSummary && (
+        <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
+          <span>👥</span>
+          <span className="truncate">{participantSummary}</span>
         </div>
       )}
       {!canViewMedia && (

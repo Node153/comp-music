@@ -317,11 +317,12 @@ export interface Database {
       };
     };
     Functions: {
-      // 0019_knock_context_nickname: invite_only 게시물 노크 UI용 — 참여자 전원의 표시 이름
-      // (뷰어와 Companion이면 실명, 아니면 닉네임), 참여자 한 명당 한 행.
+      // 0020_knock_context_is_companion: invite_only 게시물 참여자 요약용 — 참여자 한 명당
+      // 표시 이름(뷰어와 Companion이면 실명, 아니면 닉네임) + Companion 여부. 서버(feed/page.tsx)가
+      // 뷰어의 참여 여부(canViewMedia)를 보고 "Companion 이름 + 외 n명" 또는 "전원 이름"으로 조립.
       knock_context: {
         Args: { pid: string };
-        Returns: { display_name: string }[];
+        Returns: { display_name: string; is_companion: boolean }[];
       };
     };
     Enums: Record<string, never>;
