@@ -56,13 +56,24 @@ export function ComplexAccessGate({
   initialChatMessages: ChatMessage[];
 }) {
   const supabase = createClient();
-  // 음원 게시물은 미디어 박스를 안 쓰고 ComplexPostChat의 mediaSlot으로 넘겨서 사운드바 옆에
-  // 재창작물 스택을 붙여 보여준다(feed/page.tsx의 followers 공개 게시물과 동일한 패턴).
-  const isAudioInlineChat = canViewMedia && mediaType === "audio" && !!videoSrc;
-  const audioMediaEl =
-    isAudioInlineChat && videoSrc ? (
-      <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} posterSrc={posterSrc} />
-    ) : null;
+  // 열람 가능한 게시물은 미디어 박스를 안 쓰고 ComplexPostChat의 mediaSlot으로 넘겨서
+  // 재창작물 스택 + 실시간 채팅과 나란히 보여준다(feed/page.tsx의 followers 공개 게시물과 동일한 패턴).
+  const useInlineChatLayout = canViewMedia && !!videoSrc;
+  const inlineMediaEl = useInlineChatLayout
+    ? mediaType === "audio" ? (
+        <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} posterSrc={posterSrc} />
+      ) : mediaType === "image" ? (
+        <img src={videoSrc} alt="" className="max-h-[420px] w-auto max-w-full rounded-xl object-contain" />
+      ) : (
+        <PostVideo
+          postId={postId}
+          title={contentTypeLabel ?? "영상"}
+          author={authorName}
+          videoSrc={videoSrc}
+          posterSrc={posterSrc}
+        />
+      )
+    : null;
   const [knocked, setKnocked] = useState(initialKnocked);
   const [knockPending, setKnockPending] = useState(false);
   const [pending, setPending] = useState<PendingRequest[]>(initialPendingRequests);
@@ -113,22 +124,10 @@ export function ComplexAccessGate({
         </div>
       )}
 
-      {isAudioInlineChat ? null : (
+      {useInlineChatLayout ? null : (
         <div className="relative flex items-center justify-center bg-black">
           {canViewMedia ? (
-            mediaType === "image" && videoSrc ? (
-              <img src={videoSrc} alt="" className="max-h-[780px] w-auto object-contain" />
-            ) : videoSrc ? (
-              <PostVideo
-                postId={postId}
-                title={contentTypeLabel ?? "영상"}
-                author={authorName}
-                videoSrc={videoSrc}
-                posterSrc={posterSrc}
-              />
-            ) : (
-              <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
-            )
+            <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
           ) : (
             <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
               <span className="text-4xl">🔒</span>
@@ -216,10 +215,10 @@ export function ComplexAccessGate({
           postId={postId}
           currentUserId={currentUserId}
           currentUserName={currentUserName}
-          originalMediaType={mediaType}
+          isOwnPost={isOwnPost}
           initialMessages={initialChatMessages}
           collabAvailable={collabAvailable}
-          mediaSlot={audioMediaEl ?? undefined}
+          mediaSlot={inlineMediaEl}
         />
       ) : (
         <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">

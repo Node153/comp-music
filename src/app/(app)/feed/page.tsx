@@ -448,12 +448,28 @@ export default async function FeedPage({
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
           const followersLocked = isComplex && post.visibility === "followers" && !post.canViewMedia;
-          // memo(complex) 탭의 음원 게시물은 미디어 박스를 따로 안 쓰고 ComplexPostChat의
-          // mediaSlot으로 넘겨서 사운드바 옆에 재창작물 스택을 붙여 보여준다.
-          const isAudioInlineChat = isComplex && post.media_type === "audio" && !!post.videoSrc;
-          const audioMediaEl =
-            isAudioInlineChat && post.videoSrc ? (
-              <SoundbarPlayer src={post.videoSrc} title={post.caption || "음원"} posterSrc={post.posterSrc} />
+          // memo(complex) 탭 게시물(미디어 접근 가능한 경우)은 미디어 박스를 따로 안 쓰고
+          // ComplexPostChat의 mediaSlot으로 넘겨서 재창작물 스택 + 실시간 채팅과 나란히 보여준다.
+          const useInlineChatLayout = isComplex && !followersLocked;
+          const inlineMediaEl =
+            useInlineChatLayout && post.videoSrc ? (
+              post.media_type === "audio" ? (
+                <SoundbarPlayer src={post.videoSrc} title={post.caption || "음원"} posterSrc={post.posterSrc} />
+              ) : post.media_type === "image" ? (
+                <img
+                  src={post.videoSrc}
+                  alt={post.caption ?? "이미지 게시물"}
+                  className="max-h-[420px] w-auto max-w-full rounded-xl object-contain"
+                />
+              ) : (
+                <PostVideo
+                  postId={post.id}
+                  title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
+                  author={author?.name ?? "알 수 없음"}
+                  videoSrc={post.videoSrc}
+                  posterSrc={post.posterSrc}
+                />
+              )
             ) : null;
 
           return (
@@ -541,7 +557,7 @@ export default async function FeedPage({
                     </div>
                   )}
 
-                  {isAudioInlineChat ? null : (
+                  {useInlineChatLayout ? null : (
                     <div className="relative flex items-center justify-center bg-black">
                       {!isComplex && (
                         <div className="absolute right-3 top-3 z-10">
@@ -628,10 +644,10 @@ export default async function FeedPage({
                       postId={post.id}
                       currentUserId={currentUser?.id ?? ""}
                       currentUserName={currentUserName}
-                      originalMediaType={post.media_type}
+                      isOwnPost={isOwnPost}
                       initialMessages={chatMessagesByPost.get(post.id) ?? []}
                       collabAvailable={post.collab_available}
-                      mediaSlot={audioMediaEl ?? undefined}
+                      mediaSlot={inlineMediaEl}
                     />
                   ) : post.isMock ? (
                     <div

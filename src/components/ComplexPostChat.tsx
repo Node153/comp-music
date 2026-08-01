@@ -9,7 +9,6 @@
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
-import type { MediaType } from "@/types/database";
 
 export type ChatMessage = {
   id: string;
@@ -34,7 +33,7 @@ export function ComplexPostChat({
   postId,
   currentUserId,
   currentUserName,
-  originalMediaType,
+  isOwnPost,
   initialMessages,
   collabAvailable,
   mediaSlot,
@@ -42,32 +41,33 @@ export function ComplexPostChat({
   postId: string;
   currentUserId: string;
   currentUserName: string;
-  originalMediaType: MediaType;
+  // 방장(작성자)은 협업 구함 여부와 무관하게 언제나 이미지/오디오 작업물을 올릴 수 있다 —
+  // 협업 구함은 "방장 외" 참여자에게만 적용되는 게이트(0013_owner_can_always_upload_work).
+  isOwnPost: boolean;
   initialMessages: ChatMessage[];
-  // 협업 구함(post.collab_available)이 켜진 게시물에서만 이미지/오디오 작업물 업로드 버튼을 쓸 수
-  // 있음(video/text는 항상 허용) — RLS(post_chat_messages_insert_participant)에서도 동일하게
-  // 강제되므로 여기 disabled는 UX 힌트일 뿐, 실제 보안 경계는 서버에 있음.
+  // 협업 구함(post.collab_available)이 켜진 게시물에서만 방장 외 사용자가 이미지/오디오 작업물
+  // 업로드 버튼을 쓸 수 있음(video/text는 항상 허용) — RLS(post_chat_messages_insert_participant)
+  // 에서도 동일하게 강제되므로 여기 disabled는 UX 힌트일 뿐, 실제 보안 경계는 서버에 있음.
   collabAvailable: boolean;
-  // 음원 게시물 전용 — 부모가 미디어(SoundbarPlayer)를 여기로 넘기면 재창작물 스택을 그 옆에
-  // 작은 목록형으로 붙여서 보여준다(없으면 기존처럼 큰 카드형 스택을 미디어 아래에 그대로 둠).
-  mediaSlot?: React.ReactNode;
+  // 부모(feed/page.tsx, ComplexAccessGate)가 미디어(사운드바/영상/이미지)를 렌더해서 넘겨준다 —
+  // 1차(원본)는 이 미디어 자체로 보여지고, 그 아래 2차+ 재창작물 스택(접기 가능), 오른쪽엔
+  // 실시간 채팅이 나란히 배치된다.
+  mediaSlot: React.ReactNode;
 }) {
   const supabase = createClient();
+  const canUploadWork = collabAvailable || isOwnPost;
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [stackOpen, setStackOpen] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   const workMessages = messages.filter((m) => m.isWork);
 
-  // 스택 카드 목록 — 원본(1차)을 맨 아래, 이후 올라온 작업물을 위로 쌓아 최신 것이 맨 위에 오도록.
-  const stackCards = [
-    { generation: 1, work: null as ChatMessage | null },
-    ...workMessages.map((m, i) => ({ generation: i + 2, work: m })),
-  ].reverse();
+  // 1차(원본)는 mediaSlot 자체로 이미 보여지니 2차+만 스택에 담는다.
+  const secondaryStack = workMessages.map((m, i) => ({ generation: i + 2, work: m })).reverse();
 
   async function sendText(asWork: boolean) {
     const text = draft.trim();
@@ -95,7 +95,7 @@ export function ComplexPostChat({
     setDraft("");
   }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>, type: "image" | "video" | "audio") {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>, type: "image" | "audio") {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || sending) return;
@@ -142,128 +142,9 @@ export function ComplexPostChat({
     }
   }
 
-  function renderWorkContent(work: ChatMessage | null) {
-    if (!work) {
-      return <span className="truncate text-xs text-gray-400 dark:text-gray-500">원곡</span>;
-    }
-    if (work.type === "video" && work.fileUrl) {
-      return <video src={work.fileUrl} controls className="max-h-40 w-full max-w-xs rounded-lg" />;
-    }
-    if (work.type === "image" && work.fileUrl) {
-      return (
-        <img
-          src={work.fileUrl}
-          alt={work.fileName ?? "첨부 이미지"}
-          className="max-h-40 max-w-xs rounded-lg object-cover"
-        />
-      );
-    }
-    if (work.type === "audio" && work.fileUrl) {
-      return <audio src={work.fileUrl} controls className="h-8 w-full max-w-xs" />;
-    }
-    return <span className="truncate text-xs text-gray-600 dark:text-gray-300">{work.content}</span>;
-  }
-
-  return (
-    <div className="border-t border-gray-100 dark:border-gray-800">
-      {mediaSlot ? (
-        <div className="flex items-start gap-3 p-4">
-          <div className="min-w-0 flex-1">{mediaSlot}</div>
-          <div className="flex w-44 shrink-0 flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">재창작물 스택</span>
-              <button
-                type="button"
-                onClick={refreshMessages}
-                disabled={refreshing}
-                title="새로고침"
-                className="text-[11px] text-gray-400 hover:text-gray-700 disabled:opacity-50 dark:text-gray-500 dark:hover:text-gray-200"
-              >
-                🔄
-              </button>
-            </div>
-            <div className="flex max-h-[260px] flex-col gap-1 overflow-y-auto">
-              {stackCards.map((card, i) => (
-                <div
-                  key={card.generation}
-                  className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 ${
-                    i === 0
-                      ? "border-violet-300 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/30"
-                      : "border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/40"
-                  }`}
-                >
-                  <span className="shrink-0 text-sm">
-                    {card.work ? WORK_TYPE_LABEL[card.work.type] : WORK_TYPE_LABEL[originalMediaType]}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={`truncate text-[11px] font-semibold ${
-                        i === 0 ? "text-violet-600 dark:text-violet-300" : "text-gray-500 dark:text-gray-400"
-                      }`}
-                    >
-                      {card.generation === 1 ? "1차 (원본)" : `${card.generation}차 창작물`}
-                    </p>
-                    <p className="truncate text-[10px] text-gray-400 dark:text-gray-500">
-                      {card.work?.senderName ?? "작성자"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center justify-between px-4 pt-3">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">재창작물 스택</span>
-            <button
-              type="button"
-              onClick={refreshMessages}
-              disabled={refreshing}
-              className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-50 dark:text-gray-500 dark:hover:text-gray-200"
-            >
-              {refreshing ? "새로고침 중..." : "🔄 새로고침"}
-            </button>
-          </div>
-          <div className="flex flex-col gap-2 px-4 py-3">
-            {stackCards.map((card, i) => (
-              <div
-                key={card.generation}
-                className={`flex items-center gap-3 rounded-xl border p-2.5 ${
-                  i === 0
-                    ? "border-violet-300 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/30"
-                    : "border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/40"
-                }`}
-              >
-                <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${
-                    i === 0 ? "bg-violet-100 dark:bg-violet-900/50" : "bg-gray-100 dark:bg-gray-800"
-                  }`}
-                >
-                  {card.work ? WORK_TYPE_LABEL[card.work.type] : WORK_TYPE_LABEL[originalMediaType]}
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span
-                    className={`text-xs font-semibold ${
-                      i === 0 ? "text-violet-600 dark:text-violet-300" : "text-gray-500 dark:text-gray-400"
-                    }`}
-                  >
-                    {card.generation === 1
-                      ? "🎼 1차 (원본)"
-                      : `${WORK_TYPE_LABEL[card.work!.type]} ${card.generation}차 창작물`}{" "}
-                    · {card.work?.senderName ?? "작성자"}
-                  </span>
-                  {renderWorkContent(card.work)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      <div className="border-t border-gray-100 dark:border-gray-800" />
-
-      <div className="flex max-h-72 flex-col gap-2 overflow-y-auto px-4 py-3">
+  function renderMessages() {
+    return (
+      <>
         {messages.map((m) => {
           const isMe = m.senderId === currentUserId;
           return (
@@ -313,6 +194,65 @@ export function ComplexPostChat({
             아직 채팅이 없어요. 첫 메시지를 남겨보세요.
           </p>
         )}
+      </>
+    );
+  }
+
+  return (
+    <div className="border-t border-gray-100 dark:border-gray-800">
+      {/* 왼쪽: 미디어(1차) + 재창작물 스택(2차+, 접기 가능) · 오른쪽: 실시간 채팅. */}
+      <div className="flex divide-x divide-gray-100 dark:divide-gray-800">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
+          {mediaSlot}
+          {secondaryStack.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => setStackOpen((v) => !v)}
+                className="flex items-center justify-between px-0.5 text-[11px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <span>재창작물 스택 ({secondaryStack.length})</span>
+                <span>{stackOpen ? "▲" : "▼"}</span>
+              </button>
+              {stackOpen && (
+                <div className="flex max-h-[220px] flex-col gap-1 overflow-y-auto">
+                  {secondaryStack.map((card) => (
+                    <div
+                      key={card.generation}
+                      className="flex items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 dark:border-gray-800 dark:bg-gray-900/40"
+                    >
+                      <span className="shrink-0 text-sm">{WORK_TYPE_LABEL[card.work.type]}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                          {card.generation}차 창작물
+                        </p>
+                        <p className="truncate text-[10px] text-gray-400 dark:text-gray-500">
+                          {card.work.senderName}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">채팅</span>
+            <button
+              type="button"
+              onClick={refreshMessages}
+              disabled={refreshing}
+              title="새로고침"
+              className="text-[11px] text-gray-400 hover:text-gray-700 disabled:opacity-50 dark:text-gray-500 dark:hover:text-gray-200"
+            >
+              🔄
+            </button>
+          </div>
+          <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto">{renderMessages()}</div>
+        </div>
       </div>
 
       <form
@@ -323,18 +263,11 @@ export function ComplexPostChat({
         className="flex items-center gap-1.5 border-t border-gray-100 p-2 dark:border-gray-800"
       >
         <input
-          ref={videoInputRef}
-          type="file"
-          accept="video/*"
-          className="hidden"
-          onChange={(e) => handleFile(e, "video")}
-        />
-        <input
           ref={imageInputRef}
           type="file"
           accept="image/*"
           className="hidden"
-          disabled={!collabAvailable}
+          disabled={!canUploadWork}
           onChange={(e) => handleFile(e, "image")}
         />
         <input
@@ -342,22 +275,13 @@ export function ComplexPostChat({
           type="file"
           accept="audio/mpeg,audio/mp3,audio/wav"
           className="hidden"
-          disabled={!collabAvailable}
+          disabled={!canUploadWork}
           onChange={(e) => handleFile(e, "audio")}
         />
         <button
           type="button"
-          title="영상 작업물 올리기"
-          disabled={sending}
-          onClick={() => videoInputRef.current?.click()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-        >
-          🎬
-        </button>
-        <button
-          type="button"
-          disabled={!collabAvailable || sending}
-          title={collabAvailable ? "이미지 작업물 올리기" : "협업 구함 게시물에서만 이미지를 올릴 수 있어요"}
+          disabled={!canUploadWork || sending}
+          title={canUploadWork ? "이미지 작업물 올리기" : "협업 구함 게시물에서만 방장 외 사용자가 이미지를 올릴 수 있어요"}
           onClick={() => imageInputRef.current?.click()}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
         >
@@ -365,8 +289,8 @@ export function ComplexPostChat({
         </button>
         <button
           type="button"
-          disabled={!collabAvailable || sending}
-          title={collabAvailable ? "오디오 작업물 올리기" : "협업 구함 게시물에서만 오디오를 올릴 수 있어요"}
+          disabled={!canUploadWork || sending}
+          title={canUploadWork ? "오디오 작업물 올리기" : "협업 구함 게시물에서만 방장 외 사용자가 오디오를 올릴 수 있어요"}
           onClick={() => audioInputRef.current?.click()}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
         >

@@ -23,7 +23,7 @@ export function PostVideo({
     <video
       src={videoSrc}
       poster={posterSrc ?? undefined}
-      className="max-h-[780px] w-auto object-contain"
+      className="max-h-[780px] w-auto max-w-full object-contain"
       controls
       muted
       playsInline
