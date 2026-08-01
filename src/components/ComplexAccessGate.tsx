@@ -12,6 +12,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { PostVideo } from "@/components/PostVideo";
+import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
 import { tagColorClass } from "@/lib/feedConstants";
 import type { MediaType } from "@/types/database";
@@ -127,7 +128,7 @@ export function ComplexAccessGate({
                   🎵
                 </div>
               )}
-              <audio src={videoSrc} controls className="w-full max-w-md" />
+              <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} />
             </div>
           ) : videoSrc ? (
             <PostVideo

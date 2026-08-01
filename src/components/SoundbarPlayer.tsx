@@ -1,17 +1,13 @@
 "use client";
 
-// Complex 업로드에서 음원(mp3/wav) 파일을 고르면 Web Audio API로 파형을 분석해
-// 자동으로 그려주는 사운드바 미리보기. 서버 왕복 없이 브라우저에서만 계산.
-// 디자인은 사용자가 제공한 레퍼런스(비트포트류 다크 트랙 플레이어 — 어두운 바탕 + 시안색 파형 +
-// 재생된 구간만 밝게)를 참고. BPM/키/가격처럼 실제로 분석하지 않는 값은 지어내지 않고 뺐다.
-// 사운드바는 "게시물 이미지"가 아니라 업로드 폼 안에 작게 들어가는 재생 위젯 — 실제 커버
-// 이미지는 별도로 첨부해서 미리보기(aside)에 보여준다(업로드 폼 참고).
+// SoundbarPreview(업로드 미리보기)와 같은 파형 재생 위젯을 피드 카드에서도 보여주기 위한 버전.
+// 업로드 쪽은 File을 바로 갖고 있지만 피드는 R2 signed URL만 있어서, fetch로 받아온 뒤
+// 같은 computeWaveformBars로 분석한다. signed URL이 만료되기 전(발급 후 30분)에만 유효 —
+// 이미 <audio src>가 같은 URL을 쓰고 있어서 새로운 제약은 아니다.
 import { useEffect, useRef, useState } from "react";
 import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
 
-// 부모가 파일이 바뀔 때마다 다른 key를 넘겨줘야 함 — 그래야 리마운트되면서 bars 상태가
-// 새 파일 기준으로 깨끗하게 초기화됨(effect 안에서 직접 setState로 리셋하지 않음).
-export function SoundbarPreview({ file, src }: { file: File; src: string }) {
+export function SoundbarPlayer({ src, title }: { src: string; title: string }) {
   const [bars, setBars] = useState<number[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -21,8 +17,10 @@ export function SoundbarPreview({ file, src }: { file: File; src: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    file
-      .arrayBuffer()
+    // <audio src>는 태그라 CORS 영향 없이 바로 재생되지만, 파형 분석을 위한 fetch()는
+    // R2 도메인에 대한 브라우저 CORS 처리가 불안정해서 우리 서버 프록시(같은 출처)를 거친다.
+    fetch(`/api/media/waveform-proxy?url=${encodeURIComponent(src)}`)
+      .then((res) => res.arrayBuffer())
       .then(computeWaveformBars)
       .then((result) => {
         if (!cancelled) setBars(result);
@@ -33,7 +31,7 @@ export function SoundbarPreview({ file, src }: { file: File; src: string }) {
     return () => {
       cancelled = true;
     };
-  }, [file]);
+  }, [src]);
 
   function togglePlay() {
     const audio = audioRef.current;
@@ -53,7 +51,7 @@ export function SoundbarPreview({ file, src }: { file: File; src: string }) {
   const playedBarCount = bars ? Math.round(playedRatio * bars.length) : 0;
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl bg-neutral-900 p-3">
+    <div className="flex w-full max-w-md flex-col gap-2 rounded-xl bg-neutral-900 p-3">
       <audio
         ref={audioRef}
         src={src}
@@ -73,16 +71,14 @@ export function SoundbarPreview({ file, src }: { file: File; src: string }) {
           {isPlaying ? "⏸" : "▶"}
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-white">{file.name}</p>
+          <p className="truncate text-xs font-semibold text-white">{title}</p>
           <p className="text-[11px] text-neutral-400">
             {formatWaveformTime(currentTime)} / {formatWaveformTime(duration)}
           </p>
         </div>
       </div>
 
-      {failed && (
-        <p className="text-[11px] text-neutral-400">파형을 분석하지 못했어요. 업로드 자체는 문제없어요.</p>
-      )}
+      {failed && <p className="text-[11px] text-neutral-400">파형을 분석하지 못했어요. 재생은 문제없어요.</p>}
       {!failed && !bars && <p className="text-[11px] text-neutral-400">파형 분석 중...</p>}
       {bars && (
         <div

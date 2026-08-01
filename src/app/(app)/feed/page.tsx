@@ -6,6 +6,7 @@ import { PostEngagementProvider } from "@/components/PostEngagementContext";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { PostVideo } from "@/components/PostVideo";
 import { MockPlayOverlay } from "@/components/MockPlayOverlay";
+import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
 import { ComplexAccessGate } from "@/components/ComplexAccessGate";
 import { LikeButton } from "./LikeButton";
@@ -594,7 +595,7 @@ export default async function FeedPage({
                             🎵
                           </div>
                         )}
-                        <audio src={post.videoSrc} controls className="w-full max-w-md" />
+                        <SoundbarPlayer src={post.videoSrc} title={post.caption || "음원"} />
                       </div>
                     ) : post.videoSrc ? (
                       <PostVideo
