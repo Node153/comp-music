@@ -2,7 +2,7 @@
 
 // S8 업로드 화면 (FEED-01, 02, 05, 07)
 // Phase 0: 공개범위 UI 없음(visibility=public 고정), 예약 게시 없음(즉시 게시만) — 1.4
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
@@ -14,6 +14,20 @@ import { ALL_GENRES } from "@/lib/genres";
 import type { ExpireHours } from "@/types/database";
 
 const MIN_TAGS = 3;
+
+// 게시하기 버튼에 랜덤으로 노출되는 사투리 문구 — SSR과 클라이언트의 Math.random 결과가
+// 달라질 수밖에 없어서, 버튼 텍스트 span에 suppressHydrationWarning을 걸고 클라이언트 값을 쓴다.
+const SUBMIT_PHRASES = [
+  "그냥 해부러. 뭣 땜시 그라고 고민헌디?",
+  "뭣 허고 있냐? 그냥 해부러라.",
+  "아따, 그냥 질러부러! 뭘 그리 재고 있냐?",
+  "뭐 하노? 그냥 해뿌라.",
+  "마, 그냥 해라. 뭘 그리 고민하노?",
+  "와 그라노? 그냥 질러라.",
+  "그냥 혀~ 뭘 그리 고민혀.",
+  "에이, 그냥 해버려유. 뭘 그려.",
+  "그냥 혀유~ 될 겨.",
+];
 
 const EXPIRE_HOURS_OPTIONS: ExpireHours[] = [6, 12, 24, 48];
 
@@ -70,7 +84,9 @@ function readVideoDuration(file: File): Promise<number> {
 // 아래 dark: 조합은 Complex 선택 시 <html>에 .dark가 붙는 것에 반응하는 용도.
 // 이 페이지 밖(예: /profile/manage)에도 재사용되는 공유 스타일(pageCard/labelClass/field)은
 // 건드리지 않고, 여기서만 dark: 클래스를 덧붙여 확장한다.
-const darkPageCard = `${pageCard} dark:border-gray-800 dark:bg-gray-950`;
+// w-full: pageCard는 max-w만 있어서 카드 폭이 내용물 고유 너비를 따라간다 — 해시태그 검색으로
+// 칩 목록이 줄면 폼 전체가 좁아지는 문제가 있어 이 페이지에서는 폭을 항상 max-w까지 고정.
+const darkPageCard = `${pageCard} w-full dark:border-gray-800 dark:bg-gray-950`;
 const darkLabel = `${labelClass} dark:text-gray-300`;
 const darkField = `${field} dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-white dark:focus:ring-white`;
 const darkErrorText = `${errorText} dark:text-red-400`;
@@ -104,6 +120,70 @@ function chipButtonClass(active: boolean) {
   return `rounded-full px-3 py-1.5 text-sm font-medium transition ${colors}`;
 }
 
+// 파일 input을 감춘 큰 dropzone — 클릭·드래그앤드롭 둘 다 지원. 업로드 가능한 확장자를
+// 박스 안에 나열해서 별도 라벨 없이 이 박스 하나로 파일 선택 UI를 대체한다.
+const UPLOADABLE_FORMATS = "mp3 · wav · mp4 · mov";
+
+function UploadDropbox({ file, onSelect }: { file: File | null; onSelect: (file: File | null) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => inputRef.current?.click()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        onSelect(e.dataTransfer.files?.[0] ?? null);
+      }}
+      className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
+        dragOver
+          ? "border-black bg-gray-50 dark:border-white dark:bg-gray-900"
+          : "border-gray-300 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-900"
+      }`}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept={VIDEO_OR_AUDIO_ACCEPT}
+        className="hidden"
+        onChange={(e) => {
+          onSelect(e.target.files?.[0] ?? null);
+          e.target.value = "";
+        }}
+      />
+      <span className="text-3xl" aria-hidden>
+        ⬆
+      </span>
+      {file ? (
+        <>
+          <p className="max-w-full truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
+            {file.name}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Click or drop to replace</p>
+        </>
+      ) : (
+        <>
+          <p className="text-lg font-bold text-gray-800 dark:text-gray-100">Upload</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{UPLOADABLE_FORMATS}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function UploadPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -124,7 +204,6 @@ export default function UploadPage() {
   const [caption, setCaption] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearch, setTagSearch] = useState("");
-  const [customTagInput, setCustomTagInput] = useState("");
   const [expireHours, setExpireHours] = useState<ExpireHours>(24);
   const [complexVisibility, setComplexVisibility] = useState<ComplexVisibility>("followers");
   const [inviteUsers, setInviteUsers] = useState<PickedUser[]>([]);
@@ -136,6 +215,10 @@ export default function UploadPage() {
   // 미리보기 aside는 영상 업로드일 때만 나타나고, 버튼으로 접었다 폈다 할 수 있음(음원은 폼 안
   // 사운드바로 이미 충분해서 aside 자체가 안 뜸).
   const [previewOpen, setPreviewOpen] = useState(true);
+
+  const [submitPhrase] = useState(
+    () => SUBMIT_PHRASES[Math.floor(Math.random() * SUBMIT_PHRASES.length)],
+  );
 
   // Complex 선택 시 피드의 Complex 탭(ThemeSync.tsx)과 동일하게 다크 테마로 전환.
   // ThemeSync는 URL(/feed?feed=complex)만 감시해서 이 페이지의 로컬 상태는 모르기 때문에
@@ -175,8 +258,7 @@ export default function UploadPage() {
     setUploadType(next);
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
+  async function handleFileChange(file: File | null) {
     setMediaFile(file);
     setDurationWarning(null);
     setCoverFile(null);
@@ -196,8 +278,7 @@ export default function UploadPage() {
     setCoverFile(e.target.files?.[0] ?? null);
   }
 
-  function handleComplexFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
+  function handleComplexFileChange(file: File | null) {
     setComplexFile(file);
     setComplexKind(file ? detectMediaKind(file) : null);
   }
@@ -208,11 +289,12 @@ export default function UploadPage() {
     );
   }
 
+  // 검색창이 직접 입력을 겸한다 — Enter/추가를 누르면 입력한 텍스트가 그대로 태그로 추가됨.
   function addCustomTag() {
-    const tag = customTagInput.trim().replace(/^#/, "");
+    const tag = tagSearch.trim().replace(/^#/, "");
     if (!tag) return;
     setSelectedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
-    setCustomTagInput("");
+    setTagSearch("");
   }
 
   const filteredGenres = ALL_GENRES.filter((tag) =>
@@ -393,7 +475,12 @@ export default function UploadPage() {
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 md:flex-row md:items-start md:justify-center">
       <main className={`${darkPageCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
-        <h1 className={`${pageTitle} dark:text-gray-100`}>영상 업로드</h1>
+        {/* 스티커처럼 살짝 기울인 하드 섀도우 박스 — DEMO(옐로우)/memo(바이올렛) 포인트 컬러를 따라간다. */}
+        <h1
+          className={`${pageTitle} mx-auto w-fit -rotate-2 rounded-xl border-2 border-black bg-yellow-300 px-5 py-2 shadow-[4px_4px_0_0_#000] transition-colors dark:border-violet-400 dark:bg-black dark:text-violet-300 dark:shadow-[4px_4px_0_0_#7c3aed]`}
+        >
+          Drop Zone
+        </h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <span className={darkLabel}>게시 유형</span>
@@ -424,13 +511,8 @@ export default function UploadPage() {
 
           {uploadType === "demo" ? (
             <div className="flex flex-col gap-1.5">
-              <span className={darkLabel}>영상 또는 음원 파일 (mp3/wav) — 필수</span>
-              <input
-                type="file"
-                accept={VIDEO_OR_AUDIO_ACCEPT}
-                onChange={handleFileChange}
-                className={darkFileInput}
-              />
+              <span className={darkLabel}>업로드</span>
+              <UploadDropbox file={mediaFile} onSelect={handleFileChange} />
               {mediaFile && !mediaKind && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
                   영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
@@ -469,13 +551,8 @@ export default function UploadPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
-              <span className={darkLabel}>영상 또는 음원 파일 (mp3/wav) — 필수</span>
-              <input
-                type="file"
-                accept={VIDEO_OR_AUDIO_ACCEPT}
-                onChange={handleComplexFileChange}
-                className={darkFileInput}
-              />
+              <span className={darkLabel}>업로드</span>
+              <UploadDropbox file={complexFile} onSelect={handleComplexFileChange} />
               {complexFile && !complexKind && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
                   영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
@@ -536,40 +613,12 @@ export default function UploadPage() {
                 </div>
               )}
 
-              <input
-                type="text"
-                placeholder="해시태그 검색"
-                value={tagSearch}
-                onChange={(e) => setTagSearch(e.target.value)}
-                className={darkField}
-              />
-              <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-                {filteredGenres.map((tag) => {
-                  const isSelected = selectedTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={chipButtonClass(isSelected)}
-                    >
-                      #{tag}
-                    </button>
-                  );
-                })}
-                {filteredGenres.length === 0 && (
-                  <p className="py-2 text-sm text-gray-400 dark:text-gray-500">
-                    일치하는 해시태그가 없어요. 직접 입력해보세요.
-                  </p>
-                )}
-              </div>
-
               <div className="flex gap-1.5">
                 <input
                   type="text"
-                  placeholder="목록에 없는 해시태그 직접 입력"
-                  value={customTagInput}
-                  onChange={(e) => setCustomTagInput(e.target.value)}
+                  placeholder="해시태그 검색 또는 직접 입력"
+                  value={tagSearch}
+                  onChange={(e) => setTagSearch(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -581,6 +630,48 @@ export default function UploadPage() {
                 <Button type="button" onClick={addCustomTag} className="shrink-0 px-4">
                   추가
                 </Button>
+              </div>
+              {/* 검색 중이 아닐 때는 예시 칩 블록 2개를 세로로 이어붙여 위로 천천히 무한 스크롤
+                  (hover 시 정지 — globals.css의 .animate-marquee-up). 두 블록 높이가 같아야
+                  -50% 이동 시 이음새가 안 보이므로 column gap 대신 각 블록에 pb-1.5를 준다.
+                  검색으로 필터링 중일 땐 결과가 몇 개 안 남아 흐르면 어색해서 정적 목록으로 표시. */}
+              <div className="max-h-48 overflow-hidden rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+                {filteredGenres.length === 0 ? (
+                  <p className="py-2 text-sm text-gray-400 dark:text-gray-500">
+                    일치하는 해시태그가 없어요. Enter나 추가 버튼으로 그대로 추가할 수 있어요.
+                  </p>
+                ) : tagSearch.trim() !== "" ? (
+                  <div className="flex max-h-[10.5rem] flex-wrap gap-1.5 overflow-y-auto">
+                    {filteredGenres.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={chipButtonClass(selectedTags.includes(tag))}
+                      >
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="animate-marquee-up flex flex-col">
+                    {[0, 1].map((dup) => (
+                      <div key={dup} aria-hidden={dup === 1} className="flex flex-wrap gap-1.5 pb-1.5">
+                        {filteredGenres.map((tag) => (
+                          <button
+                            key={`${dup}-${tag}`}
+                            type="button"
+                            tabIndex={dup === 1 ? -1 : undefined}
+                            onClick={() => toggleTag(tag)}
+                            className={chipButtonClass(selectedTags.includes(tag))}
+                          >
+                            #{tag}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -664,7 +755,7 @@ export default function UploadPage() {
 
           {error && <p className={darkErrorText}>{error}</p>}
           <Button type="submit" disabled={loading} className="mt-1 w-full">
-            {loading ? "게시 중..." : "게시하기"}
+            {loading ? "게시 중..." : <span suppressHydrationWarning>{submitPhrase}</span>}
           </Button>
         </form>
       </main>

@@ -45,3 +45,22 @@ body {
 .animate-peak-in {
   animation: peak-slide-in 0.4s ease-out both;
 }
+
+/* 업로드 페이지 해시태그 예시 칩 — 동일한 블록 2개를 세로로 이어붙이고 -50%까지 올린 뒤
+   되감아 이음새 없이 위로 천천히 무한 흐르게 한다. 클릭할 수 있게 hover 시엔 정지. */
+@keyframes marquee-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-marquee-up {
+  animation: marquee-up 30s linear infinite;
+}
+
+.animate-marquee-up:hover {
+  animation-play-state: paused;
+}
