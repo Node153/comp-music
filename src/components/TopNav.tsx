@@ -1,13 +1,13 @@
 "use client";
 
 // 데스크톱 웹 기준 상단 네비게이션(페이스북 참고). 모바일(md 미만)에서는 BottomNav가 대신 노출됨.
-// 좌: 로고+검색(장식용, SEARCH는 Phase1) · 우: Drop(업로드)/DM/Me 클러스터
+// 좌: 로고+검색(장식용, SEARCH는 Phase1) · 우: Drop(업로드)/Me/Away 클러스터.
 // Push(알림) 버튼은 프로필 링크·뱃지가 Me 드롭다운과 중복이라 제거하고, 안읽음 알림 뱃지는 Me 아바타로 옮김.
+// DM은 자리를 Away(공지사항+피드백, 0021_announcements_and_feedback)에 내줬다 — 메시지 자체는
+// /messages 라우트로 여전히 접근 가능(대화 중인 상대 프로필의 "메시지 보내기" 버튼 등).
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
-
-const ICON_ACTIONS = [{ href: "/messages", label: "DM", icon: "✉️", unread: 2 }];
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
 // 특정인 초대) 두 피드 탭.
@@ -88,29 +88,18 @@ export function TopNav({
           <span className="text-lg">➕</span>
           Drop
         </Link>
-        {ICON_ACTIONS.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`relative flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
-                isActive
-                  ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-              }`}
-            >
-              <span className="text-base">{item.icon}</span>
-              {item.label}
-              {item.unread > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
-                  {item.unread}
-                </span>
-              )}
-            </Link>
-          );
-        })}
         <ProfileMenu userId={currentUserId} userName={userName} unseenCount={unseenNotifications} />
+        <Link
+          href="/away"
+          className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+            pathname === "/away"
+              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
+          }`}
+        >
+          <span className="text-base">📣</span>
+          Away
+        </Link>
       </div>
     </header>
   );

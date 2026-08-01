@@ -303,6 +303,44 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["post_chat_messages"]["Insert"]>;
         Relationships: [];
       };
+      // 0021_announcements_and_feedback — Away 메뉴(구 DM 자리)의 공지사항. 관리자만 작성.
+      announcements: {
+        Row: {
+          id: string;
+          author_id: string;
+          title: string;
+          content: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          title: string;
+          content: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["announcements"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0021_announcements_and_feedback — Away 메뉴에서 보내는 피드백. 본인+관리자만 열람.
+      feedback: {
+        Row: {
+          id: string;
+          user_id: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["feedback"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       // 0018 — 뷰어 기준 표시 이름: 본인/Companion이면 실명(users.name), 아니면 닉네임.
