@@ -3,7 +3,10 @@
 // 데스크톱 우측 사이드바 — Discord 접속자 리스트 참고. 페이스북 카드형 박스 대신
 // 아바타+이름 한 줄로 축약해서 위계를 낮춘다.
 // memo(구 Complex) 탭에서는 "실시간 PEAK" 대신 노크 가능한 비공개(초대전용) 게시물 목록을
-// 보여준다 — 실제 posts/post_access 기반(0012_complex_access_and_chat).
+// 보여준다 — 실제 posts/post_access 기반(0012_complex_access_and_chat). memo는 방장과
+// Companion인 게시물만 보이므로(feed/page.tsx와 동일한 원칙) 여기서도 Companion 필터를 거친
+// 후보만 후보로 삼는다 — 안 그러면 RLS(post_access_insert_knock_self)에서 막히는 죽은
+// 노크 버튼을 보여주게 된다.
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -64,16 +67,35 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
     const supabase = createClient();
 
     (async () => {
-      const { data: posts } = await supabase
+      const { data: companionRows } = await supabase
+        .from("companions")
+        .select("requester_id, addressee_id")
+        .eq("status", "accepted")
+        .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+      const companionIds = new Set(
+        (companionRows ?? []).map((r) =>
+          r.requester_id === currentUserId ? r.addressee_id : r.requester_id,
+        ),
+      );
+
+      if (companionIds.size === 0) {
+        if (!cancelled) setKnockablePosts([]);
+        return;
+      }
+
+      // 이후 Companion 필터 + accessMap 필터 + slice(0,5)로 더 줄어들 걸 감안해 넉넉히 가져온다.
+      const { data: rawPosts } = await supabase
         .from("posts")
         .select("id, user_id, caption, published_at")
         .eq("visibility", "invite_only")
         .eq("status", "published")
         .neq("user_id", currentUserId)
         .order("published_at", { ascending: false })
-        .limit(10);
+        .limit(30);
 
-      if (!posts || posts.length === 0) {
+      const posts = (rawPosts ?? []).filter((p) => companionIds.has(p.user_id));
+
+      if (posts.length === 0) {
         if (!cancelled) setKnockablePosts([]);
         return;
       }

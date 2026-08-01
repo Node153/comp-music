@@ -2,16 +2,17 @@
 
 // Complex "특정인 초대"(invite_only) 게시물의 노크(열람 요청) 흐름 — 0012_complex_access_and_chat로
 // 실제 DB(post_access) 연동됨(이전엔 전부 로컬 state만 쓰는 mock이었음).
-// - 초대 안 된 사람에게는 존재(헤더/캡션/태그)는 보이되 미디어+채팅은 락으로 가려지고, 노크 버튼만 노출.
-//   이 "티저" 동작 때문에 posts 행 자체의 RLS는 visibility로 좁히지 않고, 실제 프라이버시 경계는
-//   feed/page.tsx가 뷰어별로 미디어 signed URL을 조건부 발급하는 데서 생긴다 — canViewMedia prop이
-//   그 결과다.
-// - 비초대 방문자에게도 참여자 전원을 이름으로 보여준다(0019_knock_context_nickname) — 나와
-//   Companion인 참여자는 실명, 아닌 참여자는 닉네임(knock_context 함수가 서버에서 계산 —
-//   feed/page.tsx). 실명 자체를 감추는 게 목적이라 닉네임까지 숨길 필요는 없음(user_display와
-//   동일한 실명/닉네임 정책, 0018).
-// - 노크는 방장과 Companion인 사람만 가능(canKnock) — RLS(post_access_insert_knock_self)에서도
-//   동일하게 강제되므로 여기 disabled는 UX 힌트일 뿐.
+// - 이 컴포넌트가 렌더된다는 것 자체가 이미 뷰어=방장과 Companion(또는 본인)이라는 뜻이다
+//   (feed/page.tsx가 그 조건을 만족하는 게시물만 애초에 피드에 포함시킴) — memo는
+//   "팔로우한 사람 게시물만 보임"이 특정인 초대에도 그대로 적용되고, 초대 안 된 사람에게는
+//   존재 자체를 보여주지 않는다. 노크는 그 안에서 "아직 이 게시물에 초대 안 된 Companion"이
+//   미디어/채팅에 대한 접근을 요청하는 더 좁은 두 번째 게이트일 뿐이다.
+// - 참여자 전원을 이름으로 보여준다(0019_knock_context_nickname) — 나와 Companion인 참여자는
+//   실명, 아닌 참여자는 닉네임(knock_context 함수가 서버에서 계산 — feed/page.tsx). 실명
+//   자체를 감추는 게 목적이라 닉네임까지 숨길 필요는 없음(user_display와 동일한 정책, 0018).
+// - canKnock은 방장과 Companion인가를 그대로 넘겨받는 값 — 위 피드 필터 덕분에 이 컴포넌트가
+//   렌더되는 시점엔 사실상 항상 true지만(본인 글 제외), RLS(post_access_insert_knock_self)와
+//   같은 조건을 컴포넌트 계약으로도 명시해두는 방어적 prop이다.
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PostVideo } from "@/components/PostVideo";

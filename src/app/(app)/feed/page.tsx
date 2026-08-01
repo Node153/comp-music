@@ -292,12 +292,13 @@ export default async function FeedPage({
     );
   }
 
-  // "Companion 공개"(followers) 게시물은 Companion에게만 노출 — memo 원래 취지("팔로우한
-  // 사람의 게시물만 보임")대로, 아닌 사람에게는 잠긴 티저조차 보여주지 않고 피드에서 아예
-  // 뺀다. "특정인 초대"(invite_only)는 반대로 누구에게나 존재는 보이고 노크로 열람을
-  // 요청하는 게 핵심 UX라 그대로 둔다(아래 ComplexAccessGate).
+  // memo 원래 취지("팔로우한 사람의 게시물만 보임")대로, "Companion 공개"(followers)와
+  // "특정인 초대"(invite_only) 둘 다 방장과 Companion인 사람(또는 본인)에게만 노출 — 아닌
+  // 사람에게는 잠긴 티저조차 보여주지 않고 피드에서 아예 뺀다. invite_only의 노크는 그
+  // "Companion 사이"에서 방장이 아직 초대 안 한 특정 게시물의 콘텐츠(미디어/채팅)에 대한
+  // 별도의 더 좁은 접근 요청일 뿐, 존재 자체를 비Companion에게 공개하는 수단이 아니다.
   const posts = (rawPosts ?? []).filter((p) => {
-    if (p.visibility !== "followers") return true;
+    if (!isComplex) return true;
     if (currentUser?.id === p.user_id) return true;
     return myCompanionIds.has(p.user_id);
   });
