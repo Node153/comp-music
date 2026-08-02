@@ -28,7 +28,12 @@ export default async function AdminVerificationQueuePage() {
 
   return (
     <main className="mx-auto max-w-2xl p-6">
-      <h1 className={pageTitle}>심사 대기열</h1>
+      <div className="flex items-center justify-between">
+        <h1 className={pageTitle}>심사 대기열</h1>
+        <Link href="/admin/members" className="text-sm font-medium text-blue-600 hover:underline">
+          회원 관리 →
+        </Link>
+      </div>
       <div className="mt-5 flex flex-col gap-2">
         {(verifications ?? []).map((v) => {
           const user = userMap.get(v.user_id);

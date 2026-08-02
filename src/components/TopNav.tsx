@@ -1,7 +1,7 @@
 "use client";
 
 // 데스크톱 웹 기준 상단 네비게이션(페이스북 참고). 모바일(md 미만)에서는 BottomNav가 대신 노출됨.
-// 좌: 로고+검색(장식용, SEARCH는 Phase1) · 우: Drop(업로드)/Me/Away 클러스터.
+// 좌: 로고 · 우: Drop(업로드)/Me/Away 클러스터.
 // Push(알림) 버튼은 프로필 링크·뱃지가 Me 드롭다운과 중복이라 제거하고, 안읽음 알림 뱃지는 Me 아바타로 옮김.
 // DM은 자리를 Away(공지사항+피드백, 0021_announcements_and_feedback)에 내줬다 — 메시지 자체는
 // /messages 라우트로 여전히 접근 가능(대화 중인 상대 프로필의 "메시지 보내기" 버튼 등).
@@ -39,18 +39,6 @@ export function TopNav({
           </span>
           <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Comp</span>
         </Link>
-        <div className="relative ml-2 w-full max-w-md">
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base text-gray-400">
-            🔍
-          </span>
-          <input
-            type="text"
-            placeholder="Comp 검색"
-            disabled
-            title="검색 기능은 준비 중이에요"
-            className="w-full rounded-full bg-gray-100 py-3 pl-11 pr-4 text-base text-gray-600 placeholder:text-gray-400 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-300"
-          />
-        </div>
       </div>
 
       <nav className="flex h-full items-center gap-1">

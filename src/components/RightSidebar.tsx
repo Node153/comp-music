@@ -228,7 +228,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
 
       <section>
         <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          {isMemoTab ? "🔒 노크 가능한 게시물" : "실시간 PEAK"}
+          {isMemoTab ? "🔒 노크 가능한 게시물" : "최근 Peak 게시물"}
         </h2>
         <div className="mt-1 flex flex-col gap-1">
           {isMemoTab ? (
