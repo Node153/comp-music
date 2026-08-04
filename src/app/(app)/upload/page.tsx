@@ -149,7 +149,7 @@ function UploadDropbox({ file, onSelect }: { file: File | null; onSelect: (file:
         setDragOver(false);
         onSelect(e.dataTransfer.files?.[0] ?? null);
       }}
-      className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
+      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
         dragOver
           ? "border-black bg-gray-50 dark:border-white dark:bg-gray-900"
           : "border-gray-300 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-900"
@@ -165,6 +165,20 @@ function UploadDropbox({ file, onSelect }: { file: File | null; onSelect: (file:
           e.target.value = "";
         }}
       />
+      {file && (
+        <button
+          type="button"
+          aria-label="파일 제거"
+          title="파일 제거"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(null);
+          }}
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-600 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+        >
+          ×
+        </button>
+      )}
       <span className="text-3xl" aria-hidden>
         ⬆
       </span>
