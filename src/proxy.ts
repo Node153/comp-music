@@ -48,8 +48,13 @@ export async function proxy(request: NextRequest) {
 
   const status = profile?.status ?? "pending";
 
-  // 승인된 사용자가 가입/로그인 화면에 다시 들어가면 피드로 보냄
-  if (status === "approved" && (pathname === "/login" || pathname === "/signup")) {
+  // 승인된 사용자가 가입/로그인 또는 심사 관련 화면(승인 전에 보던 화면)에 남아있으면 피드로 보냄.
+  // 관리자가 SQL로 수동 승인한 경우(서류 미제출) 특히 중요 — 승인 직후 새로고침/재방문 시
+  // /status·/verify/type에 그대로 멈춰있지 않고 바로 피드로 넘어가야 한다.
+  if (
+    status === "approved" &&
+    (pathname === "/login" || pathname === "/signup" || UNAPPROVED_ALLOWED_PATHS.includes(pathname))
+  ) {
     return NextResponse.redirect(new URL("/feed", request.url));
   }
 
