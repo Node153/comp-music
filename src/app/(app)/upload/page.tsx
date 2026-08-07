@@ -649,17 +649,15 @@ export default function UploadPage() {
                   추가
                 </Button>
               </div>
-              {/* 검색 중이 아닐 때는 예시 칩 블록 2개를 세로로 이어붙여 위로 천천히 무한 스크롤
-                  (hover 시 정지 — globals.css의 .animate-marquee-up). 두 블록 높이가 같아야
-                  -50% 이동 시 이음새가 안 보이므로 column gap 대신 각 블록에 pb-1.5를 준다.
-                  검색으로 필터링 중일 땐 결과가 몇 개 안 남아 흐르면 어색해서 정적 목록으로 표시. */}
-              <div className="max-h-48 overflow-hidden rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+              {/* 예전엔 훑어보는 용도로 자동 무한 스크롤(marquee)했는데, 항목이 계속 움직이면
+                  원하는 태그를 클릭하기 불편하다는 피드백으로 고정 목록 + 수동 스크롤로 변경. */}
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-gray-200 p-3 dark:border-gray-700">
                 {filteredGenres.length === 0 ? (
                   <p className="py-2 text-sm text-gray-400 dark:text-gray-500">
                     일치하는 해시태그가 없어요. Enter나 추가 버튼으로 그대로 추가할 수 있어요.
                   </p>
-                ) : tagSearch.trim() !== "" ? (
-                  <div className="flex max-h-[10.5rem] flex-wrap gap-1.5 overflow-y-auto">
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
                     {filteredGenres.map((tag) => (
                       <button
                         key={tag}
@@ -669,24 +667,6 @@ export default function UploadPage() {
                       >
                         #{tag}
                       </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="animate-marquee-up flex flex-col">
-                    {[0, 1].map((dup) => (
-                      <div key={dup} aria-hidden={dup === 1} className="flex flex-wrap gap-1.5 pb-1.5">
-                        {filteredGenres.map((tag) => (
-                          <button
-                            key={`${dup}-${tag}`}
-                            type="button"
-                            tabIndex={dup === 1 ? -1 : undefined}
-                            onClick={() => toggleTag(tag)}
-                            className={chipButtonClass(selectedTags.includes(tag))}
-                          >
-                            #{tag}
-                          </button>
-                        ))}
-                      </div>
                     ))}
                   </div>
                 )}
