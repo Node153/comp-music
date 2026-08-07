@@ -6,15 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function ProfileMenu({
-  userId,
-  userName,
-  unseenCount = 0,
-}: {
-  userId: string;
-  userName: string;
-  unseenCount?: number;
-}) {
+export function ProfileMenu({ userId, userName }: { userId: string; userName: string }) {
   const router = useRouter();
   const supabase = createClient();
   const [open, setOpen] = useState(false);
@@ -29,14 +21,9 @@ export function ProfileMenu({
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-9 items-center rounded-full bg-gray-200 px-3 text-sm font-semibold text-gray-600 transition hover:brightness-95 dark:bg-gray-800 dark:text-gray-300"
+        className="flex h-9 items-center rounded-full bg-gray-200 px-3 text-sm font-semibold text-gray-600 transition hover:brightness-95 dark:bg-gray-800 dark:text-gray-300"
       >
         Me
-        {unseenCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
-            {unseenCount}
-          </span>
-        )}
       </button>
 
       {open && (
