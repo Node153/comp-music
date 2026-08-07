@@ -219,6 +219,7 @@ export default function UploadPage() {
   const [caption, setCaption] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearch, setTagSearch] = useState("");
+  const [popularUserTags, setPopularUserTags] = useState<string[]>([]);
   const [expireHours, setExpireHours] = useState<ExpireHours>(24);
   const [complexVisibility, setComplexVisibility] = useState<ComplexVisibility>("followers");
   const [inviteUsers, setInviteUsers] = useState<PickedUser[]>([]);
@@ -246,6 +247,33 @@ export default function UploadPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, [supabase]);
+
+  // 실제 업로드된 게시물에서 커스텀 태그(고정 목록 ALL_GENRES에 없는 것)가 얼마나 반복
+  // 사용됐는지 집계해서 "인기 사용자 태그"로 노출 — 자유 입력 태그가 2회 이상 쓰이면
+  // 자연스럽게 선택 목록에 편입되게 해서, 고정 목록을 처음부터 다 채워두지 않아도 되게 한다.
+  useEffect(() => {
+    const genreSet = new Set(ALL_GENRES);
+    supabase
+      .from("posts")
+      .select("instrument_tags")
+      .eq("status", "published")
+      .then(({ data }) => {
+        if (!data) return;
+        const counts = new Map<string, number>();
+        for (const row of data) {
+          for (const tag of row.instrument_tags ?? []) {
+            if (genreSet.has(tag)) continue;
+            counts.set(tag, (counts.get(tag) ?? 0) + 1);
+          }
+        }
+        const popular = [...counts.entries()]
+          .filter(([, count]) => count >= 2)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 20)
+          .map(([tag]) => tag);
+        setPopularUserTags(popular);
+      });
   }, [supabase]);
 
   // demo 음원 파일의 사운드바 재생용 object URL — Complex와 동일한 useMemo+cleanup-effect 패턴.
@@ -312,6 +340,12 @@ export default function UploadPage() {
   }
 
   const filteredGenres = ALL_GENRES.filter((tag) =>
+    tag.toLowerCase().includes(tagSearch.trim().toLowerCase()),
+  );
+
+  // 실제 게시물에서 반복 사용된 커스텀 태그(고정 목록엔 없는 것) — 2회 이상 쓰인 것만,
+  // 사용 빈도 내림차순 상위 20개까지만 노출. 마운트 시 1회만 집계(실시간 갱신까진 불필요).
+  const filteredPopularUserTags = popularUserTags.filter((tag) =>
     tag.toLowerCase().includes(tagSearch.trim().toLowerCase()),
   );
 
@@ -652,22 +686,43 @@ export default function UploadPage() {
               {/* 예전엔 훑어보는 용도로 자동 무한 스크롤(marquee)했는데, 항목이 계속 움직이면
                   원하는 태그를 클릭하기 불편하다는 피드백으로 고정 목록 + 수동 스크롤로 변경. */}
               <div className="max-h-48 overflow-y-auto rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-                {filteredGenres.length === 0 ? (
+                {filteredGenres.length === 0 && filteredPopularUserTags.length === 0 ? (
                   <p className="py-2 text-sm text-gray-400 dark:text-gray-500">
                     일치하는 해시태그가 없어요. Enter나 추가 버튼으로 그대로 추가할 수 있어요.
                   </p>
                 ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {filteredGenres.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => toggleTag(tag)}
-                        className={chipButtonClass(selectedTags.includes(tag))}
-                      >
-                        #{tag}
-                      </button>
-                    ))}
+                  <div className="flex flex-col gap-2">
+                    {filteredPopularUserTags.length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
+                          🔥 인기 사용자 태그
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {filteredPopularUserTags.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleTag(tag)}
+                              className={chipButtonClass(selectedTags.includes(tag))}
+                            >
+                              #{tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {filteredGenres.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => toggleTag(tag)}
+                          className={chipButtonClass(selectedTags.includes(tag))}
+                        >
+                          #{tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
