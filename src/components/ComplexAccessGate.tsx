@@ -186,7 +186,7 @@ export function ComplexAccessGate({
         )}
         {collabAvailable && (
           <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
-            🤝 Compilation{collabRoleNeeded ? `: ${collabRoleNeeded}` : ""}
+            🤝 공동창작{collabRoleNeeded ? `: ${collabRoleNeeded}` : ""}
           </span>
         )}
       </div>

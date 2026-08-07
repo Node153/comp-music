@@ -657,7 +657,7 @@ export default async function FeedPage({
                       ))}
                     {post.collab_available && (
                       <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
-                        🤝 Compilation{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
+                        🤝 공동창작{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
                       </span>
                     )}
                   </div>

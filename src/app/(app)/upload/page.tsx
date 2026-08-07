@@ -754,7 +754,7 @@ export default function UploadPage() {
                   onChange={(e) => setCollabAvailable(e.target.checked)}
                   className="h-4 w-4 accent-black dark:accent-white"
                 />
-                Compilation
+                공동창작
               </label>
               <p className="-mt-1 px-1 text-xs text-gray-400 dark:text-gray-500">
                 Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요.

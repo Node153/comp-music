@@ -284,7 +284,7 @@ export function ComplexPostChat({
         <button
           type="button"
           disabled={!canUploadWork || sending}
-          title={canUploadWork ? "음원 작업물 올리기" : "Compilation 게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
+          title={canUploadWork ? "음원 작업물 올리기" : "공동창작 게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
           onClick={() => audioInputRef.current?.click()}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
         >
