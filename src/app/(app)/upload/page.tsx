@@ -9,7 +9,7 @@ import { uploadFileToR2 } from "@/lib/uploadToR2";
 import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
-import { field, label as labelClass, errorText, pageTitle, pageCard } from "@/components/ui/styles";
+import { field, label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
 import type { ExpireHours } from "@/types/database";
 
@@ -523,12 +523,6 @@ export default function UploadPage() {
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 md:flex-row md:items-start md:justify-center">
       <main className={`${darkPageCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
-        {/* 스티커처럼 살짝 기울인 하드 섀도우 박스 — DEMO(옐로우)/memo(바이올렛) 포인트 컬러를 따라간다. */}
-        <h1
-          className={`${pageTitle} mx-auto w-fit -rotate-2 rounded-xl border-2 border-black bg-yellow-300 px-5 py-2 shadow-[4px_4px_0_0_#000] transition-colors dark:border-violet-400 dark:bg-black dark:text-violet-300 dark:shadow-[4px_4px_0_0_#7c3aed]`}
-        >
-          Drop Zone
-        </h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <span className={darkLabel}>게시 유형</span>
