@@ -1,10 +1,10 @@
 "use client";
 
-// 데스크톱 웹 기준 상단 네비게이션(페이스북 참고). 모바일(md 미만)에서는 BottomNav가 대신 노출됨.
-// 좌: 로고 · 우: Drop(업로드)/Me/Away 클러스터.
+// 데스크톱 웹 기준 상단 네비게이션(링크드인 참고). 모바일(md 미만)에서는 BottomNav가 대신 노출됨.
+// 좌: 로고 · 우: Drop(업로드)/Messages/Me/Help 클러스터.
 // Push(알림) 버튼은 프로필 링크·뱃지가 Me 드롭다운과 중복이라 제거하고, 안읽음 알림 뱃지는 Me 아바타로 옮김.
-// DM은 자리를 Away(공지사항+피드백, 0021_announcements_and_feedback)에 내줬다 — 메시지 자체는
-// /messages 라우트로 여전히 접근 가능(대화 중인 상대 프로필의 "메시지 보내기" 버튼 등).
+// 우측 사이드바의 mock DM 위젯을 걷어내면서 메시지를 상단 메뉴 1급 항목으로 승격 — 실제
+// /messages 라우트(Realtime)로 바로 연결.
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -80,17 +80,28 @@ export function TopNav({
           <span className="text-base">☂</span>
           Drop
         </Link>
+        <Link
+          href="/messages"
+          className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+            pathname.startsWith("/messages")
+              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
+          }`}
+        >
+          <span className="text-base">✉</span>
+          Messages
+        </Link>
         <ProfileMenu userId={currentUserId} userName={userName} unseenCount={unseenNotifications} />
         <Link
-          href="/away"
+          href="/help"
           className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
-            pathname === "/away"
+            pathname === "/help"
               ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
           }`}
         >
           <span className="text-base">☁</span>
-          Away
+          Help
         </Link>
       </div>
     </header>

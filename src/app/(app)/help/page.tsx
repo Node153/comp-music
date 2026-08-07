@@ -10,10 +10,10 @@ const ADMIN_LINKS = [
   { href: "/admin/feedback", label: "피드백 보기" },
 ];
 
-// Away — 상단바 DM 자리를 대신하는 공지사항+피드백 창구(0021_announcements_and_feedback).
+// Help(구 Away) — 공지사항+피드백 창구(0021_announcements_and_feedback).
 // 관리자에게는 여기(맨 위)에 관리자 페이지 진입 링크도 노출 — 앱 안에 다른 진입점이 없어서
 // 지금까지는 /admin/* URL을 직접 쳐서만 들어갈 수 있었음.
-export default async function AwayPage() {
+export default async function HelpPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -32,7 +32,7 @@ export default async function AwayPage() {
   return (
     <main className={`${pageCard} flex flex-col gap-8`}>
       <div>
-        <h1 className={pageTitle}>Away</h1>
+        <h1 className={pageTitle}>Help</h1>
         <p className={`${mutedText} mt-1`}>공지사항을 확인하고, 하고 싶은 말을 남겨주세요.</p>
       </div>
 

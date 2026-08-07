@@ -303,7 +303,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["post_chat_messages"]["Insert"]>;
         Relationships: [];
       };
-      // 0021_announcements_and_feedback — Away 메뉴(구 DM 자리)의 공지사항. 관리자만 작성.
+      // 0021_announcements_and_feedback — Help 메뉴(구 Away)의 공지사항. 관리자만 작성.
       announcements: {
         Row: {
           id: string;
@@ -324,7 +324,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["announcements"]["Insert"]>;
         Relationships: [];
       };
-      // 0021_announcements_and_feedback — Away 메뉴에서 보내는 피드백. 본인+관리자만 열람.
+      // 0021_announcements_and_feedback — Help 메뉴에서 보내는 피드백. 본인+관리자만 열람.
       feedback: {
         Row: {
           id: string;

@@ -11,7 +11,6 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { SidebarChatPanel } from "@/components/SidebarChatPanel";
 import { timeAgo } from "@/lib/timeAgo";
 
 type Companion = {
@@ -56,13 +55,6 @@ const MOCK_PEAK_POSTS = [
     publishedAgo: "1일 전",
     emoji: "🎸",
   },
-  {
-    postId: "mock-completion-8",
-    name: "강태오",
-    caption: "베이스 솔로 챌린지 영상",
-    publishedAgo: "1일 전",
-    emoji: "🎸",
-  },
 ];
 
 type KnockablePost = {
@@ -81,13 +73,6 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
   const [knockablePosts, setKnockablePosts] = useState<KnockablePost[] | null>(null);
 
   const [showAllOnline, setShowAllOnline] = useState(false);
-  const [dmPanelOpen, setDmPanelOpen] = useState(false);
-  const [selectedDmId, setSelectedDmId] = useState<string | null>(null);
-
-  function openDmWith(id: string) {
-    setSelectedDmId(id);
-    setDmPanelOpen(true);
-  }
 
   const visibleCompanions = showAllOnline ? COMPANIONS : COMPANIONS.slice(0, ONLINE_VISIBLE_LIMIT);
 
@@ -190,21 +175,12 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                   {person.activity ? `🎮 ${person.activity}` : person.status === "online" ? "온라인" : "자리 비움"}
                 </span>
               </div>
-              <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
-                <button
-                  onClick={() => openDmWith(person.id)}
-                  aria-label="DM 보내기"
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  💬
-                </button>
-                <button
-                  aria-label="더 보기"
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  ⋮
-                </button>
-              </div>
+              <button
+                aria-label="더 보기"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              >
+                ⋮
+              </button>
             </div>
           ))}
         </div>
@@ -217,14 +193,6 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
           </button>
         )}
       </section>
-
-      <SidebarChatPanel
-        contacts={COMPANIONS.map((c) => ({ id: c.id, name: c.name, meta: c.role }))}
-        open={dmPanelOpen}
-        onOpenChange={setDmPanelOpen}
-        selectedId={selectedDmId}
-        onSelectedIdChange={setSelectedDmId}
-      />
 
       <section>
         <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">

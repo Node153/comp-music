@@ -1,6 +1,6 @@
 "use client";
 
-// /away 페이지의 피드백 제출 폼 — feedback 테이블(0021_announcements_and_feedback)에 저장.
+// /help 페이지의 피드백 제출 폼 — feedback 테이블(0021_announcements_and_feedback)에 저장.
 // 관리자는 /admin/feedback에서 목록으로 확인한다.
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
