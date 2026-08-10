@@ -1,6 +1,6 @@
 "use client";
 
-// TopNav 우측 프로필 드롭다운(페이스북 참고) — 아바타 클릭 시 프로필 보기/로그아웃 메뉴 노출
+// TopNav 우측 프로필 드롭다운(페이스북 참고) — 아바타 클릭 시 프로필 보기/프로필 수정/로그아웃 메뉴 노출
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,6 +46,16 @@ export function ProfileMenu({ userId, userName }: { userId: string; userName: st
                 <span className="block font-medium text-gray-900 dark:text-gray-100">{userName}</span>
                 <span className="block text-xs text-gray-500 dark:text-gray-400">프로필 보기</span>
               </span>
+            </Link>
+            <Link
+              href="/profile/edit"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-900"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm dark:bg-gray-800">
+                ⚙️
+              </span>
+              프로필 수정
             </Link>
             <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
             <button
