@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getR2SignedUrl } from "@/lib/r2/storage";
 import { MessageButton } from "@/components/MessageButton";
@@ -259,6 +260,28 @@ export default async function FeedPage({
     data: { user: currentUser },
   } = await supabase.auth.getUser();
 
+  // 로그인 전 미리보기(Instagram 참고) — DEMO는 비로그인 방문자에게도 열지만, memo는
+  // Companion 전용 공간이라 존재 형태조차 안 보여주고 완전히 잠근다(0024_public_feed_preview).
+  if (isComplex && !currentUser) {
+    return (
+      <main className="mx-auto flex max-w-[900px] flex-col items-center justify-center gap-3 px-4 py-24 text-center">
+        <span className="text-4xl">🔒</span>
+        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          memo는 아는 사람들끼리만 보는 공간이에요
+        </p>
+        <p className="max-w-xs text-sm text-gray-500 dark:text-gray-400">
+          가입하고 Companion을 만들면 서로의 비공개 작업물을 볼 수 있어요.
+        </p>
+        <Link
+          href="/signup"
+          className="mt-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+        >
+          가입하기
+        </Link>
+      </main>
+    );
+  }
+
   let currentUserName = "나";
   if (currentUser) {
     const { data: me } = await supabase.from("users").select("name").eq("id", currentUser.id).single();
@@ -307,9 +330,13 @@ export default async function FeedPage({
   const userIds = [...new Set(posts.map((p) => p.user_id))];
 
   // 이름 표시는 전부 user_display 뷰(0018) — 뷰어가 Companion이면 실명, 아니면 닉네임이 내려온다.
+  // 비로그인 방문자는 누구의 Companion도 될 수 없고 user_display 자체가 "승인된 뷰어" 전제라
+  // 행을 안 내려주므로, 훨씬 좁은 public_post_authors(0024, 닉네임만) 뷰를 대신 쓴다.
   const { data: users } =
     userIds.length > 0
-      ? await supabase.from("user_display").select("id, display_name").in("id", userIds)
+      ? currentUser
+        ? await supabase.from("user_display").select("id, display_name").in("id", userIds)
+        : await supabase.from("public_post_authors").select("id, display_name").in("id", userIds)
       : { data: [] };
   const { data: profiles } =
     userIds.length > 0
@@ -482,6 +509,19 @@ export default async function FeedPage({
 
   return (
     <main className="mx-auto max-w-[900px] px-0 pb-24 pt-0 md:px-4 md:pb-8 md:pt-4">
+      {!currentUser && (
+        <div className="mx-3 mb-4 flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 md:mx-0">
+          <p className="text-sm text-gray-600">
+            가입하면 좋아요·댓글을 남기고, memo(비공개 공간)도 볼 수 있어요.
+          </p>
+          <Link
+            href="/signup"
+            className="shrink-0 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+          >
+            가입하기
+          </Link>
+        </div>
+      )}
       {allPosts.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 py-24">
           <span className="text-3xl">🎬</span>
@@ -676,6 +716,14 @@ export default async function FeedPage({
                     <div
                       className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
                       title="샘플 게시물이라 실제로 누를 수는 없어요"
+                    >
+                      <span>❤️ 좋아요 {likeCount}</span>
+                      <span>💬 댓글 {commentCount}</span>
+                    </div>
+                  ) : !currentUser ? (
+                    <div
+                      className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
+                      title="가입하면 좋아요·댓글을 남길 수 있어요"
                     >
                       <span>❤️ 좋아요 {likeCount}</span>
                       <span>💬 댓글 {commentCount}</span>

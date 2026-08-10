@@ -371,6 +371,15 @@ export interface Database {
         };
         Relationships: [];
       };
+      // 0024 — 로그인 전 DEMO 미리보기 전용. 비로그인 방문자는 누구의 Companion도 될 수
+      // 없으므로 무조건 닉네임만 내려주고, 지금 공개 게시물이 있는 사용자로만 범위를 좁힌다.
+      public_post_authors: {
+        Row: {
+          id: string;
+          display_name: string;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       // 0020_knock_context_is_companion: invite_only 게시물 참여자 요약용 — 참여자 한 명당

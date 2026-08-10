@@ -2,8 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // 접근 권한 매트릭스 (spec 1.2, 3.1)
-// 비로그인: 랜딩/가입/로그인만. 미승인(대기/반려): 심사 관련 화면만. 승인: 전체.
-const PUBLIC_PATHS = ["/", "/login", "/signup"];
+// 비로그인: 랜딩/가입/로그인 + /feed(DEMO 미리보기, Instagram 참고). 미승인(대기/반려): 심사
+// 관련 화면만. 승인: 전체.
+// /feed는 비로그인 방문자에게도 열어주지만, 실제로 뭘 보여줄지(DEMO만 공개, memo는 잠금)는
+// posts_select_public_anyone 등 RLS(0024)와 feed/page.tsx 안의 분기가 담당한다 — 여기서는
+// "리다이렉트하지 않는다"까지만 책임진다.
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/feed"];
 const UNAPPROVED_ALLOWED_PATHS = ["/status", "/verify/type", "/verify/documents"];
 
 export async function proxy(request: NextRequest) {
