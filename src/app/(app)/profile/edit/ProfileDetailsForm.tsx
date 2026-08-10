@@ -1,6 +1,6 @@
 "use client";
 
-// 학교/전공/지역/소개글/협업가능 — profiles 테이블(0001_init) 저장.
+// 학교/전공/지역/소개글 — profiles 테이블(0001_init) 저장.
 // 지금까지는 이 폼이 onSubmit 없는 정적 mock이었고, 실제로 profiles에 쓰는 화면이 하나도
 // 없어서 가입 이후 아무도 이 행을 만든 적이 없다(그래서 프로필 화면에 학교/전공 배지가
 // 아예 안 뜸). upsert로 처음 저장 시 행을 만들고, 이후엔 갱신한다(profiles_insert_self/
@@ -27,7 +27,6 @@ type ProfileDetails = {
   major: string;
   region: string;
   bio: string;
-  collab_available: boolean;
 };
 
 const EMPTY: ProfileDetails = {
@@ -36,7 +35,6 @@ const EMPTY: ProfileDetails = {
   major: "",
   region: "",
   bio: "",
-  collab_available: false,
 };
 
 export function ProfileDetailsForm() {
@@ -51,7 +49,7 @@ export function ProfileDetailsForm() {
       if (!data.user) return;
       const { data: row } = await supabase
         .from("profiles")
-        .select("user_type, school, major, region, bio, collab_available")
+        .select("user_type, school, major, region, bio")
         .eq("user_id", data.user.id)
         .maybeSingle();
 
@@ -74,7 +72,6 @@ export function ProfileDetailsForm() {
           major: row.major ?? "",
           region: row.region ?? "",
           bio: row.bio ?? "",
-          collab_available: row.collab_available,
         });
       } else {
         setDetails((d) => ({ ...d, userType }));
@@ -103,7 +100,6 @@ export function ProfileDetailsForm() {
         major: details.major.trim() || null,
         region: details.region.trim() || null,
         bio: details.bio.trim() || null,
-        collab_available: details.collab_available,
       },
       { onConflict: "user_id" },
     );
@@ -179,16 +175,6 @@ export function ProfileDetailsForm() {
           className={field}
         />
       </div>
-      <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-3.5 py-3 text-sm">
-        <input
-          type="checkbox"
-          disabled={!loaded}
-          checked={details.collab_available}
-          onChange={(e) => setDetails((d) => ({ ...d, collab_available: e.target.checked }))}
-          className="h-4 w-4 accent-black"
-        />
-        협업 가능
-      </label>
       {message &&
         (message.type === "error" ? (
           <p className={errorText}>{message.text}</p>

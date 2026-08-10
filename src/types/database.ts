@@ -72,7 +72,6 @@ export interface Database {
           major: string | null;
           instruments: string[] | null;
           region: string | null;
-          collab_available: boolean;
           bio: string | null;
           portfolio_links: Record<string, string> | null;
           profile_image_url: string | null;
@@ -84,7 +83,6 @@ export interface Database {
           major?: string | null;
           instruments?: string[] | null;
           region?: string | null;
-          collab_available?: boolean;
           bio?: string | null;
           portfolio_links?: Record<string, string> | null;
           profile_image_url?: string | null;

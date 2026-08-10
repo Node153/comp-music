@@ -5,7 +5,7 @@ import { getR2SignedUrl } from "@/lib/r2/storage";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { MessageButton } from "@/components/MessageButton";
 import { LogoutButton } from "@/components/LogoutButton";
-import { badge, badgeDark, pageCard } from "@/components/ui/styles";
+import { badge, pageCard } from "@/components/ui/styles";
 import { CompanionButton, type CompanionRelation } from "./CompanionButton";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
@@ -35,7 +35,7 @@ export default async function ProfilePage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("school, major, instruments, region, collab_available, bio")
+    .select("school, major, instruments, region, bio")
     .eq("user_id", userId)
     .single();
 
@@ -110,7 +110,6 @@ export default async function ProfilePage({
             {inst}
           </span>
         ))}
-        {profile?.collab_available && <span className={badgeDark}>협업 가능</span>}
       </div>
       {profile?.bio && <p className="mt-3 text-sm leading-relaxed text-gray-700">{profile.bio}</p>}
 
