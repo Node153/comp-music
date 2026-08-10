@@ -32,6 +32,8 @@ export type ChatMessageType = "text" | "image" | "video" | "audio";
 // 0017_companions: companions.status — pending(신청 대기) / accepted(맞팔 성립).
 // 거절·취소·해제는 전부 행 삭제로 처리해서 별도 값이 없다(post_access와 같은 원칙).
 export type CompanionStatus = "pending" | "accepted";
+// 0023_agreements: 가입 시 필수 동의 3종(docs/copyright_agreement_draft.md).
+export type AgreementType = "content_rights" | "collab_disclaimer" | "license_grant";
 
 export interface Database {
   public: {
@@ -62,6 +64,24 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["users"]["Insert"]>;
+        Relationships: [];
+      };
+      agreements: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: AgreementType;
+          version: string;
+          agreed_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: AgreementType;
+          version: string;
+          agreed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["agreements"]["Insert"]>;
         Relationships: [];
       };
       profiles: {
