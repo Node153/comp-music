@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
 import { GuestTopNav } from "@/components/GuestTopNav";
+import { GuestSignupPromptProvider } from "@/components/GuestSignupPrompt";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightSidebar } from "@/components/RightSidebar";
 import { NowPlayingProvider } from "@/components/NowPlayingContext";
@@ -76,25 +77,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <ThemeSync />
       <div className="min-h-screen bg-gray-100 transition-colors duration-300 dark:bg-black md:bg-[#f0f2f5] md:dark:bg-black">
         {user ? (
-          <TopNav
-            currentUserId={user.id}
-            userName={userName}
-            unseenNotifications={unseenNotifications}
-          />
+          <>
+            <TopNav
+              currentUserId={user.id}
+              userName={userName}
+              unseenNotifications={unseenNotifications}
+            />
+            <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
+              <LeftSidebar />
+              <div>{children}</div>
+              <RightSidebar currentUserId={user.id} />
+            </div>
+            <BottomNav currentUserId={user.id} unseenNotifications={unseenNotifications} />
+            <GlobalPlayerBar />
+          </>
         ) : (
-          <GuestTopNav />
+          // GuestTopNav와 children(익명 미리보기 피드)이 같은 GuestSignupPromptProvider
+          // 안에 있어야 좋아요/댓글 클릭 시 뜨는 가입 유도 모달 상태를 공유한다.
+          <GuestSignupPromptProvider>
+            <GuestTopNav />
+            {children}
+          </GuestSignupPromptProvider>
         )}
-        {user ? (
-          <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
-            <LeftSidebar />
-            <div>{children}</div>
-            <RightSidebar currentUserId={user.id} />
-          </div>
-        ) : (
-          children
-        )}
-        {user && <BottomNav currentUserId={user.id} unseenNotifications={unseenNotifications} />}
-        {user && <GlobalPlayerBar />}
       </div>
     </NowPlayingProvider>
   );

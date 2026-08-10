@@ -12,6 +12,7 @@ import { ComplexAccessGate } from "@/components/ComplexAccessGate";
 import { PostFocusToggle } from "@/components/PostFocusToggle";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
+import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
 import { tagColorClass } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
@@ -712,18 +713,12 @@ export default async function FeedPage({
                       collabAvailable={post.collab_available}
                       mediaSlot={inlineMediaEl}
                     />
+                  ) : !currentUser ? (
+                    <GuestEngagementRow likeCount={likeCount} commentCount={commentCount} />
                   ) : post.isMock ? (
                     <div
                       className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
                       title="샘플 게시물이라 실제로 누를 수는 없어요"
-                    >
-                      <span>❤️ 좋아요 {likeCount}</span>
-                      <span>💬 댓글 {commentCount}</span>
-                    </div>
-                  ) : !currentUser ? (
-                    <div
-                      className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
-                      title="가입하면 좋아요·댓글을 남길 수 있어요"
                     >
                       <span>❤️ 좋아요 {likeCount}</span>
                       <span>💬 댓글 {commentCount}</span>
