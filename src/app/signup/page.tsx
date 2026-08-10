@@ -1,21 +1,25 @@
 "use client";
 
 // S2 회원가입 (AUTH-01)
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, errorText, pageTitle } from "@/components/ui/styles";
-import { randomNicknameExample } from "@/lib/nicknameExamples";
+import { generateNicknameCandidate } from "@/lib/nicknameExamples";
 
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState("");
   // 실명/닉네임 이원화(0018) — Companion에게는 실명, 그 외에게는 닉네임이 보이므로 둘 다 필수.
+  // 배달의민족 가입 화면 참고 — 재밌는 닉네임을 자동으로 채워주고 "다시 뽑기"로 고르게 한다.
+  // 서버(SSR)와 클라이언트가 다른 랜덤값을 만들면 하이드레이션이 꼬이므로, 초기값은 빈
+  // 문자열로 두고 마운트 후 useEffect에서만 채운다(NicknameForm의 비동기 로드와 같은 패턴).
   const [nickname, setNickname] = useState("");
-  // placeholder 예시는 mount마다 랜덤 — SSR과 달라질 수 있어 input에 suppressHydrationWarning.
-  const [nicknameExample] = useState(randomNicknameExample);
+  useEffect(() => {
+    setNickname(generateNicknameCandidate());
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   // 저작권/공동창작 동의(docs/copyright_agreement_draft.md) — 셋 다 필수 체크.
@@ -57,7 +61,9 @@ export default function SignupPage() {
       setError(
         signUpError.message.includes("already registered")
           ? "이미 가입된 이메일입니다."
-          : signUpError.message,
+          : signUpError.message.includes("duplicate")
+            ? "이미 사용 중인 닉네임이에요. 🎲로 다시 뽑거나 다른 닉네임을 입력해주세요."
+            : signUpError.message,
       );
       return;
     }
@@ -100,18 +106,28 @@ export default function SignupPage() {
           className={field}
         />
         <div className="flex flex-col gap-1">
-          <input
-            type="text"
-            placeholder={`닉네임 예: ${nicknameExample}`}
-            suppressHydrationWarning
-            required
-            maxLength={30}
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            className={field}
-          />
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              placeholder="닉네임"
+              required
+              maxLength={30}
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              className={field}
+            />
+            <button
+              type="button"
+              onClick={() => setNickname(generateNicknameCandidate())}
+              title="다른 닉네임 뽑기"
+              className="shrink-0 rounded-xl border border-gray-300 px-3.5 text-sm text-gray-600 transition hover:bg-gray-50"
+            >
+              🎲
+            </button>
+          </div>
           <p className="px-1 text-xs text-gray-400">
-            Companion이 아닌 사람에게는 실명 대신 닉네임이 보여요.
+            Companion이 아닌 사람에게는 실명 대신 닉네임이 보여요. 마음에 안 들면 🎲로 다시
+            뽑거나 직접 수정할 수 있어요.
           </p>
         </div>
         <input
