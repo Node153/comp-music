@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
+import { GuestTopNav } from "@/components/GuestTopNav";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightSidebar } from "@/components/RightSidebar";
 import { NowPlayingProvider } from "@/components/NowPlayingContext";
@@ -74,12 +75,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <NowPlayingProvider>
       <ThemeSync />
       <div className="min-h-screen bg-gray-100 transition-colors duration-300 dark:bg-black md:bg-[#f0f2f5] md:dark:bg-black">
-        {user && (
+        {user ? (
           <TopNav
             currentUserId={user.id}
             userName={userName}
             unseenNotifications={unseenNotifications}
           />
+        ) : (
+          <GuestTopNav />
         )}
         {user ? (
           <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
