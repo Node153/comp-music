@@ -1,7 +1,8 @@
 "use client";
 
 // 데스크톱 웹 기준 상단 네비게이션(링크드인 참고). 모바일(md 미만)에서는 BottomNav가 대신 노출됨.
-// 좌: 로고 · 우: Drop(업로드)/Messages/Notifications/Me/Help 클러스터.
+// 좌: 로고 · 우: Drop(업로드)/Chat(메시지)/Alerts(알림)/Me/Help 클러스터.
+// Messages/Notifications는 각각 Chat/Alerts로 축약 — Drop과 첫 글자가 겹치는 DM은 피했다.
 // 안읽음 뱃지는 원래 Me 아바타에 있었는데, /notifications 알림 목록 페이지가 생기면서
 // 그 전용 아이콘으로 옮김(좋아요/댓글만 1단계 — Companion 신청·Peak·공동창작 신청은 다음 단계).
 // 우측 사이드바의 mock DM 위젯을 걷어내면서 메시지를 상단 메뉴 1급 항목으로 승격 — 실제
@@ -90,7 +91,7 @@ export function TopNav({
           }`}
         >
           <span className="text-base">✉</span>
-          Messages
+          Chat
         </Link>
         <Link
           href="/notifications"
@@ -101,7 +102,7 @@ export function TopNav({
           }`}
         >
           <span className="text-base">🔔</span>
-          Notifications
+          Alerts
           {unseenNotifications > 0 && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
               {unseenNotifications}
