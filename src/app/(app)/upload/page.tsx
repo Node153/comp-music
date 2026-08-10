@@ -66,8 +66,15 @@ function detectMediaKind(file: File): DetectedMediaKind | null {
   return null;
 }
 
-// FEED-01: 임시값(60초), 확정 필요 — 넘어도 업로드는 막지 않고 경고만 표시
-const SOFT_MAX_DURATION_SECONDS = 60;
+// 업로드 용량/길이 제한 — Instagram 릴스(650MB/90초)보다 타이트하게 잡음(우리 R2 저장 비용,
+// DEMO는 만료 없이 영구 보관이라 무제한 용량이면 계속 쌓임). 음원은 실무상 이 정도 용량을
+// 넘기기 어려워 사실상 영상에만 걸리는 제한이다.
+const MAX_FILE_SIZE_BYTES = 300 * 1024 * 1024;
+const MAX_VIDEO_DURATION_SECONDS = 60;
+
+function formatMB(bytes: number) {
+  return `${Math.round(bytes / (1024 * 1024))}MB`;
+}
 
 function readVideoDuration(file: File): Promise<number> {
   return new Promise((resolve) => {
@@ -208,13 +215,14 @@ export default function UploadPage() {
   // demo 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별(Complex와 동일한 방식)
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<DetectedMediaKind | null>(null);
-  const [durationWarning, setDurationWarning] = useState<string | null>(null);
+  const [mediaFileError, setMediaFileError] = useState<string | null>(null);
   // posts.thumbnail_url(원래부터 있던 컬럼, 이제야 처음 사용)에 저장돼 피드에서 영상 poster/커버로 쓰인다.
   const [coverFile, setCoverFile] = useState<File | null>(null);
 
   // Complex 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
   const [complexFile, setComplexFile] = useState<File | null>(null);
   const [complexKind, setComplexKind] = useState<DetectedMediaKind | null>(null);
+  const [complexFileError, setComplexFileError] = useState<string | null>(null);
 
   const [caption, setCaption] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -301,16 +309,24 @@ export default function UploadPage() {
   }
 
   async function handleFileChange(file: File | null) {
-    setMediaFile(file);
-    setDurationWarning(null);
+    setMediaFileError(null);
     setCoverFile(null);
+    if (file && file.size > MAX_FILE_SIZE_BYTES) {
+      setMediaFile(null);
+      setMediaKind(null);
+      setMediaFileError(`파일 용량이 ${formatMB(file.size)}예요. ${formatMB(MAX_FILE_SIZE_BYTES)} 이하만 올릴 수 있어요.`);
+      return;
+    }
+    setMediaFile(file);
     const kind = file ? detectMediaKind(file) : null;
     setMediaKind(kind);
     if (file && kind === "video") {
       const duration = await readVideoDuration(file);
-      if (duration > SOFT_MAX_DURATION_SECONDS) {
-        setDurationWarning(
-          `영상 길이가 ${Math.round(duration)}초입니다. 권장 길이(${SOFT_MAX_DURATION_SECONDS}초)를 초과했어요.`,
+      if (duration > MAX_VIDEO_DURATION_SECONDS) {
+        setMediaFile(null);
+        setMediaKind(null);
+        setMediaFileError(
+          `영상 길이가 ${Math.round(duration)}초예요. ${MAX_VIDEO_DURATION_SECONDS}초 이하만 올릴 수 있어요.`,
         );
       }
     }
@@ -320,9 +336,27 @@ export default function UploadPage() {
     setCoverFile(e.target.files?.[0] ?? null);
   }
 
-  function handleComplexFileChange(file: File | null) {
+  async function handleComplexFileChange(file: File | null) {
+    setComplexFileError(null);
+    if (file && file.size > MAX_FILE_SIZE_BYTES) {
+      setComplexFile(null);
+      setComplexKind(null);
+      setComplexFileError(`파일 용량이 ${formatMB(file.size)}예요. ${formatMB(MAX_FILE_SIZE_BYTES)} 이하만 올릴 수 있어요.`);
+      return;
+    }
     setComplexFile(file);
-    setComplexKind(file ? detectMediaKind(file) : null);
+    const kind = file ? detectMediaKind(file) : null;
+    setComplexKind(kind);
+    if (file && kind === "video") {
+      const duration = await readVideoDuration(file);
+      if (duration > MAX_VIDEO_DURATION_SECONDS) {
+        setComplexFile(null);
+        setComplexKind(null);
+        setComplexFileError(
+          `영상 길이가 ${Math.round(duration)}초예요. ${MAX_VIDEO_DURATION_SECONDS}초 이하만 올릴 수 있어요.`,
+        );
+      }
+    }
   }
 
   function toggleTag(tag: string) {
@@ -564,9 +598,7 @@ export default function UploadPage() {
                   영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
                 </p>
               )}
-              {durationWarning && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">{durationWarning}</p>
-              )}
+              {mediaFileError && <p className={darkErrorText}>{mediaFileError}</p>}
               {mediaFile && mediaKind === "video" && (
                 <button
                   type="button"
@@ -604,6 +636,7 @@ export default function UploadPage() {
                   영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
                 </p>
               )}
+              {complexFileError && <p className={darkErrorText}>{complexFileError}</p>}
               {complexFile && complexKind === "video" && (
                 <button
                   type="button"
