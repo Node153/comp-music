@@ -230,17 +230,32 @@ export function ComplexPostChat({
                   {secondaryStack.map((card) => (
                     <div
                       key={card.generation}
-                      className="flex items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 dark:border-gray-800 dark:bg-gray-900/40"
+                      className="flex flex-col gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 dark:border-gray-800 dark:bg-gray-900/40"
                     >
-                      <span className="shrink-0 text-sm">{WORK_TYPE_LABEL[card.work.type]}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                          {card.generation}차 창작물
-                        </p>
-                        <p className="truncate text-[10px] text-gray-400 dark:text-gray-500">
-                          {card.work.senderName}
-                        </p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="shrink-0 text-sm">{WORK_TYPE_LABEL[card.work.type]}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                            {card.generation}차 창작물
+                          </p>
+                          <p className="truncate text-[10px] text-gray-400 dark:text-gray-500">
+                            {card.work.senderName}
+                          </p>
+                        </div>
+                        {card.work.fileUrl && (
+                          <a
+                            href={card.work.fileUrl}
+                            download={card.work.fileName ?? undefined}
+                            title="다운로드"
+                            className="shrink-0 rounded-full p-1 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                          >
+                            ⬇
+                          </a>
+                        )}
                       </div>
+                      {card.work.fileUrl && (
+                        <audio src={card.work.fileUrl} controls className="h-8 w-full" />
+                      )}
                     </div>
                   ))}
                 </div>
