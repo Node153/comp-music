@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import { PlusIcon, ChatIcon, BellIcon, HelpIcon } from "@/components/icons";
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
 // 특정인 초대) 두 피드 탭.
@@ -70,39 +71,42 @@ export function TopNav({
         })}
       </nav>
 
-      <div className="flex flex-1 items-center justify-end gap-3">
+      <div className="flex flex-1 items-center justify-end gap-2">
         <Link
           href="/upload"
-          className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+          title="Drop"
+          aria-label="Drop"
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
             pathname === "/upload"
               ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
           }`}
         >
-          <span className="text-base">☂</span>
-          Drop
+          <PlusIcon />
         </Link>
         <Link
           href="/messages"
-          className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+          title="Chat"
+          aria-label="Chat"
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
             pathname.startsWith("/messages")
               ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
           }`}
         >
-          <span className="text-base">✉</span>
-          Chat
+          <ChatIcon />
         </Link>
         <Link
           href="/notifications"
-          className={`relative flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+          title="Alerts"
+          aria-label="Alerts"
+          className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
             pathname === "/notifications"
               ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
           }`}
         >
-          <span className="text-base">🔔</span>
-          Alerts
+          <BellIcon />
           {unseenNotifications > 0 && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
               {unseenNotifications}
@@ -112,14 +116,15 @@ export function TopNav({
         <ProfileMenu userId={currentUserId} userName={userName} />
         <Link
           href="/help"
-          className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+          title="Help"
+          aria-label="Help"
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
             pathname === "/help"
               ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
           }`}
         >
-          <span className="text-base">☁</span>
-          Help
+          <HelpIcon />
         </Link>
       </div>
     </header>

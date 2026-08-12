@@ -14,30 +14,50 @@ import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
-type Companion = {
+// 온라인/자리비움/오프라인 — PresenceHeartbeat가 60초마다 갱신하는 users.last_seen_at(0025) 기준
+// 근사치 판정. 오프라인인 Companion은 이 목록에 아예 안 보인다(헤더가 "온라인 — N명"이라
+// 오프라인까지 섞으면 숫자가 안 맞음 — Discord도 접속 안 한 사람은 기본 목록에서 접는다).
+const ONLINE_WINDOW_MS = 2 * 60 * 1000;
+const AWAY_WINDOW_MS = 15 * 60 * 1000;
+
+type PresenceStatus = "online" | "away";
+
+type OnlineCompanion = {
   id: string;
   name: string;
-  role: string;
-  status: "online" | "idle";
-  activity?: string;
+  status: PresenceStatus;
   color: string;
 };
 
-const COMPANIONS: Companion[] = [
-  { id: "c1", name: "이도윤", role: "보컬", status: "online", color: "bg-amber-700" },
-  {
-    id: "c2",
-    name: "강민서",
-    role: "드럼",
-    status: "online",
-    activity: "온라인 게임 중",
-    color: "bg-sky-700",
-  },
-  { id: "c3", name: "윤소이", role: "신스", status: "idle", color: "bg-fuchsia-900" },
-  { id: "c4", name: "배지훈", role: "프로듀서", status: "idle", color: "bg-orange-400" },
+function presenceStatus(lastSeenAt: string | null): PresenceStatus | "offline" {
+  if (!lastSeenAt) return "offline";
+  const elapsed = Date.now() - new Date(lastSeenAt).getTime();
+  if (elapsed <= ONLINE_WINDOW_MS) return "online";
+  if (elapsed <= AWAY_WINDOW_MS) return "away";
+  return "offline";
+}
+
+// 실제 프로필 색상 개념이 따로 없어서 id를 해시해 고정 팔레트에서 하나 골라 쓴다 — 같은
+// 사람은 새로고침해도 항상 같은 색.
+const AVATAR_COLORS = [
+  "bg-amber-700",
+  "bg-sky-700",
+  "bg-fuchsia-900",
+  "bg-orange-400",
+  "bg-emerald-700",
+  "bg-indigo-700",
+  "bg-rose-700",
+  "bg-teal-700",
 ];
+function avatarColorFor(id: string) {
+  const hash = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
 
 const ONLINE_VISIBLE_LIMIT = 3;
+// 온라인 목록도 PresenceHeartbeat와 같은 주기로 다시 조회해서 "방금 나간 사람"이 계속 온라인으로
+// 남아있지 않게 한다.
+const ONLINE_REFRESH_INTERVAL_MS = 30_000;
 
 // 금주의 PEAK 게시물 = 이번 주(캘린더) 좋아요 수가 peakThreshold(승인 회원 수/3) 이상인 게시물,
 // 이번 주 좋아요 수 많은 순으로 최대 3개만 노출.
@@ -69,10 +89,63 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
 
   const [knockablePosts, setKnockablePosts] = useState<KnockablePost[] | null>(null);
   const [peakPosts, setPeakPosts] = useState<PeakPost[] | null>(null);
+  const [onlineCompanions, setOnlineCompanions] = useState<OnlineCompanion[] | null>(null);
 
   const [showAllOnline, setShowAllOnline] = useState(false);
 
-  const visibleCompanions = showAllOnline ? COMPANIONS : COMPANIONS.slice(0, ONLINE_VISIBLE_LIMIT);
+  const visibleCompanions =
+    onlineCompanions === null
+      ? []
+      : showAllOnline
+        ? onlineCompanions
+        : onlineCompanions.slice(0, ONLINE_VISIBLE_LIMIT);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+
+    async function loadPresence() {
+      const { data: companionRows } = await supabase
+        .from("companions")
+        .select("requester_id, addressee_id")
+        .eq("status", "accepted")
+        .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+      const companionIds = [
+        ...new Set(
+          (companionRows ?? []).map((r) =>
+            r.requester_id === currentUserId ? r.addressee_id : r.requester_id,
+          ),
+        ),
+      ];
+
+      if (companionIds.length === 0) {
+        if (!cancelled) setOnlineCompanions([]);
+        return;
+      }
+
+      // Companion끼리는 실명 공개 대상이라(0018) user_display를 거치지 않고 users.name을
+      // 바로 써도 정책상 문제없다 — last_seen_at은 애초에 뷰에 없어서 어차피 직접 조회해야 함.
+      const { data: users } = await supabase
+        .from("users")
+        .select("id, name, last_seen_at")
+        .in("id", companionIds);
+
+      const presentCompanions: OnlineCompanion[] = (users ?? [])
+        .map((u) => ({ id: u.id, name: u.name, status: presenceStatus(u.last_seen_at) }))
+        .filter((u): u is { id: string; name: string; status: PresenceStatus } => u.status !== "offline")
+        .sort((a, b) => (a.status === b.status ? 0 : a.status === "online" ? -1 : 1))
+        .map((u) => ({ ...u, color: avatarColorFor(u.id) }));
+
+      if (!cancelled) setOnlineCompanions(presentCompanions);
+    }
+
+    loadPresence();
+    const timer = setInterval(loadPresence, ONLINE_REFRESH_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [currentUserId]);
 
   useEffect(() => {
     if (!isMemoTab) return;
@@ -220,47 +293,55 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
     <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-4 md:flex">
       <section>
         <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          온라인 — {COMPANIONS.length}명
+          온라인 — {onlineCompanions?.length ?? 0}명
         </h2>
         <div className="mt-1 flex flex-col gap-0.5">
-          {visibleCompanions.map((person) => (
-            <div
-              key={person.id}
-              className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-gray-200/60 dark:hover:bg-gray-900"
-            >
-              <span
-                className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${person.color}`}
+          {onlineCompanions === null ? (
+            <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">불러오는 중...</p>
+          ) : onlineCompanions.length === 0 ? (
+            <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+              지금 접속 중인 Companion이 없어요
+            </p>
+          ) : (
+            visibleCompanions.map((person) => (
+              <div
+                key={person.id}
+                className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-gray-200/60 dark:hover:bg-gray-900"
               >
-                {person.name.slice(0, 1)}
                 <span
-                  className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-black ${
-                    person.status === "online" ? "bg-emerald-500" : "bg-amber-400"
-                  }`}
-                />
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
-                  {person.name}
+                  className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${person.color}`}
+                >
+                  {person.name.slice(0, 1)}
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-black ${
+                      person.status === "online" ? "bg-emerald-500" : "bg-amber-400"
+                    }`}
+                  />
                 </span>
-                <span className="truncate text-xs text-gray-400 dark:text-gray-500">
-                  {person.activity ? `🎮 ${person.activity}` : person.status === "online" ? "온라인" : "자리 비움"}
-                </span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    {person.name}
+                  </span>
+                  <span className="truncate text-xs text-gray-400 dark:text-gray-500">
+                    {person.status === "online" ? "온라인" : "자리 비움"}
+                  </span>
+                </div>
+                <button
+                  aria-label="더 보기"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  ⋮
+                </button>
               </div>
-              <button
-                aria-label="더 보기"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-              >
-                ⋮
-              </button>
-            </div>
-          ))}
+            ))
+          )}
         </div>
-        {COMPANIONS.length > ONLINE_VISIBLE_LIMIT && (
+        {onlineCompanions !== null && onlineCompanions.length > ONLINE_VISIBLE_LIMIT && (
           <button
             onClick={() => setShowAllOnline((v) => !v)}
             className="mt-0.5 w-full rounded-md px-2 py-1 text-left text-xs text-gray-400 transition hover:bg-gray-200/60 hover:text-gray-600 dark:hover:bg-gray-900 dark:hover:text-gray-300"
           >
-            {showAllOnline ? "접기" : `더 보기 (+${COMPANIONS.length - ONLINE_VISIBLE_LIMIT})`}
+            {showAllOnline ? "접기" : `더 보기 (+${onlineCompanions.length - ONLINE_VISIBLE_LIMIT})`}
           </button>
         )}
       </section>

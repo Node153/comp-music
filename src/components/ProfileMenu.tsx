@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { UserIcon } from "@/components/icons";
 
 export function ProfileMenu({ userId, userName }: { userId: string; userName: string }) {
   const router = useRouter();
@@ -21,9 +22,11 @@ export function ProfileMenu({ userId, userName }: { userId: string; userName: st
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 items-center rounded-full bg-gray-200 px-3 text-sm font-semibold text-gray-600 transition hover:brightness-95 dark:bg-gray-800 dark:text-gray-300"
+        title="Me"
+        aria-label="Me"
+        className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
       >
-        Me
+        <UserIcon />
       </button>
 
       {open && (

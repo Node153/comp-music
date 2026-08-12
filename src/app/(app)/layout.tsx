@@ -8,6 +8,7 @@ import { RightSidebar } from "@/components/RightSidebar";
 import { NowPlayingProvider } from "@/components/NowPlayingContext";
 import { GlobalPlayerBar } from "@/components/GlobalPlayerBar";
 import { ThemeSync } from "@/components/ThemeSync";
+import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
 // 승인된 사용자 전용 화면(S6 피드, S8 업로드, S9 프로필, S12/S13 DM) 공통 레이아웃.
@@ -79,6 +80,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen bg-gray-100 transition-colors duration-300 dark:bg-black md:bg-[#f0f2f5] md:dark:bg-black">
         {user ? (
           <>
+            <PresenceHeartbeat userId={user.id} />
             <TopNav
               currentUserId={user.id}
               userName={userName}

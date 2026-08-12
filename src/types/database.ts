@@ -48,6 +48,9 @@ export interface Database {
           status: UserStatus;
           role: UserRole;
           notifications_seen_at: string;
+          // 우측 사이드바 온라인/자리비움/오프라인 판정용(0025) — 클라이언트가 주기적으로 갱신,
+          // 한 번도 접속 안 했으면 null(오프라인 취급).
+          last_seen_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -60,6 +63,7 @@ export interface Database {
           status?: UserStatus;
           role?: UserRole;
           notifications_seen_at?: string;
+          last_seen_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
