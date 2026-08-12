@@ -295,7 +295,11 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
         <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           온라인 — {onlineCompanions?.length ?? 0}명
         </h2>
-        <div className="mt-1 flex flex-col gap-0.5">
+        <div
+          className={`mt-1 flex flex-col gap-0.5 ${
+            showAllOnline ? "max-h-72 overflow-y-auto pr-0.5" : ""
+          }`}
+        >
           {onlineCompanions === null ? (
             <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">불러오는 중...</p>
           ) : onlineCompanions.length === 0 ? (
