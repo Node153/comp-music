@@ -12,6 +12,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
+import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
 type Companion = {
   id: string;
@@ -38,24 +39,20 @@ const COMPANIONS: Companion[] = [
 
 const ONLINE_VISIBLE_LIMIT = 3;
 
-// 실시간 PEAK 게시물 = 지금 핫한 게시물(좋아요+댓글 합이 PEAK_THRESHOLD를 넘은 게시물).
-// postId는 feed/page.tsx의 DEMO_MOCK_SAMPLES와 같은 값 — 클릭하면 해당 게시물로 이동(#앵커).
-const MOCK_PEAK_POSTS = [
-  {
-    postId: "mock-completion-3",
-    name: "한지민",
-    caption: "합주 영상 반응이 심상치 않아요",
-    publishedAgo: "5시간 전",
-    emoji: "🔥",
-  },
-  {
-    postId: "mock-completion-2",
-    name: "오세준",
-    caption: "즉흥 세션 녹화했어요",
-    publishedAgo: "1일 전",
-    emoji: "🎸",
-  },
-];
+// 금주의 PEAK 게시물 = 이번 주(캘린더) 좋아요 수가 peakThreshold(승인 회원 수/3) 이상인 게시물,
+// 이번 주 좋아요 수 많은 순으로 최대 3개만 노출.
+const PEAK_POSTS_VISIBLE_LIMIT = 3;
+// PEAK 후보를 뽑을 게시물 풀 — feed/page.tsx의 FEED_LIMIT(20)과 별개로 넉넉히 잡아서, 최신
+// 20개 밖이라도 이번 주 좋아요가 몰린 DEMO(영구 노출) 게시물을 놓치지 않게 한다.
+const PEAK_CANDIDATE_POOL_LIMIT = 50;
+
+type PeakPost = {
+  postId: string;
+  authorName: string;
+  caption: string | null;
+  publishedAt: string;
+  weeklyLikeCount: number;
+};
 
 type KnockablePost = {
   postId: string;
@@ -71,6 +68,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
   const isMemoTab = pathname === "/feed" && searchParams.get("feed") === "complex";
 
   const [knockablePosts, setKnockablePosts] = useState<KnockablePost[] | null>(null);
+  const [peakPosts, setPeakPosts] = useState<PeakPost[] | null>(null);
 
   const [showAllOnline, setShowAllOnline] = useState(false);
 
@@ -145,6 +143,79 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
     };
   }, [isMemoTab, currentUserId]);
 
+  useEffect(() => {
+    if (isMemoTab) return;
+    let cancelled = false;
+    const supabase = createClient();
+
+    (async () => {
+      const weekStartISO = currentWeekStartISO();
+
+      const [{ count: approvedMemberCount }, { data: rawPosts }] = await Promise.all([
+        supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved"),
+        supabase
+          .from("posts")
+          .select("id, user_id, caption, published_at")
+          .eq("visibility", "public")
+          .eq("status", "published")
+          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+          .order("published_at", { ascending: false })
+          .limit(PEAK_CANDIDATE_POOL_LIMIT),
+      ]);
+      const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
+      const posts = rawPosts ?? [];
+
+      if (posts.length === 0) {
+        if (!cancelled) setPeakPosts([]);
+        return;
+      }
+
+      const postIds = posts.map((p) => p.id);
+      const { data: weekLikes } = await supabase
+        .from("likes")
+        .select("post_id")
+        .in("post_id", postIds)
+        .gte("created_at", weekStartISO);
+
+      const weeklyLikeCountMap = new Map<string, number>();
+      for (const row of weekLikes ?? []) {
+        weeklyLikeCountMap.set(row.post_id, (weeklyLikeCountMap.get(row.post_id) ?? 0) + 1);
+      }
+
+      const peakCandidates = posts
+        .map((p) => ({ ...p, weeklyLikeCount: weeklyLikeCountMap.get(p.id) ?? 0 }))
+        .filter((p) => p.weeklyLikeCount >= peakThreshold)
+        .sort((a, b) => b.weeklyLikeCount - a.weeklyLikeCount)
+        .slice(0, PEAK_POSTS_VISIBLE_LIMIT);
+
+      if (peakCandidates.length === 0) {
+        if (!cancelled) setPeakPosts([]);
+        return;
+      }
+
+      const authorIds = [...new Set(peakCandidates.map((p) => p.user_id))];
+      const { data: authors } = await supabase
+        .from("user_display")
+        .select("id, display_name")
+        .in("id", authorIds);
+      const authorMap = new Map((authors ?? []).map((u) => [u.id, u.display_name]));
+
+      const result: PeakPost[] = peakCandidates.map((p) => ({
+        postId: p.id,
+        authorName: authorMap.get(p.user_id) ?? "알 수 없음",
+        caption: p.caption,
+        publishedAt: p.published_at ?? new Date().toISOString(),
+        weeklyLikeCount: p.weeklyLikeCount,
+      }));
+
+      if (!cancelled) setPeakPosts(result);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isMemoTab]);
+
   return (
     <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-4 md:flex">
       <section>
@@ -195,9 +266,16 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
       </section>
 
       <section>
-        <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          {isMemoTab ? "🔒 노크 가능한 게시물" : "최근 Peak 게시물"}
-        </h2>
+        {isMemoTab ? (
+          <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            🔒 노크 가능한 게시물
+          </h2>
+        ) : (
+          <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-red-500 dark:text-red-400">
+            🔥 금주의 Peak 게시물
+            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-red-500" />
+          </h2>
+        )}
         <div className="mt-1 flex flex-col gap-1">
           {isMemoTab ? (
             knockablePosts === null ? (
@@ -233,28 +311,60 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                 </Link>
               ))
             )
+          ) : peakPosts === null ? (
+            <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">불러오는 중...</p>
+          ) : peakPosts.length === 0 ? (
+            <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+              이번 주 PEAK 게시물이 아직 없어요
+            </p>
           ) : (
-            MOCK_PEAK_POSTS.map((post, i) => (
-              <Link
-                key={post.postId}
-                href={`/feed?feed=completion#${post.postId}`}
-                style={{ animationDelay: `${i * 100}ms` }}
-                className="animate-peak-in flex items-center gap-2 rounded-md border border-red-100 bg-red-50 px-2 py-1.5 transition hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:hover:bg-red-950/50"
-              >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs dark:bg-black/30">
-                  {post.emoji}
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm text-gray-700 dark:text-gray-200">{post.name}</span>
-                    <span className="shrink-0 text-[10px] font-bold text-red-500">🔥 PEAK</span>
+            peakPosts.map((post, i) =>
+              i === 0 ? (
+                // 1위는 카드로 확대 — 나머지 두 개와 같은 줄짜리 취급이면 순위 1위라는 게 안 와닿아서
+                // 여기만 반응 수를 크게 보여주고 카드 자체 크기도 키운다.
+                <Link
+                  key={post.postId}
+                  href={`/feed?feed=completion#${post.postId}`}
+                  className="animate-peak-in flex flex-col gap-1 rounded-lg border-2 border-red-300 bg-red-50 p-2.5 transition hover:bg-red-100 dark:border-red-800/70 dark:bg-red-950/40 dark:hover:bg-red-950/60"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                      🔥 1위
+                    </span>
+                    <span className="shrink-0 text-base font-bold text-red-600 dark:text-red-400">
+                      🔥 {post.weeklyLikeCount}
+                    </span>
                   </div>
-                  <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">
-                    {post.publishedAgo}
+                  <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    {post.authorName}
                   </span>
-                </div>
-              </Link>
-            ))
+                  <span className="truncate text-xs text-gray-500 dark:text-gray-400">
+                    {post.caption || "게시물"}
+                  </span>
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500">{timeAgo(post.publishedAt)}</span>
+                </Link>
+              ) : (
+                <Link
+                  key={post.postId}
+                  href={`/feed?feed=completion#${post.postId}`}
+                  style={{ animationDelay: `${i * 100}ms` }}
+                  className="animate-peak-in flex items-center gap-2 rounded-md border border-red-100 bg-red-50 px-2 py-1.5 transition hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:hover:bg-red-950/50"
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-red-500 dark:bg-black/30">
+                    {i + 1}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm text-gray-700 dark:text-gray-200">{post.authorName}</span>
+                      <span className="shrink-0 text-[10px] font-bold text-red-500">🔥 {post.weeklyLikeCount}</span>
+                    </div>
+                    <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">
+                      {post.caption || "게시물"} · {timeAgo(post.publishedAt)}
+                    </span>
+                  </div>
+                </Link>
+              ),
+            )
           )}
         </div>
       </section>

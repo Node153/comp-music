@@ -17,7 +17,7 @@ export function LikeButton({
   className?: string;
 }) {
   const supabase = createClient();
-  const { likeCount, setLikeCount } = usePostEngagement();
+  const { likeCount, setLikeCount, setWeeklyLikeCount } = usePostEngagement();
   const [liked, setLiked] = useState(initialLiked);
   const [pending, setPending] = useState(false);
 
@@ -28,6 +28,10 @@ export function LikeButton({
     const nextLiked = !liked;
     setLiked(nextLiked);
     setLikeCount((c) => c + (nextLiked ? 1 : -1));
+    // 지금 누르는 좋아요/취소는 항상 "이번 주" 안에서 일어나는 일이라 weeklyLikeCount도 같이
+    // 맞춰준다 — 다만 몇 주 전에 눌러둔 좋아요를 지금 취소하는 경우엔 그 좋아요가 애초에
+    // weeklyLikeCount에 안 잡혀있었을 수 있어 미세하게 어긋날 수 있다(다음 새로고침에 정정됨).
+    setWeeklyLikeCount((c) => Math.max(0, c + (nextLiked ? 1 : -1)));
 
     const { error } = nextLiked
       ? await supabase.from("likes").insert({ post_id: postId, user_id: userId })
@@ -37,6 +41,7 @@ export function LikeButton({
       // 실패 시 낙관적 업데이트 롤백
       setLiked(!nextLiked);
       setLikeCount((c) => c + (nextLiked ? -1 : 1));
+      setWeeklyLikeCount((c) => Math.max(0, c + (nextLiked ? -1 : 1)));
     }
 
     setPending(false);

@@ -3,13 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { timeAgo } from "@/lib/timeAgo";
 import { pageTitle, pageCard, mutedText } from "@/components/ui/styles";
-import { PEAK_THRESHOLD } from "@/lib/feedConstants";
+import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
 // 알림 목록 — 좋아요·댓글(1단계) + Companion 신청·PEAK(2단계). 공동창작 신청은 다음 단계.
-// 별도 notifications 테이블 없이 기존 테이블(likes/comments/companions)과 PEAK_THRESHOLD
-// 판정 로직(EngagementMeter와 동일 기준)을 그대로 재사용해서 조립한다.
+// 별도 notifications 테이블 없이 기존 테이블(likes/comments/companions)과 PEAK 판정 로직
+// (EngagementMeter와 동일 기준 — 이번 주 좋아요 수 ≥ 승인 회원 수/3)을 그대로 재사용해서 조립한다.
 // PEAK는 "이벤트"가 아니라 "지금 임계치를 넘은 상태"라 정확한 도달 시각이 없다 — 근사치로
-// 그 게시물의 가장 최근 좋아요/댓글 시각을 쓴다.
+// 그 게시물의 이번 주 가장 최근 좋아요 시각을 쓴다.
 type NotificationItem =
   | { type: "like"; id: string; postId: string; actorName: string; createdAt: string }
   | { type: "comment"; id: string; postId: string; actorName: string; createdAt: string; content: string }
@@ -39,7 +39,7 @@ export default async function NotificationsPage() {
   const visibilityByPostId = new Map((myPosts ?? []).map((p) => [p.id, p.visibility]));
   const seenAt = me?.notifications_seen_at ?? new Date(0).toISOString();
 
-  const [{ data: likes }, { data: comments }, { data: allLikes }, { data: allComments }] =
+  const [{ data: likes }, { data: comments }, { data: weekLikes }, { count: approvedMemberCount }] =
     myPostIds.length > 0
       ? await Promise.all([
           supabase
@@ -56,11 +56,11 @@ export default async function NotificationsPage() {
             .neq("user_id", user.id)
             .order("created_at", { ascending: false })
             .limit(50),
-          // PEAK 판정용 — EngagementMeter와 동일하게 본인 반응도 포함한 전체 합계를 쓴다.
-          supabase.from("likes").select("post_id, created_at").in("post_id", myPostIds),
-          supabase.from("comments").select("post_id, created_at").in("post_id", myPostIds),
+          // PEAK 판정용 — EngagementMeter와 동일하게 이번 주(캘린더) 좋아요 수만 쓴다(본인 반응 포함).
+          supabase.from("likes").select("post_id, created_at").in("post_id", myPostIds).gte("created_at", currentWeekStartISO()),
+          supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved"),
         ])
-      : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
+      : [{ data: [] }, { data: [] }, { data: [] }, { count: 0 }];
 
   const actorIds = new Set([
     ...(incomingRequests ?? []).map((r) => r.requester_id),
@@ -73,16 +73,17 @@ export default async function NotificationsPage() {
       : { data: [] };
   const actorNameById = new Map((actors ?? []).map((a) => [a.id, a.display_name]));
 
-  const engagementByPost = new Map<string, { count: number; lastActivityAt: string }>();
-  for (const row of [...(allLikes ?? []), ...(allComments ?? [])]) {
-    const prev = engagementByPost.get(row.post_id);
+  const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
+  const weeklyLikesByPost = new Map<string, { count: number; lastActivityAt: string }>();
+  for (const row of weekLikes ?? []) {
+    const prev = weeklyLikesByPost.get(row.post_id);
     const isNewer = !prev || new Date(row.created_at) > new Date(prev.lastActivityAt);
-    engagementByPost.set(row.post_id, {
+    weeklyLikesByPost.set(row.post_id, {
       count: (prev?.count ?? 0) + 1,
       lastActivityAt: isNewer ? row.created_at : prev.lastActivityAt,
     });
   }
-  const peakPosts = [...engagementByPost.entries()].filter(([, v]) => v.count >= PEAK_THRESHOLD);
+  const peakPosts = [...weeklyLikesByPost.entries()].filter(([, v]) => v.count >= peakThreshold);
 
   const items: NotificationItem[] = [
     ...(likes ?? []).map(

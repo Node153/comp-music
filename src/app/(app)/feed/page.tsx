@@ -14,7 +14,7 @@ import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
-import { tagColorClass } from "@/lib/feedConstants";
+import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
@@ -213,6 +213,7 @@ function buildDemoMockPosts(
   profileMap: Map<string, { user_id: string; school: string | null; major: string | null }>,
   likeCountMap: Map<string, number>,
   commentCountMap: Map<string, number>,
+  weeklyLikeCountMap: Map<string, number>,
 ) {
   const now = Date.now();
   return samples.map((m) => {
@@ -220,6 +221,9 @@ function buildDemoMockPosts(
     profileMap.set(m.userId, { user_id: m.userId, school: m.school, major: m.major });
     likeCountMap.set(m.postId, m.likes);
     commentCountMap.set(m.postId, m.comments);
+    // mock 게시물은 개별 좋아요 row(created_at)가 없어서 "이번 주" 구분이 불가능 — 전체
+    // 좋아요 수를 그대로 이번 주 수로도 쓴다(볼륨미터 데모 목적이니 근사치로 충분).
+    weeklyLikeCountMap.set(m.postId, m.likes);
     return {
       id: m.postId,
       user_id: m.userId,
@@ -348,17 +352,30 @@ export default async function FeedPage({
 
   const { data: likeRows } =
     postIds.length > 0
-      ? await supabase.from("likes").select("post_id, user_id").in("post_id", postIds)
+      ? await supabase.from("likes").select("post_id, user_id, created_at").in("post_id", postIds)
       : { data: [] };
   const { data: commentRows } =
     postIds.length > 0
       ? await supabase.from("comments").select("post_id").in("post_id", postIds)
       : { data: [] };
 
+  // PEAK 기준치 — 승인 회원 수의 1/3(회원이 늘어날수록 기준도 같이 올라간다).
+  const { count: approvedMemberCount } = await supabase
+    .from("users")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "approved");
+  const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
+  const weekStartISO = currentWeekStartISO();
+
   const likeCountMap = new Map<string, number>();
+  // PEAK 판정 전용 — 이번 주(캘린더) 좋아요만. likeCountMap(화면에 보이는 전체 누적 수)와는 별개.
+  const weeklyLikeCountMap = new Map<string, number>();
   const likedByMeSet = new Set<string>();
   for (const row of likeRows ?? []) {
     likeCountMap.set(row.post_id, (likeCountMap.get(row.post_id) ?? 0) + 1);
+    if (row.created_at >= weekStartISO) {
+      weeklyLikeCountMap.set(row.post_id, (weeklyLikeCountMap.get(row.post_id) ?? 0) + 1);
+    }
     if (currentUser && row.user_id === currentUser.id) likedByMeSet.add(row.post_id);
   }
   const commentCountMap = new Map<string, number>();
@@ -502,7 +519,7 @@ export default async function FeedPage({
 
   const mockPosts = isComplex
     ? []
-    : buildDemoMockPosts(DEMO_MOCK_SAMPLES, userMap, profileMap, likeCountMap, commentCountMap);
+    : buildDemoMockPosts(DEMO_MOCK_SAMPLES, userMap, profileMap, likeCountMap, commentCountMap, weeklyLikeCountMap);
 
   const allPosts = [...postsWithVideo, ...mockPosts].sort(
     (a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime(),
@@ -538,6 +555,7 @@ export default async function FeedPage({
           const buttonBasis = isOwnPost ? "basis-1/2" : "basis-1/3";
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
+          const weeklyLikeCount = weeklyLikeCountMap.get(post.id) ?? 0;
           const schoolMajor = [profile?.school, profile?.major].filter(Boolean).join(" · ");
           const headerMetaLine = `${schoolMajor}${schoolMajor ? " · " : ""}${timeAgo(post.published_at ?? new Date().toISOString())}`;
           // memo(complex) 탭 게시물은 미디어 박스를 따로 안 쓰고 ComplexPostChat의 mediaSlot으로
@@ -571,7 +589,12 @@ export default async function FeedPage({
               id={post.id}
               className="scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border md:shadow-sm dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400"
             >
-              <PostEngagementProvider initialLikeCount={likeCount} initialCommentCount={commentCount}>
+              <PostEngagementProvider
+                initialLikeCount={likeCount}
+                initialCommentCount={commentCount}
+                initialWeeklyLikeCount={weeklyLikeCount}
+                peakThreshold={peakThreshold}
+              >
               <PostFocusToggle
                 authorInitial={(author?.name ?? "?").slice(0, 1)}
                 authorName={author?.name ?? "알 수 없음"}
