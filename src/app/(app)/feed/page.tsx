@@ -48,8 +48,13 @@ type MockSample = {
   tags: string[];
   collab: boolean;
   collabRole: string | null;
-  likes: number;
-  comments: number;
+  // 좋아요를 고정 숫자로 박아두면 회원이 늘/줄 때마다 "회원 10명인데 좋아요 71개" 같은 비현실적인
+  // 숫자가 되고, PEAK 기준(회원수/3)도 그때그때 달라져서 매번 다시 손봐야 한다 — 그래서 절대값
+  // 대신 peakThreshold 대비 배수로 갖고 있다가 렌더 시점에 실제 회원 수 기준으로 계산한다.
+  // (아래 목록은 배수를 오름차순으로 둬서 미터가 초록/노랑/빨강/PEAK 구간을 골고루 보여준다.)
+  likesMultiplier: number;
+  // 댓글 수 = 좋아요 수 × 이 비율(원래 데이터의 댓글/좋아요 비율을 그대로 유지).
+  commentRatio: number;
   publishedHoursAgo: number;
   expireHours: number | null;
   gradient: string;
@@ -69,8 +74,8 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     tags: ["피아노", "발라드"],
     collab: false,
     collabRole: null,
-    likes: 32,
-    comments: 9,
+    likesMultiplier: 0.65,
+    commentRatio: 0.28,
     publishedHoursAgo: 20,
     expireHours: null,
     gradient: "from-slate-700 to-slate-900",
@@ -87,8 +92,8 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     tags: ["기타", "밴드"],
     collab: false,
     collabRole: null,
-    likes: 58,
-    comments: 14,
+    likesMultiplier: 1.0,
+    commentRatio: 0.24,
     publishedHoursAgo: 30,
     expireHours: null,
     gradient: "from-indigo-600 to-purple-700",
@@ -105,8 +110,8 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     tags: ["보컬"],
     collab: false,
     collabRole: null,
-    likes: 71,
-    comments: 25,
+    likesMultiplier: 1.4,
+    commentRatio: 0.35,
     publishedHoursAgo: 5,
     expireHours: null,
     gradient: "from-rose-600 to-orange-500",
@@ -126,8 +131,8 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     tags: ["보컬", "라이브"],
     collab: false,
     collabRole: null,
-    likes: 5,
-    comments: 1,
+    likesMultiplier: 0.1,
+    commentRatio: 0.2,
     publishedHoursAgo: 2,
     expireHours: null,
     gradient: "from-sky-600 to-cyan-700",
@@ -144,8 +149,8 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     tags: ["드럼"],
     collab: false,
     collabRole: null,
-    likes: 15,
-    comments: 3,
+    likesMultiplier: 0.3,
+    commentRatio: 0.2,
     publishedHoursAgo: 9,
     expireHours: null,
     gradient: "from-amber-700 to-yellow-600",
@@ -162,8 +167,8 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     tags: ["피아노", "클래식"],
     collab: false,
     collabRole: null,
-    likes: 24,
-    comments: 6,
+    likesMultiplier: 0.5,
+    commentRatio: 0.25,
     publishedHoursAgo: 14,
     expireHours: null,
     gradient: "from-emerald-700 to-teal-800",
@@ -180,8 +185,8 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     tags: ["작곡", "필름스코어"],
     collab: false,
     collabRole: null,
-    likes: 33,
-    comments: 8,
+    likesMultiplier: 0.7,
+    commentRatio: 0.24,
     publishedHoursAgo: 26,
     expireHours: null,
     gradient: "from-orange-700 to-red-700",
@@ -198,8 +203,8 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     tags: ["베이스", "챌린지"],
     collab: false,
     collabRole: null,
-    likes: 40,
-    comments: 10,
+    likesMultiplier: 0.85,
+    commentRatio: 0.25,
     publishedHoursAgo: 40,
     expireHours: null,
     gradient: "from-fuchsia-700 to-pink-800",
@@ -214,16 +219,23 @@ function buildDemoMockPosts(
   likeCountMap: Map<string, number>,
   commentCountMap: Map<string, number>,
   weeklyLikeCountMap: Map<string, number>,
+  peakThreshold: number,
+  approvedMemberCount: number,
 ) {
   const now = Date.now();
   return samples.map((m) => {
     userMap.set(m.userId, { id: m.userId, name: m.name });
     profileMap.set(m.userId, { user_id: m.userId, school: m.school, major: m.major });
-    likeCountMap.set(m.postId, m.likes);
-    commentCountMap.set(m.postId, m.comments);
+    // likesMultiplier × 현재 peakThreshold로 계산 — 좋아요 수가 승인 회원 수를 넘는 비현실적인
+    // 상황이 안 나오게 approvedMemberCount로 한 번 더 clamp한다(실제 likes 테이블도
+    // post_id+user_id 유니크라 회원 수 이상은 물리적으로 불가능).
+    const likes = Math.max(0, Math.min(approvedMemberCount, Math.round(peakThreshold * m.likesMultiplier)));
+    const comments = Math.round(likes * m.commentRatio);
+    likeCountMap.set(m.postId, likes);
+    commentCountMap.set(m.postId, comments);
     // mock 게시물은 개별 좋아요 row(created_at)가 없어서 "이번 주" 구분이 불가능 — 전체
     // 좋아요 수를 그대로 이번 주 수로도 쓴다(볼륨미터 데모 목적이니 근사치로 충분).
-    weeklyLikeCountMap.set(m.postId, m.likes);
+    weeklyLikeCountMap.set(m.postId, likes);
     return {
       id: m.postId,
       user_id: m.userId,
@@ -519,7 +531,16 @@ export default async function FeedPage({
 
   const mockPosts = isComplex
     ? []
-    : buildDemoMockPosts(DEMO_MOCK_SAMPLES, userMap, profileMap, likeCountMap, commentCountMap, weeklyLikeCountMap);
+    : buildDemoMockPosts(
+        DEMO_MOCK_SAMPLES,
+        userMap,
+        profileMap,
+        likeCountMap,
+        commentCountMap,
+        weeklyLikeCountMap,
+        peakThreshold,
+        approvedMemberCount ?? 0,
+      );
 
   const allPosts = [...postsWithVideo, ...mockPosts].sort(
     (a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime(),
