@@ -55,8 +55,11 @@ export function GiphyPicker({
   const [results, setResults] = useState<GiphyResult[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 검색어 바뀔 때마다 300ms 기다렸다가 요청(디바운스) — 빈 검색어면 트렌딩을 보여준다.
+  // 검색어 바뀔 때마다 600ms 기다렸다가 요청(디바운스) — Beta API 키가 시간당 100회로
+  // 제한이라 호출을 최대한 아낀다. 빈 검색어는 트렌딩, 한 글자만 입력했을 때는 검색어로서
+  // 의미가 적어 호출 자체를 건너뛴다(직전 결과를 그대로 유지).
   useEffect(() => {
+    if (query.trim().length === 1) return;
     let cancelled = false;
     setLoading(true);
     const timer = setTimeout(() => {
@@ -66,7 +69,7 @@ export function GiphyPicker({
           setLoading(false);
         }
       });
-    }, 300);
+    }, 600);
     return () => {
       cancelled = true;
       clearTimeout(timer);
