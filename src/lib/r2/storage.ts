@@ -21,6 +21,17 @@ export function getR2SignedUrl(key: string, expirySeconds: number) {
   return getSignedUrl(r2Client, command, { expiresIn: expirySeconds });
 }
 
+// posts.thumbnail_url은 R2 key(직접 업로드한 커버) 또는 GIPHY가 호스팅하는 완전한 URL(GIF를
+// 커버로 고른 경우, GiphyPicker) 둘 다 저장될 수 있다 — GIF는 우리 R2에 다시 올리지 않고
+// GIPHY 자체 CDN 링크를 그대로 쓰기 때문. 읽을 때 그 값이 어느 쪽인지 구분해서 R2 key만
+// signed URL로 바꾸고, 외부 URL은 그대로 반환한다.
+export function resolveMediaUrl(value: string, expirySeconds: number): Promise<string> {
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return Promise.resolve(value);
+  }
+  return getR2SignedUrl(value, expirySeconds);
+}
+
 export async function deleteR2Object(key: string) {
   await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
 }

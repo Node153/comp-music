@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getR2SignedUrl } from "@/lib/r2/storage";
+import { getR2SignedUrl, resolveMediaUrl } from "@/lib/r2/storage";
 import { MessageButton } from "@/components/MessageButton";
 import { EngagementMeter } from "@/components/EngagementMeter";
 import { PostEngagementProvider } from "@/components/PostEngagementContext";
@@ -515,7 +515,7 @@ export default async function FeedPage({
       const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
       const videoSrc = canView && mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
       const posterSrc =
-        canView && post.thumbnail_url ? await getR2SignedUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS) : null;
+        canView && post.thumbnail_url ? await resolveMediaUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS) : null;
       return {
         ...post,
         videoSrc,

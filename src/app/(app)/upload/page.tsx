@@ -9,6 +9,7 @@ import { uploadFileToR2 } from "@/lib/uploadToR2";
 import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
+import { GiphyPicker } from "@/components/GiphyPicker";
 import { field, label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
 import type { ExpireHours } from "@/types/database";
@@ -237,6 +238,10 @@ export default function UploadPage() {
   // DEMO는 Instagram처럼 커버 이미지가 사실상 메인 비주얼이라 필수로 바꿈.
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverFileError, setCoverFileError] = useState<string | null>(null);
+  // 사진이 없는 유저를 위한 대안 — GIPHY에서 GIF를 골라 커버로 쓸 수 있다(GiphyPicker).
+  // coverFile과 coverGifUrl은 동시에 하나만 유효(둘 중 하나를 고르면 다른 쪽은 비운다).
+  const [coverGifUrl, setCoverGifUrl] = useState<string | null>(null);
+  const [gifPickerOpen, setGifPickerOpen] = useState(false);
 
   // Complex 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
   const [complexFile, setComplexFile] = useState<File | null>(null);
@@ -331,6 +336,7 @@ export default function UploadPage() {
     setMediaFileError(null);
     setCoverFile(null);
     setCoverFileError(null);
+    setCoverGifUrl(null);
     if (file && file.size > MAX_FILE_SIZE_BYTES) {
       setMediaFile(null);
       setMediaKind(null);
@@ -357,6 +363,14 @@ export default function UploadPage() {
       return;
     }
     setCoverFile(file);
+    setCoverGifUrl(null);
+  }
+
+  function handleSelectGif(gif: { url: string; width: number; height: number }) {
+    setCoverGifUrl(gif.url);
+    setCoverFile(null);
+    setCoverFileError(null);
+    setGifPickerOpen(false);
   }
 
   function handleComplexFileChange(file: File | null) {
@@ -495,8 +509,8 @@ export default function UploadPage() {
       setError("영상 또는 음원(mp3/wav)을 업로드해주세요.");
       return;
     }
-    if (!coverFile) {
-      setError("커버 이미지를 올려주세요.");
+    if (!coverFile && !coverGifUrl) {
+      setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
       return;
     }
     if (selectedTags.length < MIN_TAGS) {
@@ -527,9 +541,11 @@ export default function UploadPage() {
     }
 
     // 커버 이미지는 이제 필수(위에서 검증됨) — thumbnail_url(원래 있던 미사용 컬럼)에 저장한다.
+    // GIF를 골랐으면 GIPHY 자체 URL을 그대로 쓰고(resolveMediaUrl이 읽을 때 구분), 직접 올린
+    // 사진이면 R2에 업로드해서 key를 저장한다.
     let thumbnailPath: string;
     try {
-      thumbnailPath = await uploadFileToR2(coverFile);
+      thumbnailPath = coverGifUrl ?? (await uploadFileToR2(coverFile!));
     } catch (err) {
       setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
       setLoading(false);
@@ -640,12 +656,41 @@ export default function UploadPage() {
                   <p className="-mt-1 text-xs text-gray-400 dark:text-gray-500">
                     세로 4:5 ~ 가로 1.91:1 사이 비율(Instagram 게시물과 동일)
                   </p>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleCoverChange}
-                    className={darkFileInput}
-                  />
+                  {coverGifUrl ? (
+                    <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={coverGifUrl}
+                        alt="선택한 GIF"
+                        className="h-16 w-16 rounded-lg object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setCoverGifUrl(null)}
+                        className="text-sm"
+                      >
+                        GIF 제거
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={handleCoverChange}
+                        className={darkFileInput}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setGifPickerOpen(true)}
+                        className="shrink-0 text-sm"
+                      >
+                        GIF로 만들기
+                      </Button>
+                    </div>
+                  )}
                   {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
                 </>
               )}
@@ -856,6 +901,10 @@ export default function UploadPage() {
             <video src={previewVideoSrc} controls muted className="w-full rounded-xl" />
           </div>
         </aside>
+      )}
+
+      {gifPickerOpen && (
+        <GiphyPicker onSelect={handleSelectGif} onClose={() => setGifPickerOpen(false)} />
       )}
     </div>
   );
