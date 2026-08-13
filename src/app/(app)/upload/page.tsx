@@ -55,10 +55,12 @@ const COMPLEX_VISIBILITY_OPTIONS: { value: ComplexVisibility; label: string; ico
 // 영구노출 여부는 expires_at(null)로만 판단하므로(feed/page.tsx 쿼리 참고) 이 값 자체는 화면에 노출되지 않는다.
 const PERMANENT_POST_EXPIRE_HOURS_PLACEHOLDER: ExpireHours = 48;
 
-// demo·Complex 둘 다 "영상 또는 음원 파일 하나 → MIME 타입으로 자동 판별"하는 같은 방식을 쓴다
-// (0011_posts_audio_media_type). Complex 쪽은 아직 mock 미리보기라(위 주석 참고) 실제 저장은 안 됨.
+// demo는 영상/음원 둘 다, memo는 음원(mp3/wav)만 — memo는 Discord처럼 짧은 스케치를 음원으로만
+// 주고받는 공간으로 좁혀서 이미지/영상 업로드 자체를 없앴다(재창작물 스택은 이미 0015부터
+// 음원 전용이었고, 이번엔 1차 게시물 업로드도 같은 원칙으로 맞춤).
 type DetectedMediaKind = "video" | "audio";
 const VIDEO_OR_AUDIO_ACCEPT = "video/mp4,video/quicktime,audio/mpeg,audio/mp3,audio/wav,audio/x-wav";
+const AUDIO_ONLY_ACCEPT = "audio/mpeg,audio/mp3,audio/wav,audio/x-wav";
 
 function detectMediaKind(file: File): DetectedMediaKind | null {
   if (file.type.startsWith("video/")) return "video";
@@ -66,26 +68,30 @@ function detectMediaKind(file: File): DetectedMediaKind | null {
   return null;
 }
 
-// 업로드 용량/길이 제한 — Instagram 릴스(650MB/90초)보다 타이트하게 잡음(우리 R2 저장 비용,
-// DEMO는 만료 없이 영구 보관이라 무제한 용량이면 계속 쌓임). 음원은 실무상 이 정도 용량을
-// 넘기기 어려워 사실상 영상에만 걸리는 제한이다.
+// 업로드 용량 제한 — Instagram 릴스(650MB)보다 타이트하게 잡음(우리 R2 저장 비용, DEMO는
+// 만료 없이 영구 보관이라 무제한 용량이면 계속 쌓임). 음원은 실무상 이 정도 용량을 넘기기
+// 어려워 사실상 영상에만 걸리는 제한이다. 영상 길이 제한은 없앰(DEMO는 SoundCloud처럼
+// 음원+커버 이미지가 중심이라 영상은 부차적인 존재라 길이보다 용량만 제어).
 const MAX_FILE_SIZE_BYTES = 300 * 1024 * 1024;
-const MAX_VIDEO_DURATION_SECONDS = 60;
 
 function formatMB(bytes: number) {
   return `${Math.round(bytes / (1024 * 1024))}MB`;
 }
 
-function readVideoDuration(file: File): Promise<number> {
+// DEMO 커버 이미지 비율 — Instagram 피드 게시물과 동일한 범위(세로 4:5 ~ 가로 1.91:1)로
+// 제한해서 레이아웃이 깨지지 않게 한다.
+const MIN_COVER_ASPECT_RATIO = 4 / 5;
+const MAX_COVER_ASPECT_RATIO = 1.91;
+
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve) => {
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.onloadedmetadata = () => {
-      URL.revokeObjectURL(video.src);
-      resolve(video.duration);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
     };
-    video.onerror = () => resolve(0);
-    video.src = URL.createObjectURL(file);
+    img.onerror = () => resolve({ width: 1, height: 1 });
+    img.src = URL.createObjectURL(file);
   });
 }
 
@@ -131,8 +137,19 @@ function chipButtonClass(active: boolean) {
 // 파일 input을 감춘 큰 dropzone — 클릭·드래그앤드롭 둘 다 지원. 업로드 가능한 확장자를
 // 박스 안에 나열해서 별도 라벨 없이 이 박스 하나로 파일 선택 UI를 대체한다.
 const UPLOADABLE_FORMATS = "mp3 · wav · mp4 · mov";
+const MEMO_UPLOADABLE_FORMATS = "mp3 · wav";
 
-function UploadDropbox({ file, onSelect }: { file: File | null; onSelect: (file: File | null) => void }) {
+function UploadDropbox({
+  file,
+  onSelect,
+  accept,
+  formatsLabel,
+}: {
+  file: File | null;
+  onSelect: (file: File | null) => void;
+  accept: string;
+  formatsLabel: string;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   return (
@@ -165,7 +182,7 @@ function UploadDropbox({ file, onSelect }: { file: File | null; onSelect: (file:
       <input
         ref={inputRef}
         type="file"
-        accept={VIDEO_OR_AUDIO_ACCEPT}
+        accept={accept}
         className="hidden"
         onChange={(e) => {
           onSelect(e.target.files?.[0] ?? null);
@@ -217,7 +234,9 @@ export default function UploadPage() {
   const [mediaKind, setMediaKind] = useState<DetectedMediaKind | null>(null);
   const [mediaFileError, setMediaFileError] = useState<string | null>(null);
   // posts.thumbnail_url(원래부터 있던 컬럼, 이제야 처음 사용)에 저장돼 피드에서 영상 poster/커버로 쓰인다.
+  // DEMO는 Instagram처럼 커버 이미지가 사실상 메인 비주얼이라 필수로 바꿈.
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverFileError, setCoverFileError] = useState<string | null>(null);
 
   // Complex 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
   const [complexFile, setComplexFile] = useState<File | null>(null);
@@ -308,9 +327,10 @@ export default function UploadPage() {
     setUploadType(next);
   }
 
-  async function handleFileChange(file: File | null) {
+  function handleFileChange(file: File | null) {
     setMediaFileError(null);
     setCoverFile(null);
+    setCoverFileError(null);
     if (file && file.size > MAX_FILE_SIZE_BYTES) {
       setMediaFile(null);
       setMediaKind(null);
@@ -318,25 +338,28 @@ export default function UploadPage() {
       return;
     }
     setMediaFile(file);
-    const kind = file ? detectMediaKind(file) : null;
-    setMediaKind(kind);
-    if (file && kind === "video") {
-      const duration = await readVideoDuration(file);
-      if (duration > MAX_VIDEO_DURATION_SECONDS) {
-        setMediaFile(null);
-        setMediaKind(null);
-        setMediaFileError(
-          `영상 길이가 ${Math.round(duration)}초예요. ${MAX_VIDEO_DURATION_SECONDS}초 이하만 올릴 수 있어요.`,
-        );
-      }
+    setMediaKind(file ? detectMediaKind(file) : null);
+  }
+
+  async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    setCoverFileError(null);
+    if (!file) {
+      setCoverFile(null);
+      return;
     }
+    const { width, height } = await readImageDimensions(file);
+    const ratio = width / height;
+    if (ratio < MIN_COVER_ASPECT_RATIO || ratio > MAX_COVER_ASPECT_RATIO) {
+      setCoverFile(null);
+      setCoverFileError("커버 이미지 비율이 적절하지 않아요. 세로 4:5 ~ 가로 1.91:1 사이 비율을 사용해주세요.");
+      return;
+    }
+    setCoverFile(file);
   }
 
-  function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setCoverFile(e.target.files?.[0] ?? null);
-  }
-
-  async function handleComplexFileChange(file: File | null) {
+  function handleComplexFileChange(file: File | null) {
     setComplexFileError(null);
     if (file && file.size > MAX_FILE_SIZE_BYTES) {
       setComplexFile(null);
@@ -344,19 +367,15 @@ export default function UploadPage() {
       setComplexFileError(`파일 용량이 ${formatMB(file.size)}예요. ${formatMB(MAX_FILE_SIZE_BYTES)} 이하만 올릴 수 있어요.`);
       return;
     }
-    setComplexFile(file);
     const kind = file ? detectMediaKind(file) : null;
-    setComplexKind(kind);
-    if (file && kind === "video") {
-      const duration = await readVideoDuration(file);
-      if (duration > MAX_VIDEO_DURATION_SECONDS) {
-        setComplexFile(null);
-        setComplexKind(null);
-        setComplexFileError(
-          `영상 길이가 ${Math.round(duration)}초예요. ${MAX_VIDEO_DURATION_SECONDS}초 이하만 올릴 수 있어요.`,
-        );
-      }
+    if (file && kind !== "audio") {
+      setComplexFile(null);
+      setComplexKind(null);
+      setComplexFileError("memo는 음원(mp3/wav) 파일만 올릴 수 있어요.");
+      return;
     }
+    setComplexFile(file);
+    setComplexKind(kind);
   }
 
   function toggleTag(tag: string) {
@@ -383,15 +402,8 @@ export default function UploadPage() {
     tag.toLowerCase().includes(tagSearch.trim().toLowerCase()),
   );
 
-  // demo·Complex 둘 다 영상일 때만 옆 미리보기 aside를 씀(음원은 폼 안 사운드바로 충분).
-  const previewVideoSrc =
-    uploadType === "demo"
-      ? mediaKind === "video"
-        ? mediaObjectUrl
-        : null
-      : complexKind === "video"
-        ? complexObjectUrl
-        : null;
+  // 영상 미리보기 aside는 DEMO 전용 — memo는 이제 음원(mp3/wav)만 올릴 수 있어서 해당 없음.
+  const previewVideoSrc = uploadType === "demo" && mediaKind === "video" ? mediaObjectUrl : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -435,10 +447,10 @@ export default function UploadPage() {
         .from("posts")
         .insert({
           user_id: user.id,
-          media_type: complexKind,
-          video_url: complexKind === "video" ? complexMediaPath : null,
+          media_type: "audio",
+          video_url: null,
           image_url: null,
-          audio_url: complexKind === "audio" ? complexMediaPath : null,
+          audio_url: complexMediaPath,
           caption: caption || null,
           visibility: complexVisibility === "specific" ? "invite_only" : "followers",
           collab_available: collabAvailable,
@@ -483,6 +495,10 @@ export default function UploadPage() {
       setError("영상 또는 음원(mp3/wav)을 업로드해주세요.");
       return;
     }
+    if (!coverFile) {
+      setError("커버 이미지를 올려주세요.");
+      return;
+    }
     if (selectedTags.length < MIN_TAGS) {
       setError(`해시태그를 최소 ${MIN_TAGS}개 선택해주세요.`);
       return;
@@ -510,16 +526,14 @@ export default function UploadPage() {
       return;
     }
 
-    // 선택적으로 커버 이미지를 같이 올려서 thumbnail_url(원래 있던 미사용 컬럼)에 저장한다.
-    let thumbnailPath: string | null = null;
-    if (coverFile) {
-      try {
-        thumbnailPath = await uploadFileToR2(coverFile);
-      } catch (err) {
-        setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
-        setLoading(false);
-        return;
-      }
+    // 커버 이미지는 이제 필수(위에서 검증됨) — thumbnail_url(원래 있던 미사용 컬럼)에 저장한다.
+    let thumbnailPath: string;
+    try {
+      thumbnailPath = await uploadFileToR2(coverFile);
+    } catch (err) {
+      setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
+      setLoading(false);
+      return;
     }
 
     const publishedAt = new Date();
@@ -592,7 +606,12 @@ export default function UploadPage() {
           {uploadType === "demo" ? (
             <div className="flex flex-col gap-1.5">
               <span className={darkLabel}>업로드</span>
-              <UploadDropbox file={mediaFile} onSelect={handleFileChange} />
+              <UploadDropbox
+                file={mediaFile}
+                onSelect={handleFileChange}
+                accept={VIDEO_OR_AUDIO_ACCEPT}
+                formatsLabel={UPLOADABLE_FORMATS}
+              />
               {mediaFile && !mediaKind && (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
                   영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
@@ -617,35 +636,30 @@ export default function UploadPage() {
               )}
               {mediaFile && mediaKind && (
                 <>
-                  <span className={darkLabel}>커버 이미지 (선택)</span>
+                  <span className={darkLabel}>커버 이미지</span>
+                  <p className="-mt-1 text-xs text-gray-400 dark:text-gray-500">
+                    세로 4:5 ~ 가로 1.91:1 사이 비율(Instagram 게시물과 동일)
+                  </p>
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
                     onChange={handleCoverChange}
                     className={darkFileInput}
                   />
+                  {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
                 </>
               )}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
               <span className={darkLabel}>업로드</span>
-              <UploadDropbox file={complexFile} onSelect={handleComplexFileChange} />
-              {complexFile && !complexKind && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">
-                  영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
-                </p>
-              )}
+              <UploadDropbox
+                file={complexFile}
+                onSelect={handleComplexFileChange}
+                accept={AUDIO_ONLY_ACCEPT}
+                formatsLabel={MEMO_UPLOADABLE_FORMATS}
+              />
               {complexFileError && <p className={darkErrorText}>{complexFileError}</p>}
-              {complexFile && complexKind === "video" && (
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen((v) => !v)}
-                  className="hidden self-start text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 md:inline"
-                >
-                  {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
-                </button>
-              )}
               {complexFile && complexKind === "audio" && complexObjectUrl && (
                 <SoundbarPreview
                   key={`${complexFile.name}-${complexFile.size}-${complexFile.lastModified}`}

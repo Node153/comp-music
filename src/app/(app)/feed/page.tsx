@@ -710,13 +710,18 @@ export default async function FeedPage({
                           />
                         </div>
                       ) : post.videoSrc ? (
-                        <PostVideo
-                          postId={post.id}
-                          title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
-                          author={author?.name ?? "알 수 없음"}
-                          videoSrc={post.videoSrc}
-                          posterSrc={post.posterSrc}
-                        />
+                        // DEMO는 SoundCloud처럼 음원+커버 이미지가 중심이라 영상은 부차적인
+                        // 존재로 취급 — 실제 화질을 낮춰 인코딩하는 건 아직 없어서(추후 파이프라인
+                        // 필요), 지금은 화면에 작고 빈티지하게 보이도록 크기·필터만 낮춘 스케치.
+                        <div className="mx-auto max-w-[420px] p-4 saturate-[0.7] sepia-[0.15]">
+                          <PostVideo
+                            postId={post.id}
+                            title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
+                            author={author?.name ?? "알 수 없음"}
+                            videoSrc={post.videoSrc}
+                            posterSrc={post.posterSrc}
+                          />
+                        </div>
                       ) : (
                         <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
                       )}

@@ -1,11 +1,12 @@
 "use client";
 
 // Complex 게시물 전용 — 좋아요/댓글 대신 Discord 스타일 실시간 채팅으로 구성.
-// 재창작물(작업물)은 음원 파일만 올릴 수 있다(0015_work_uploads_audio_only) — 올릴 때마다
-// 원본(1차)을 이어받은 재창작물(2차, 3차...)로 취급해 스택처럼 쌓아 보여준다. 일반 텍스트
-// 채팅과는 구분됨(텍스트는 항상 잡담일 뿐 재창작물이 될 수 없음).
-// 이미지는 재창작물로는 못 쓰지만 일반 채팅 메시지(is_work=false)로는 업로드 가능
-// (0016_allow_image_chat_messages) — 협업 구함 여부와 무관하게 참여자 누구나.
+// memo는 이제 음원(mp3/wav)만 주고받는 공간으로 좁혀서 채팅의 이미지 업로드 버튼은 없앴다
+// (0016_allow_image_chat_messages로 한때 허용했었지만 UI에서 제거 — 과거에 올라간 이미지
+// 메시지는 renderMessages에서 계속 보여준다, 업로드만 막음). 재창작물(작업물)은 원래부터
+// 음원 파일만 올릴 수 있었고(0015_work_uploads_audio_only) 올릴 때마다 원본(1차)을 이어받은
+// 재창작물(2차, 3차...)로 취급해 스택처럼 쌓아 보여준다. 일반 텍스트 채팅과는 구분됨(텍스트는
+// 항상 잡담일 뿐 재창작물이 될 수 없음).
 // 0012_complex_access_and_chat로 실제 DB(post_chat_messages) 연동됨 — Realtime 구독은 이번
 // 범위에서 보류(전송/새로고침 시에만 반영). 파일 업로드는 기존 R2 파이프라인(uploadFileToR2)을
 // 그대로 재사용.
@@ -65,7 +66,6 @@ export function ComplexPostChat({
   const [refreshing, setRefreshing] = useState(false);
   const [stackOpen, setStackOpen] = useState(true);
   const audioInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const workMessages = messages.filter((m) => m.isWork);
 
@@ -98,16 +98,15 @@ export function ComplexPostChat({
     setDraft("");
   }
 
-  // 음원은 재창작물(is_work=true), 이미지는 일반 채팅(is_work=false) — RLS(0016)에서도 동일하게 강제.
-  async function sendFile(file: File, type: "audio" | "image") {
+  // 재창작물(음원)은 항상 is_work=true — RLS(0015_work_uploads_audio_only)에서도 음원만 허용.
+  async function sendAudioFile(file: File) {
     if (sending) return;
     setSending(true);
     try {
-      const isWork = type === "audio";
       const fileKey = await uploadFileToR2(file);
       const { data, error } = await supabase
         .from("post_chat_messages")
-        .insert({ post_id: postId, sender_id: currentUserId, type, file_key: fileKey, is_work: isWork })
+        .insert({ post_id: postId, sender_id: currentUserId, type: "audio", file_key: fileKey, is_work: true })
         .select("id, created_at")
         .single();
       if (error || !data) return;
@@ -119,10 +118,10 @@ export function ComplexPostChat({
           id: data.id,
           senderId: currentUserId,
           senderName: currentUserName,
-          type,
+          type: "audio",
           fileUrl: localUrl,
           fileName: file.name,
-          isWork,
+          isWork: true,
           createdAt: data.created_at,
         },
       ]);
@@ -131,12 +130,10 @@ export function ComplexPostChat({
     }
   }
 
-  function handleFileInput(type: "audio" | "image") {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (file) void sendFile(file, type);
-    };
+  function handleAudioFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) void sendAudioFile(file);
   }
 
   async function refreshMessages() {
@@ -294,7 +291,7 @@ export function ComplexPostChat({
           accept="audio/mpeg,audio/mp3,audio/wav"
           className="hidden"
           disabled={!canUploadWork}
-          onChange={handleFileInput("audio")}
+          onChange={handleAudioFileInput}
         />
         <button
           type="button"
@@ -304,23 +301,6 @@ export function ComplexPostChat({
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
         >
           🎵
-        </button>
-        {/* 이미지는 재창작물이 아닌 일반 채팅이라 협업 구함 게이트(canUploadWork) 없이 누구나. */}
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileInput("image")}
-        />
-        <button
-          type="button"
-          disabled={sending}
-          title="이미지 올리기 (일반 채팅 — 재창작물 아님)"
-          onClick={() => imageInputRef.current?.click()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-        >
-          🖼️
         </button>
         <input
           type="text"
