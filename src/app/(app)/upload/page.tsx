@@ -650,50 +650,46 @@ export default function UploadPage() {
                   src={mediaObjectUrl}
                 />
               )}
-              {mediaFile && mediaKind && (
-                <>
-                  <span className={darkLabel}>커버 이미지</span>
-                  <p className="-mt-1 text-xs text-gray-400 dark:text-gray-500">
-                    세로 4:5 ~ 가로 1.91:1 사이 비율(Instagram 게시물과 동일)
-                  </p>
-                  {coverGifUrl ? (
-                    <div className="flex items-center gap-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={coverGifUrl}
-                        alt="선택한 GIF"
-                        className="h-16 w-16 rounded-lg object-cover"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setCoverGifUrl(null)}
-                        className="text-sm"
-                      >
-                        GIF 제거
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        onChange={handleCoverChange}
-                        className={darkFileInput}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setGifPickerOpen(true)}
-                        className="shrink-0 text-sm"
-                      >
-                        GIF로 만들기
-                      </Button>
-                    </div>
-                  )}
-                  {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
-                </>
+              <span className={darkLabel}>커버 이미지 (필수)</span>
+              <p className="-mt-1 text-xs text-gray-400 dark:text-gray-500">
+                세로 4:5 ~ 가로 1.91:1 사이 비율(Instagram 게시물과 동일)
+              </p>
+              {coverGifUrl ? (
+                <div className="flex items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={coverGifUrl}
+                    alt="선택한 GIF"
+                    className="h-16 w-16 rounded-lg object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setCoverGifUrl(null)}
+                    className="text-sm"
+                  >
+                    GIF 제거
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleCoverChange}
+                    className={darkFileInput}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setGifPickerOpen(true)}
+                    className="shrink-0 text-sm"
+                  >
+                    GIF로 만들기
+                  </Button>
+                </div>
               )}
+              {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
