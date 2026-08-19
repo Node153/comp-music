@@ -88,6 +88,24 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["agreements"]["Insert"]>;
         Relationships: [];
       };
+      // 0026_site_settings: 전역 key-value 설정 — 지금은 로그인 화면 배경음악(login_bgm_key,
+      // value에 R2 key 또는 외부 URL) 하나뿐이라 필요할 때마다 행을 추가하는 식으로 쓴다.
+      site_settings: {
+        Row: {
+          key: string;
+          value: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          key: string;
+          value?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["site_settings"]["Insert"]>;
+        Relationships: [];
+      };
       profiles: {
         Row: {
           user_id: string;

@@ -62,9 +62,14 @@ export default async function AdminMembersPage({
     <main className="mx-auto flex max-w-4xl flex-col gap-5 p-6">
       <div className="flex items-center justify-between">
         <h1 className={pageTitle}>회원 관리</h1>
-        <Link href="/admin/verifications" className="text-sm font-medium text-blue-600 hover:underline">
-          심사 대기열 →
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/admin/login-screen" className="text-sm font-medium text-blue-600 hover:underline">
+            로그인 화면 →
+          </Link>
+          <Link href="/admin/verifications" className="text-sm font-medium text-blue-600 hover:underline">
+            심사 대기열 →
+          </Link>
+        </div>
       </div>
 
       <form className="flex gap-2">

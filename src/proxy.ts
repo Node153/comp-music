@@ -83,6 +83,10 @@ export const config = {
   matcher: [
     // /api는 제외 — cron(expire-posts) 등 API 라우트는 Supabase 세션 쿠키가 없는 서버-서버 호출이라
     // 여기 걸리면 항상 /login으로 리다이렉트되어 라우트 핸들러 자체(Bearer 토큰 검사)가 실행되지 않는다.
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // 이미지 확장자뿐 아니라 오디오/비디오도 제외 — public/의 정적 미디어(로그인 화면 배경음악 등)를
+    // 비로그인 상태로 요청하면 여기 걸려서 /login으로 리다이렉트되고, 그 결과 오디오 대신
+    // 로그인 페이지 HTML이 내려오는 문제가 있었다(사운드가 아니라 로그인 화면 자기 자신을
+    // fetch하고 있었던 셈).
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp3|wav|mp4|mov)$).*)",
   ],
 };
