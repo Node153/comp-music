@@ -39,6 +39,19 @@ export default async function AdminMembersPage({
 
   const { data: members } = await query;
 
+  // 동명이인(중복 계정 의심) 경고용 — 검색 필터와 무관하게 전체 회원 기준으로 판단해야 하므로
+  // 별도 쿼리. 소셜로그인(Google/Kakao/Spotify)마다 이메일이 다르게 잡혀서 같은 사람이 여러
+  // 계정을 만들 수 있는데, 이메일이 다르면 시스템이 자동으로는 구분 못 해서 실명 일치 여부를
+  // 관리자에게 참고 정보로만 보여준다(최종 판단은 관리자 몫 — 오탐 가능성 있음, 동명이인이
+  // 실제로 다른 사람일 수도 있어서 자동 차단은 안 함).
+  const { data: allUsers } = await supabase.from("users").select("id, name, email, status");
+  const usersByName = new Map<string, { id: string; email: string; status: string }[]>();
+  for (const u of allUsers ?? []) {
+    const key = u.name.trim();
+    if (!usersByName.has(key)) usersByName.set(key, []);
+    usersByName.get(key)!.push({ id: u.id, email: u.email, status: u.status });
+  }
+
   const userIds = (members ?? []).map((m) => m.id);
   const { data: profileRows } =
     userIds.length > 0
@@ -100,15 +113,27 @@ export default async function AdminMembersPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {(members ?? []).map((m) => (
+            {(members ?? []).map((m) => {
+              const duplicates = (usersByName.get(m.name.trim()) ?? []).filter((u) => u.id !== m.id);
+              const userType = userTypeMap.get(m.id);
+              return (
               <tr key={m.id}>
                 <td className="px-4 py-3">
                   <div className="font-medium text-gray-900">{m.name}</div>
                   <div className={mutedText}>{m.nickname}</div>
+                  {duplicates.length > 0 && (
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      {duplicates.map((d) => (
+                        <span key={d.id} className="text-xs font-medium text-amber-600">
+                          ⚠️ 동명이인 있음: {d.email} ({STATUS_LABEL[d.status] ?? d.status})
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-gray-600">{m.email}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-gray-600">
-                  {userTypeMap.get(m.id) === "student" ? "전공생" : "활동자"}
+                  {userType === "student" ? "전공생" : userType === "activist" ? "활동자" : "-"}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <div className="flex flex-col items-start gap-1.5">
@@ -127,7 +152,8 @@ export default async function AdminMembersPage({
                   {formatBytes(usageByUserId.get(m.id) ?? 0)}
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {(members ?? []).length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-10 text-center text-gray-400">
