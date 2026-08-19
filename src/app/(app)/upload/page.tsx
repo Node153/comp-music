@@ -704,12 +704,25 @@ export default function UploadPage() {
                     </Button>
                   </div>
                   {coverObjectUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={coverObjectUrl}
-                      alt="선택한 커버 이미지"
-                      className="h-24 w-24 rounded-lg object-cover"
-                    />
+                    <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={coverObjectUrl}
+                        alt="선택한 커버 이미지"
+                        className="h-24 w-24 rounded-lg object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          setCoverFile(null);
+                          setCoverFileError(null);
+                        }}
+                        className="text-sm"
+                      >
+                        이미지 제거
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
