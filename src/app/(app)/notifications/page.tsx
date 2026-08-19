@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { timeAgo } from "@/lib/timeAgo";
-import { pageTitle, pageCard, mutedText } from "@/components/ui/styles";
+import { avatarColorFor } from "@/lib/presence";
+import { pageTitle, pageCard } from "@/components/ui/styles";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
 // 알림 목록 — 좋아요·댓글(1단계) + Companion 신청·PEAK(2단계). 공동창작 신청은 다음 단계.
@@ -10,13 +11,55 @@ import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedCon
 // (EngagementMeter와 동일 기준 — 이번 주 좋아요 수 ≥ 승인 회원 수/3)을 그대로 재사용해서 조립한다.
 // PEAK는 "이벤트"가 아니라 "지금 임계치를 넘은 상태"라 정확한 도달 시각이 없다 — 근사치로
 // 그 게시물의 이번 주 가장 최근 좋아요 시각을 쓴다.
+// 인스타그램 알림탭 참고 — 줄마다 붙던 ❤️/💬/🤝 아이콘이 좌측 사이드바 장르필터 아이콘과
+// 겹쳐서 혼란스럽다는 피드백으로, 아이콘 대신 상대방 아바타(메시지/RightSidebar와 동일한
+// avatarColorFor)를 앞세우고, 카테고리 필터 탭으로 종류를 구분한다.
 type NotificationItem =
-  | { type: "like"; id: string; postId: string; actorName: string; createdAt: string }
-  | { type: "comment"; id: string; postId: string; actorName: string; createdAt: string; content: string }
-  | { type: "companion_request"; id: string; requesterId: string; actorName: string; createdAt: string }
+  | { type: "like"; id: string; postId: string; actorId: string; actorName: string; createdAt: string }
+  | {
+      type: "comment";
+      id: string;
+      postId: string;
+      actorId: string;
+      actorName: string;
+      createdAt: string;
+      content: string;
+    }
+  | {
+      type: "companion_request";
+      id: string;
+      requesterId: string;
+      actorId: string;
+      actorName: string;
+      createdAt: string;
+    }
   | { type: "peak"; id: string; postId: string; createdAt: string };
 
-export default async function NotificationsPage() {
+type CategoryFilter = "all" | "engagement" | "request" | "peak";
+
+const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
+  { value: "all", label: "전체" },
+  { value: "engagement", label: "좋아요·댓글" },
+  { value: "request", label: "신청" },
+  { value: "peak", label: "PEAK" },
+];
+
+function matchesCategory(item: NotificationItem, filter: CategoryFilter) {
+  if (filter === "all") return true;
+  if (filter === "engagement") return item.type === "like" || item.type === "comment";
+  if (filter === "request") return item.type === "companion_request";
+  return item.type === "peak";
+}
+
+export default async function NotificationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>;
+}) {
+  const { type: typeParam } = await searchParams;
+  const activeCategory: CategoryFilter = CATEGORY_OPTIONS.some((o) => o.value === typeParam)
+    ? (typeParam as CategoryFilter)
+    : "all";
   const supabase = await createClient();
   const {
     data: { user },
@@ -91,6 +134,7 @@ export default async function NotificationsPage() {
         type: "like",
         id: l.id,
         postId: l.post_id,
+        actorId: l.user_id,
         actorName: actorNameById.get(l.user_id) ?? "알 수 없음",
         createdAt: l.created_at,
       }),
@@ -100,6 +144,7 @@ export default async function NotificationsPage() {
         type: "comment",
         id: c.id,
         postId: c.post_id,
+        actorId: c.user_id,
         actorName: actorNameById.get(c.user_id) ?? "알 수 없음",
         createdAt: c.created_at,
         content: c.content,
@@ -118,11 +163,13 @@ export default async function NotificationsPage() {
         type: "companion_request",
         id: r.requester_id,
         requesterId: r.requester_id,
+        actorId: r.requester_id,
         actorName: actorNameById.get(r.requester_id) ?? "알 수 없음",
         createdAt: r.created_at,
       }),
     ),
   ]
+    .filter((item) => matchesCategory(item, activeCategory))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 50);
 
@@ -130,9 +177,24 @@ export default async function NotificationsPage() {
     <main className={pageCard}>
       <MarkNotificationsSeen userId={user.id} />
       <h1 className={pageTitle}>알림</h1>
-      <p className={`${mutedText} mt-1`}>좋아요·댓글·Companion 신청·PEAK 소식을 모아 보여줘요.</p>
 
-      <div className="mt-6 flex flex-col gap-2">
+      <div className="mt-4 flex gap-1.5 overflow-x-auto">
+        {CATEGORY_OPTIONS.map((option) => (
+          <Link
+            key={option.value}
+            href={option.value === "all" ? "/notifications" : `/notifications?type=${option.value}`}
+            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
+              activeCategory === option.value
+                ? "border-black bg-black text-white"
+                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {option.label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2">
         {items.length === 0 ? (
           <p className="py-10 text-center text-sm text-gray-400">아직 알림이 없어요</p>
         ) : (
@@ -142,8 +204,18 @@ export default async function NotificationsPage() {
               item.type === "companion_request"
                 ? `/profile/${item.requesterId}`
                 : `/feed?feed=${visibilityByPostId.get(item.postId) === "public" ? "completion" : "complex"}#${item.postId}`;
-            const icon =
-              item.type === "like" ? "❤️" : item.type === "comment" ? "💬" : item.type === "peak" ? "🔥" : "🤝";
+            const avatar =
+              item.type === "peak" ? (
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-500 text-base">
+                  🔥
+                </span>
+              ) : (
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColorFor(item.actorId)}`}
+                >
+                  {item.actorName.slice(0, 1)}
+                </span>
+              );
             return (
               <Link
                 key={`${item.type}-${item.id}`}
@@ -152,7 +224,7 @@ export default async function NotificationsPage() {
                   unread ? "border-gray-300 bg-gray-50" : "border-gray-200"
                 }`}
               >
-                <span className="text-lg">{icon}</span>
+                {avatar}
                 <div className="flex min-w-0 flex-1 flex-col">
                   <p className="text-sm text-gray-800">
                     {item.type === "peak" ? (

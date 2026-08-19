@@ -99,7 +99,7 @@ export function LeftSidebar() {
           open ? "px-2.5" : "w-9 justify-center"
         }`}
       >
-        <span className="text-lg">❤️</span>
+        <span className="text-lg">🎧</span>
         {open && "장르 필터"}
       </button>
 
