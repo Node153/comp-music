@@ -328,6 +328,16 @@ export default function UploadPage() {
     };
   }, [complexObjectUrl]);
 
+  // DEMO 커버 이미지 미리보기용 object URL — 같은 패턴. GIF를 골랐으면 coverGifUrl(이미 완성된
+  // URL)을 그대로 쓰고, 직접 올린 사진이면 이 object URL을 쓴다(previewCoverSrc가 둘을 합침).
+  const coverObjectUrl = useMemo(() => (coverFile ? URL.createObjectURL(coverFile) : null), [coverFile]);
+  useEffect(() => {
+    return () => {
+      if (coverObjectUrl) URL.revokeObjectURL(coverObjectUrl);
+    };
+  }, [coverObjectUrl]);
+  const previewCoverSrc = coverGifUrl ?? coverObjectUrl;
+
   function handleUploadTypeChange(next: UploadType) {
     setUploadType(next);
   }
@@ -418,6 +428,10 @@ export default function UploadPage() {
 
   // 영상 미리보기 aside는 DEMO 전용 — memo는 이제 음원(mp3/wav)만 올릴 수 있어서 해당 없음.
   const previewVideoSrc = uploadType === "demo" && mediaKind === "video" ? mediaObjectUrl : null;
+  // 인스타그램처럼 "게시하면 이렇게 보여요"를 실시간으로 보여주는 미리보기 — 커버 이미지가
+  // 이제 DEMO의 메인 비주얼이라, 영상이 없어도(음원만 골랐거나 아직 아무것도 안 골랐어도)
+  // 커버+캡션+해시태그만으로 미리보기를 띄운다.
+  const showPostPreview = uploadType === "demo" && (previewCoverSrc || mediaFile);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -634,7 +648,7 @@ export default function UploadPage() {
                 </p>
               )}
               {mediaFileError && <p className={darkErrorText}>{mediaFileError}</p>}
-              {mediaFile && mediaKind === "video" && (
+              {showPostPreview && (
                 <button
                   type="button"
                   onClick={() => setPreviewOpen((v) => !v)}
@@ -672,21 +686,31 @@ export default function UploadPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleCoverChange}
-                    className={darkFileInput}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setGifPickerOpen(true)}
-                    className="shrink-0 text-sm"
-                  >
-                    GIF로 만들기
-                  </Button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleCoverChange}
+                      className={darkFileInput}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setGifPickerOpen(true)}
+                      className="shrink-0 text-sm"
+                    >
+                      GIF로 만들기
+                    </Button>
+                  </div>
+                  {coverObjectUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={coverObjectUrl}
+                      alt="선택한 커버 이미지"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  )}
                 </div>
               )}
               {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
@@ -886,15 +910,43 @@ export default function UploadPage() {
         </form>
       </main>
 
-      {previewVideoSrc && (
+      {showPostPreview && (
         <aside
           className={`hidden shrink-0 overflow-hidden transition-all duration-300 ease-in-out md:sticky md:top-20 md:flex ${
-            previewOpen ? "md:w-[560px] md:opacity-100" : "md:w-0 md:opacity-0"
+            previewOpen ? "md:w-[400px] md:opacity-100" : "md:w-0 md:opacity-0"
           }`}
         >
-          <div className="flex w-[560px] shrink-0 flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
-            <span className={darkLabel}>미리보기</span>
-            <video src={previewVideoSrc} controls muted className="w-full rounded-xl" />
+          <div className="flex w-[400px] shrink-0 flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+            <span className={darkLabel}>미리보기 — 게시하면 이렇게 보여요</span>
+            <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800">
+              <div className="relative flex aspect-square items-center justify-center bg-black">
+                {previewVideoSrc ? (
+                  <video src={previewVideoSrc} poster={previewCoverSrc ?? undefined} controls muted className="h-full w-full object-contain" />
+                ) : previewCoverSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previewCoverSrc} alt="커버 미리보기" className="h-full w-full object-cover" />
+                ) : (
+                  <p className="p-6 text-center text-sm text-gray-500">커버 이미지를 올리면 여기에 보여요</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 p-3">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {caption || <span className="text-gray-400 dark:text-gray-600">캡션이 여기 보여요</span>}
+                </p>
+                {selectedTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </aside>
       )}
