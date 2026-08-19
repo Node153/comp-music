@@ -7,14 +7,16 @@
 // 기록되게 이 화면에서 처리한다(트리거가 대신 기록하지 않음 — 0027 마이그레이션 주석 참고).
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, errorText, pageTitle, mutedText } from "@/components/ui/styles";
 import { generateNicknameCandidate } from "@/lib/nicknameExamples";
 
-// signup/page.tsx의 handle_new_user 트리거(0023)가 이메일 가입자에게 남기는 것과 동일한
+// signup/page.tsx의 handle_new_user 트리거(0023/0029)가 이메일 가입자에게 남기는 것과 동일한
 // 버전 문자열 — 동의 이력을 한 기준으로 통일하기 위해 하드코딩 값도 그대로 맞춘다.
 const AGREEMENT_VERSION = "2026-08-10";
+const TERMS_PRIVACY_VERSION = "2026-08-19";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -24,6 +26,7 @@ export default function OnboardingPage() {
   const [agreedContentRights, setAgreedContentRights] = useState(false);
   const [agreedCollabDisclaimer, setAgreedCollabDisclaimer] = useState(false);
   const [agreedLicenseGrant, setAgreedLicenseGrant] = useState(false);
+  const [agreedTermsAndPrivacy, setAgreedTermsAndPrivacy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +54,12 @@ export default function OnboardingPage() {
       setError("닉네임을 입력해주세요.");
       return;
     }
-    if (!agreedContentRights || !agreedCollabDisclaimer || !agreedLicenseGrant) {
+    if (
+      !agreedContentRights ||
+      !agreedCollabDisclaimer ||
+      !agreedLicenseGrant ||
+      !agreedTermsAndPrivacy
+    ) {
       setError("아래 동의 항목에 모두 체크해주세요.");
       return;
     }
@@ -85,6 +93,8 @@ export default function OnboardingPage() {
       { user_id: user.id, type: "content_rights", version: AGREEMENT_VERSION },
       { user_id: user.id, type: "collab_disclaimer", version: AGREEMENT_VERSION },
       { user_id: user.id, type: "license_grant", version: AGREEMENT_VERSION },
+      { user_id: user.id, type: "terms_of_service", version: TERMS_PRIVACY_VERSION },
+      { user_id: user.id, type: "privacy_policy", version: TERMS_PRIVACY_VERSION },
     ]);
     setLoading(false);
 
@@ -138,6 +148,25 @@ export default function OnboardingPage() {
         </div>
 
         <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3.5">
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              required
+              checked={agreedTermsAndPrivacy}
+              onChange={(e) => setAgreedTermsAndPrivacy(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>
+              <Link href="/terms" target="_blank" className="text-blue-600 underline hover:text-blue-700">
+                이용약관
+              </Link>{" "}
+              및{" "}
+              <Link href="/privacy" target="_blank" className="text-blue-600 underline hover:text-blue-700">
+                개인정보처리방침
+              </Link>
+              에 동의합니다.
+            </span>
+          </label>
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"

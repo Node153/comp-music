@@ -33,7 +33,12 @@ export type ChatMessageType = "text" | "image" | "video" | "audio";
 // 거절·취소·해제는 전부 행 삭제로 처리해서 별도 값이 없다(post_access와 같은 원칙).
 export type CompanionStatus = "pending" | "accepted";
 // 0023_agreements: 가입 시 필수 동의 3종(docs/copyright_agreement_draft.md).
-export type AgreementType = "content_rights" | "collab_disclaimer" | "license_grant";
+export type AgreementType =
+  | "content_rights"
+  | "collab_disclaimer"
+  | "license_grant"
+  | "terms_of_service"
+  | "privacy_policy";
 
 export interface Database {
   public: {

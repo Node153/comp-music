@@ -3,6 +3,7 @@
 // S2 회원가입 (AUTH-01)
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
@@ -36,6 +37,8 @@ export default function SignupPage() {
   const [agreedContentRights, setAgreedContentRights] = useState(false);
   const [agreedCollabDisclaimer, setAgreedCollabDisclaimer] = useState(false);
   const [agreedLicenseGrant, setAgreedLicenseGrant] = useState(false);
+  // 이용약관(/terms)·개인정보처리방침(/privacy) 동의(0029) — 위 3개와 별개 체크박스.
+  const [agreedTermsAndPrivacy, setAgreedTermsAndPrivacy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,7 +59,12 @@ export default function SignupPage() {
       setError("닉네임을 입력해주세요.");
       return;
     }
-    if (!agreedContentRights || !agreedCollabDisclaimer || !agreedLicenseGrant) {
+    if (
+      !agreedContentRights ||
+      !agreedCollabDisclaimer ||
+      !agreedLicenseGrant ||
+      !agreedTermsAndPrivacy
+    ) {
       setError("아래 동의 항목에 모두 체크해주세요.");
       return;
     }
@@ -176,6 +184,25 @@ export default function SignupPage() {
         />
 
         <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3.5">
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              required
+              checked={agreedTermsAndPrivacy}
+              onChange={(e) => setAgreedTermsAndPrivacy(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>
+              <Link href="/terms" target="_blank" className="text-blue-600 underline hover:text-blue-700">
+                이용약관
+              </Link>{" "}
+              및{" "}
+              <Link href="/privacy" target="_blank" className="text-blue-600 underline hover:text-blue-700">
+                개인정보처리방침
+              </Link>
+              에 동의합니다.
+            </span>
+          </label>
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
