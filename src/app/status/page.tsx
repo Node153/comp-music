@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/LogoutButton";
 import { pageTitle, mutedText } from "@/components/ui/styles";
+import { DOCUMENT_VERIFICATION_ENABLED } from "@/lib/featureFlags";
 
 export default async function StatusPage() {
   const supabase = await createClient();
@@ -21,17 +22,22 @@ export default async function StatusPage() {
 
   const status = profile?.status ?? "pending";
 
-  const { data: latestVerification } = await supabase
-    .from("verifications")
-    .select("reject_reason")
-    .eq("user_id", user.id)
-    .order("submitted_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // 서류 심사가 꺼져있으면(featureFlags.ts) verifications 행 자체가 안 생기므로 그 존재 여부로
+  // "서류 제출 전/후"를 가를 수 없다 — 이 경우 pending은 무조건 "심사 대기 중"으로 취급한다
+  // (프로필 정보 입력이 곧 제출이라 더 낼 서류가 없음).
+  const { data: latestVerification } = DOCUMENT_VERIFICATION_ENABLED
+    ? await supabase
+        .from("verifications")
+        .select("reject_reason")
+        .eq("user_id", user.id)
+        .order("submitted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center gap-4 p-6 text-center">
-      {status === "pending" && !latestVerification && (
+      {status === "pending" && DOCUMENT_VERIFICATION_ENABLED && !latestVerification && (
         <>
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
             📄
@@ -45,7 +51,7 @@ export default async function StatusPage() {
           </Link>
         </>
       )}
-      {status === "pending" && latestVerification && (
+      {status === "pending" && (!DOCUMENT_VERIFICATION_ENABLED || latestVerification) && (
         <>
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
             ⏳

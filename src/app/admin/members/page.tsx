@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getR2UsageBytes } from "@/lib/r2/storage";
 import { pageTitle, mutedText, badge, field } from "@/components/ui/styles";
+import { MemberStatusActions } from "@/components/admin/MemberStatusActions";
 
 // 관리자 - 회원 관리(조회/검색/게시물수/스토리지 사용량). role=admin만 접근(proxy.ts에서 가드).
 // 관리 목적 내부 화면이라 user_display(닉네임) 대신 users에서 실명을 바로 조회한다.
@@ -110,7 +111,10 @@ export default async function AdminMembersPage({
                   {userTypeMap.get(m.id) === "student" ? "전공생" : "활동자"}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
-                  <span className={badge}>{STATUS_LABEL[m.status] ?? m.status}</span>
+                  <div className="flex flex-col items-start gap-1.5">
+                    <span className={badge}>{STATUS_LABEL[m.status] ?? m.status}</span>
+                    <MemberStatusActions userId={m.id} status={m.status} />
+                  </div>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <span className={badge}>{m.role === "admin" ? "관리자" : "일반"}</span>
