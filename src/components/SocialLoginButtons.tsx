@@ -10,20 +10,22 @@ import { createClient } from "@/lib/supabase/client";
 const PROVIDERS = [
   { id: "google" as const, label: "Google로 계속하기", icon: "G" },
   { id: "kakao" as const, label: "Kakao로 계속하기", icon: "💬" },
+  { id: "spotify" as const, label: "Spotify로 계속하기", icon: "♫" },
 ];
 
 // Kakao는 Supabase가 기본으로 account_email/profile_image/profile_nickname 3개를 한꺼번에
 // 요청하는데, 우리 Kakao 앱은 "카카오계정(이메일)"이 사업자 인증 없이는 권한 자체가 안 열려서
 // (KOE205, "설정하지 않은 동의 항목" 에러) 이메일/프로필사진은 요청에서 빼고 실제로 켜둔
 // 닉네임만 요청한다 — 어차피 프로필 사진은 우리 앱이 쓰지도 않음.
-const SCOPES: Partial<Record<"google" | "kakao", string>> = {
+// Spotify는 이메일 제공에 별도 사업자 인증이 없어서 기본 스코프 그대로 둬도 된다(제한 없음).
+const SCOPES: Partial<Record<"google" | "kakao" | "spotify", string>> = {
   kakao: "profile_nickname",
 };
 
 export function SocialLoginButtons() {
   const supabase = createClient();
 
-  async function handleClick(provider: "google" | "kakao") {
+  async function handleClick(provider: "google" | "kakao" | "spotify") {
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
