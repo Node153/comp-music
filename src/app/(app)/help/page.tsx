@@ -8,6 +8,7 @@ const ADMIN_LINKS = [
   { href: "/admin/verifications", label: "심사 대기열" },
   { href: "/admin/announcements", label: "공지사항 관리" },
   { href: "/admin/feedback", label: "피드백 보기" },
+  { href: "/admin/login-screen", label: "로그인 화면 설정" },
 ];
 
 // Help(구 Away) — 공지사항+피드백 창구(0021_announcements_and_feedback).
