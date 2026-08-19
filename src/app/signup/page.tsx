@@ -8,6 +8,12 @@ import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { field, errorText, pageTitle } from "@/components/ui/styles";
 import { generateNicknameCandidate } from "@/lib/nicknameExamples";
+import {
+  isValidPassword,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_POLICY_MESSAGE,
+  PASSWORD_MISMATCH_MESSAGE,
+} from "@/lib/passwordPolicy";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,6 +29,7 @@ export default function SignupPage() {
   }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   // 저작권/공동창작 동의(docs/copyright_agreement_draft.md) — 셋 다 필수 체크.
   // 실제 기록은 handle_new_user 트리거(0023_agreements)가 가입 성공 시 고정 버전으로 남긴다 —
   // 여기서는 폼 제출을 막는 게이트 역할만 하고 별도로 서버에 값을 보내지 않는다.
@@ -37,8 +44,12 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
-      setError("비밀번호는 8자 이상이어야 합니다.");
+    if (!isValidPassword(password)) {
+      setError(PASSWORD_POLICY_MESSAGE);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError(PASSWORD_MISMATCH_MESSAGE);
       return;
     }
     if (!nickname.trim()) {
@@ -147,11 +158,20 @@ export default function SignupPage() {
         />
         <input
           type="password"
-          placeholder="비밀번호 (8자 이상)"
+          placeholder={`비밀번호 (특수문자 포함 ${PASSWORD_MIN_LENGTH}자 이상)`}
           required
-          minLength={8}
+          minLength={PASSWORD_MIN_LENGTH}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className={field}
+        />
+        <input
+          type="password"
+          placeholder="비밀번호 확인"
+          required
+          minLength={PASSWORD_MIN_LENGTH}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
           className={field}
         />
 

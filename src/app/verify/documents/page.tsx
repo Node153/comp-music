@@ -3,15 +3,21 @@
 // S4 인증서류 업로드 (AUTH-03)
 // 전공생: 재학증명서/학생증/졸업증명서, 활동자: 음반발매·음원링크·공연포스터·크레딧
 // 파일당 10MB 제한(이미지/PDF), 최소 1종 이상 필수. 제출 후 verifications row 생성(status=pending) → /status
-// 학교/포지션도 여기서 같이 받는다 — 프로필 수정 화면은 가입 이후 아무도 자발적으로 안 들어가서
-// (ProfileDetailsForm.tsx 참고) 필수로 거치는 이 단계에 붙여야 실제로 채워진다. profiles 행은
-// verifications insert와 별개로 upsert(둘 다 같은 currentUser 트랜잭션은 아니지만, 실패해도
-// 인증 제출 자체는 막지 않도록 별도 처리).
+// 학교/포지션/좋아하는 장르도 여기서 같이 받는다 — 프로필 수정 화면은 가입 이후 아무도
+// 자발적으로 안 들어가서(ProfileDetailsForm.tsx 참고) 필수로 거치는 이 단계에 붙여야 실제로
+// 채워진다. profiles 행은 verifications insert와 별개로 upsert(둘 다 같은 currentUser
+// 트랜잭션은 아니지만, 실패해도 인증 제출 자체는 막지 않도록 별도 처리) — 단, 좋아하는
+// 장르는 정확히 3개를 요구하는 명시적 요구사항이라 이것만 예외적으로 제출 전 필수 검증한다
+// (school/instruments처럼 빈 채로 넘어가는 게 허용 안 됨).
+// 회원가입(/signup)이 아니라 여기서 받는 이유: 가입 시점엔 아직 user_type을 안 정했고
+// (profiles.user_type not null이라 그 전엔 행 자체를 못 만듦) 이메일 확인 대기 중이면
+// 세션도 없어서 RLS insert가 안 된다.
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { PositionTagPicker } from "@/components/PositionTagPicker";
+import { GenreTagPicker } from "@/components/GenreTagPicker";
 import { field, label, errorText, pageTitle, mutedText, card } from "@/components/ui/styles";
 import type { UserType } from "@/types/database";
 
@@ -46,6 +52,7 @@ function VerifyDocumentsForm() {
   ]);
   const [school, setSchool] = useState("");
   const [instruments, setInstruments] = useState<string[]>([]);
+  const [favoriteGenres, setFavoriteGenres] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -70,6 +77,11 @@ function VerifyDocumentsForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (favoriteGenres.length !== 3) {
+      setError("좋아하는 장르를 정확히 3개 선택해주세요.");
+      return;
+    }
 
     const filled = rows.filter((row) => row.file || row.url.trim());
     if (filled.length === 0) {
@@ -131,6 +143,7 @@ function VerifyDocumentsForm() {
         user_type: userType,
         school: school.trim() || null,
         instruments: instruments.length > 0 ? instruments : null,
+        favorite_genres: favoriteGenres,
       },
       { onConflict: "user_id" },
     );
@@ -160,6 +173,7 @@ function VerifyDocumentsForm() {
             />
           </div>
           <PositionTagPicker value={instruments} onChange={setInstruments} />
+          <GenreTagPicker value={favoriteGenres} onChange={setFavoriteGenres} />
         </div>
         {rows.map((row, i) => {
           const option = options.find((o) => o.value === row.docType) ?? options[0];

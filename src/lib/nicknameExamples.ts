@@ -70,8 +70,9 @@ export function randomNicknameExample(): string {
   return randomPhrase();
 }
 
-// 가입 폼 자동 채움용 — 실제 값으로 쓰일 거라 유니크 보장이 필요해서 숫자 접미사를 붙인다.
+// 가입 폼 자동 채움용. 예전엔 유니크 보장을 위해 숫자 접미사를 붙였는데, 번호가 붙으면
+// 닉네임처럼 안 보인다는 피드백으로 뺐다 — 중복 시엔 signup/onboarding 양쪽에서 이미
+// "이미 사용 중인 닉네임" 에러로 안내하고 🎲로 다시 뽑거나 직접 수정하게 되어 있어 안전하다.
 export function generateNicknameCandidate(): string {
-  const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-  return `${randomPhrase()}_${suffix}`;
+  return randomPhrase();
 }

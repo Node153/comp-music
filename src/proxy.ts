@@ -69,10 +69,20 @@ export async function proxy(request: NextRequest) {
   // 소셜로그인(0027)으로 막 가입한 사용자 — 회원가입 폼의 체크박스 화면을 안 거쳤으므로
   // 실명/닉네임 확정 + 저작권 동의를 여기서 먼저 받는다. status(pending/approved) 판정보다
   // 우선한다 — 동의도 안 받은 사람을 심사 대기 화면으로 보내는 게 더 이상함.
-  if (profile?.needs_onboarding && pathname !== "/onboarding") {
-    return NextResponse.redirect(new URL("/onboarding", request.url));
+  // needs_onboarding===true인 동안은 여기서 완전히 끝내고 아래 승인/미승인 로직을 아예 안
+  // 타게 한다 — UNAPPROVED_ALLOWED_PATHS에 /onboarding을 끼워 넣는 식으로 하면, 그 아래
+  // "미승인 사용자 비노출" 블록이 /onboarding에서 /status로 도로 쫓아내고 그럼 여기가 다시
+  // /onboarding으로 돌려보내는 무한 리다이렉트 루프가 생긴다(실제로 겪은 버그 — 로컬 Google
+  // 로그인 테스트 중 Safari "너무 많은 재이동" 에러로 발견). early return으로 완전히 분리해야
+  // 이런 상호작용 자체가 안 생긴다.
+  if (profile?.needs_onboarding) {
+    if (pathname !== "/onboarding") {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
+    return response;
   }
-  if (!profile?.needs_onboarding && pathname === "/onboarding") {
+  if (pathname === "/onboarding") {
+    // needs_onboarding이 이미 끝난(false) 상태에서 뒤늦게 /onboarding을 다시 열람하려는 경우.
     return NextResponse.redirect(new URL("/status", request.url));
   }
 

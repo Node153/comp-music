@@ -117,6 +117,8 @@ export interface Database {
           school: string | null;
           major: string | null;
           instruments: string[] | null;
+          // 좋아하는 장르(정확히 3개, 0028) — instruments(포지션)와 대칭되는 스타일 축.
+          favorite_genres: string[] | null;
           region: string | null;
           bio: string | null;
           portfolio_links: Record<string, string> | null;
@@ -128,6 +130,7 @@ export interface Database {
           school?: string | null;
           major?: string | null;
           instruments?: string[] | null;
+          favorite_genres?: string[] | null;
           region?: string | null;
           bio?: string | null;
           portfolio_links?: Record<string, string> | null;

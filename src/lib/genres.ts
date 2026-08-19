@@ -108,3 +108,6 @@ const STYLE_ONLY_GENRES = new Set([
   "오케스트라", "실내악", "오페라", "합창", "CCM", "J-pop", "라이브세션", "버스킹", "밴드", "아카펠라",
 ]);
 export const ROLE_TAGS = ALL_GENRES.filter((g) => !STYLE_ONLY_GENRES.has(g));
+// 가입 인증 단계에서 받는 "좋아하는 장르" 선택용 — ROLE_TAGS(무엇을 하는지)의 반대 축,
+// 스타일/장르(K-pop, 힙합, 록 등)만. 위 Set을 그대로 배열로 노출.
+export const GENRE_TAGS = ALL_GENRES.filter((g) => STYLE_ONLY_GENRES.has(g));

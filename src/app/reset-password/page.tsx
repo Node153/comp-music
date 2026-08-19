@@ -11,6 +11,12 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, errorText, pageTitle, mutedText } from "@/components/ui/styles";
+import {
+  isValidPassword,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_POLICY_MESSAGE,
+  PASSWORD_MISMATCH_MESSAGE,
+} from "@/lib/passwordPolicy";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -37,12 +43,12 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
-      setError("비밀번호는 8자 이상이어야 합니다.");
+    if (!isValidPassword(password)) {
+      setError(PASSWORD_POLICY_MESSAGE);
       return;
     }
     if (password !== confirmPassword) {
-      setError("비밀번호가 일치하지 않습니다.");
+      setError(PASSWORD_MISMATCH_MESSAGE);
       return;
     }
 
@@ -83,8 +89,9 @@ export default function ResetPasswordPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
             type="password"
-            placeholder="새 비밀번호 (8자 이상)"
+            placeholder={`새 비밀번호 (특수문자 포함 ${PASSWORD_MIN_LENGTH}자 이상)`}
             required
+            minLength={PASSWORD_MIN_LENGTH}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={field}
@@ -93,6 +100,7 @@ export default function ResetPasswordPage() {
             type="password"
             placeholder="새 비밀번호 확인"
             required
+            minLength={PASSWORD_MIN_LENGTH}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className={field}
