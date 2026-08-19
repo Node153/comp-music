@@ -7,7 +7,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
-import { field, errorText, pageTitle } from "@/components/ui/styles";
+import { field, label, errorText, pageTitle } from "@/components/ui/styles";
 import { generateNicknameCandidate } from "@/lib/nicknameExamples";
 import {
   isValidPassword,
@@ -16,10 +16,19 @@ import {
   PASSWORD_MISMATCH_MESSAGE,
 } from "@/lib/passwordPolicy";
 
+const today = new Date();
+const MAX_BIRTH_DATE = today.toISOString().slice(0, 10);
+const MIN_BIRTH_DATE = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate())
+  .toISOString()
+  .slice(0, 10);
+
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState("");
+  // 동명이인(중복 계정 의심) 판별 보조용(0031) — 소셜로그인마다 이메일이 달라서 같은 사람이
+  // 여러 계정을 만들 수 있는 문제 대응. /admin/members의 동명이인 경고에서 같이 비교됨.
+  const [birthDate, setBirthDate] = useState("");
   // 실명/닉네임 이원화(0018) — Companion에게는 실명, 그 외에게는 닉네임이 보이므로 둘 다 필수.
   // 배달의민족 가입 화면 참고 — 재밌는 닉네임을 자동으로 채워주고 "다시 뽑기"로 고르게 한다.
   // 서버(SSR)와 클라이언트가 다른 랜덤값을 만들면 하이드레이션이 꼬이므로, 초기값은 빈
@@ -47,6 +56,10 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
 
+    if (!birthDate) {
+      setError("생년월일을 입력해주세요.");
+      return;
+    }
     if (!isValidPassword(password)) {
       setError(PASSWORD_POLICY_MESSAGE);
       return;
@@ -73,7 +86,7 @@ export default function SignupPage() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, nickname: nickname.trim() } },
+      options: { data: { name, nickname: nickname.trim(), birth_date: birthDate } },
     });
     setLoading(false);
 
@@ -131,6 +144,18 @@ export default function SignupPage() {
           onChange={(e) => setName(e.target.value)}
           className={field}
         />
+        <div className="flex flex-col gap-1.5">
+          <span className={label}>생년월일</span>
+          <input
+            type="date"
+            required
+            min={MIN_BIRTH_DATE}
+            max={MAX_BIRTH_DATE}
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            className={field}
+          />
+        </div>
         <div className="flex flex-col gap-1">
           <div className="flex gap-1.5">
             <input

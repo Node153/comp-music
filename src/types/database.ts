@@ -59,6 +59,8 @@ export interface Database {
           // 소셜로그인(0027) — OAuth로 처음 가입하면 true, /onboarding에서 실명/닉네임 확정 +
           // 동의 체크박스를 받은 뒤 false로 바뀐다. 이메일 가입은 처음부터 false.
           needs_onboarding: boolean;
+          // 동명이인 판별 보조용(0031) — 기존 회원은 null, 새 가입자부터 앱에서 필수로 받음.
+          birth_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -73,6 +75,7 @@ export interface Database {
           notifications_seen_at?: string;
           last_seen_at?: string | null;
           needs_onboarding?: boolean;
+          birth_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };

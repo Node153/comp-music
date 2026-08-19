@@ -30,7 +30,7 @@ export default async function AdminMembersPage({
 
   let query = supabase
     .from("users")
-    .select("id, name, nickname, email, status, role, created_at")
+    .select("id, name, nickname, email, status, role, birth_date, created_at")
     .order("created_at", { ascending: false });
 
   if (q) {
@@ -43,13 +43,19 @@ export default async function AdminMembersPage({
   // 별도 쿼리. 소셜로그인(Google/Kakao/Spotify)마다 이메일이 다르게 잡혀서 같은 사람이 여러
   // 계정을 만들 수 있는데, 이메일이 다르면 시스템이 자동으로는 구분 못 해서 실명 일치 여부를
   // 관리자에게 참고 정보로만 보여준다(최종 판단은 관리자 몫 — 오탐 가능성 있음, 동명이인이
-  // 실제로 다른 사람일 수도 있어서 자동 차단은 안 함).
-  const { data: allUsers } = await supabase.from("users").select("id, name, email, status");
-  const usersByName = new Map<string, { id: string; email: string; status: string }[]>();
+  // 실제로 다른 사람일 수도 있어서 자동 차단은 안 함). 생년월일(0031)도 같이 대조해서 일치하면
+  // "동일인 가능성 높음"으로 더 강하게 표시 — 기존 회원은 생년월일이 없어서(null) 비교 불가.
+  const { data: allUsers } = await supabase
+    .from("users")
+    .select("id, name, email, status, birth_date");
+  const usersByName = new Map<
+    string,
+    { id: string; email: string; status: string; birthDate: string | null }[]
+  >();
   for (const u of allUsers ?? []) {
     const key = u.name.trim();
     if (!usersByName.has(key)) usersByName.set(key, []);
-    usersByName.get(key)!.push({ id: u.id, email: u.email, status: u.status });
+    usersByName.get(key)!.push({ id: u.id, email: u.email, status: u.status, birthDate: u.birth_date });
   }
 
   const userIds = (members ?? []).map((m) => m.id);
@@ -104,6 +110,7 @@ export default async function AdminMembersPage({
             <tr>
               <th className="whitespace-nowrap px-4 py-3 font-medium">이름 / 닉네임</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">이메일</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">생년월일</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">유형</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">상태</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">권한</th>
@@ -123,15 +130,26 @@ export default async function AdminMembersPage({
                   <div className={mutedText}>{m.nickname}</div>
                   {duplicates.length > 0 && (
                     <div className="mt-1 flex flex-col gap-0.5">
-                      {duplicates.map((d) => (
-                        <span key={d.id} className="text-xs font-medium text-amber-600">
-                          ⚠️ 동명이인 있음: {d.email} ({STATUS_LABEL[d.status] ?? d.status})
-                        </span>
-                      ))}
+                      {duplicates.map((d) => {
+                        const sameBirthDate = Boolean(
+                          m.birth_date && d.birthDate && m.birth_date === d.birthDate,
+                        );
+                        return (
+                          <span
+                            key={d.id}
+                            className={`text-xs font-medium ${sameBirthDate ? "text-red-600" : "text-amber-600"}`}
+                          >
+                            {sameBirthDate ? "🚨 동일인 가능성 높음" : "⚠️ 동명이인 있음"}: {d.email} (
+                            {STATUS_LABEL[d.status] ?? d.status}
+                            {d.birthDate ? `, ${d.birthDate}` : ""})
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-gray-600">{m.email}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-gray-600">{m.birth_date ?? "-"}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-gray-600">
                   {userType === "student" ? "전공생" : userType === "activist" ? "활동자" : "-"}
                 </td>
@@ -156,7 +174,7 @@ export default async function AdminMembersPage({
             })}
             {(members ?? []).length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-gray-400">
+                <td colSpan={9} className="px-4 py-10 text-center text-gray-400">
                   검색 결과가 없습니다
                 </td>
               </tr>

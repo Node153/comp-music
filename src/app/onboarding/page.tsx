@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { field, errorText, pageTitle, mutedText } from "@/components/ui/styles";
+import { field, label, errorText, pageTitle, mutedText } from "@/components/ui/styles";
 import { generateNicknameCandidate } from "@/lib/nicknameExamples";
 
 // signup/page.tsx의 handle_new_user 트리거(0023/0029)가 이메일 가입자에게 남기는 것과 동일한
@@ -18,10 +18,19 @@ import { generateNicknameCandidate } from "@/lib/nicknameExamples";
 const AGREEMENT_VERSION = "2026-08-10";
 const TERMS_PRIVACY_VERSION = "2026-08-19";
 
+const today = new Date();
+const MAX_BIRTH_DATE = today.toISOString().slice(0, 10);
+const MIN_BIRTH_DATE = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate())
+  .toISOString()
+  .slice(0, 10);
+
 export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState("");
+  // 소셜로그인 제공자(Google/Kakao/Spotify) 어디서도 생년월일을 안 줘서(0031) 직접 입력받는다
+  // — signup/page.tsx와 같은 이유(동명이인 판별 보조).
+  const [birthDate, setBirthDate] = useState("");
   const [nickname, setNickname] = useState("");
   const [agreedContentRights, setAgreedContentRights] = useState(false);
   const [agreedCollabDisclaimer, setAgreedCollabDisclaimer] = useState(false);
@@ -50,6 +59,10 @@ export default function OnboardingPage() {
       setError("실명을 입력해주세요.");
       return;
     }
+    if (!birthDate) {
+      setError("생년월일을 입력해주세요.");
+      return;
+    }
     if (!nickname.trim()) {
       setError("닉네임을 입력해주세요.");
       return;
@@ -76,7 +89,12 @@ export default function OnboardingPage() {
 
     const { error: updateError } = await supabase
       .from("users")
-      .update({ name: name.trim(), nickname: nickname.trim(), needs_onboarding: false })
+      .update({
+        name: name.trim(),
+        nickname: nickname.trim(),
+        birth_date: birthDate,
+        needs_onboarding: false,
+      })
       .eq("id", user.id);
 
     if (updateError) {
@@ -122,6 +140,18 @@ export default function OnboardingPage() {
           onChange={(e) => setName(e.target.value)}
           className={field}
         />
+        <div className="flex flex-col gap-1.5">
+          <span className={label}>생년월일</span>
+          <input
+            type="date"
+            required
+            min={MIN_BIRTH_DATE}
+            max={MAX_BIRTH_DATE}
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            className={field}
+          />
+        </div>
         <div className="flex flex-col gap-1">
           <div className="flex gap-1.5">
             <input
