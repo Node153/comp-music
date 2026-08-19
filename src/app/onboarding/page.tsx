@@ -1,44 +1,50 @@
 "use client";
 
-// S2 회원가입 (AUTH-01)
-import { useEffect, useState } from "react";
+// 소셜로그인(Google/Kakao) 최초 로그인 온보딩 — proxy.ts가 users.needs_onboarding=true인
+// 사용자를 여기로 보낸다(0027). 이메일 회원가입(signup/page.tsx)에서 받던 실명/닉네임 확정 +
+// 저작권 동의 체크박스 3종을 여기서 대신 받는다 — OAuth는 그 화면 자체를 안 거치고
+// auth.users 행이 바로 생기기 때문에, 동의는 반드시 사용자가 실제로 체크박스를 보고 눌러야만
+// 기록되게 이 화면에서 처리한다(트리거가 대신 기록하지 않음 — 0027 마이그레이션 주석 참고).
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { SocialLoginButtons } from "@/components/SocialLoginButtons";
-import { field, errorText, pageTitle } from "@/components/ui/styles";
+import { field, errorText, pageTitle, mutedText } from "@/components/ui/styles";
 import { generateNicknameCandidate } from "@/lib/nicknameExamples";
 
-export default function SignupPage() {
+// signup/page.tsx의 handle_new_user 트리거(0023)가 이메일 가입자에게 남기는 것과 동일한
+// 버전 문자열 — 동의 이력을 한 기준으로 통일하기 위해 하드코딩 값도 그대로 맞춘다.
+const AGREEMENT_VERSION = "2026-08-10";
+
+export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState("");
-  // 실명/닉네임 이원화(0018) — Companion에게는 실명, 그 외에게는 닉네임이 보이므로 둘 다 필수.
-  // 배달의민족 가입 화면 참고 — 재밌는 닉네임을 자동으로 채워주고 "다시 뽑기"로 고르게 한다.
-  // 서버(SSR)와 클라이언트가 다른 랜덤값을 만들면 하이드레이션이 꼬이므로, 초기값은 빈
-  // 문자열로 두고 마운트 후 useEffect에서만 채운다(NicknameForm의 비동기 로드와 같은 패턴).
   const [nickname, setNickname] = useState("");
-  useEffect(() => {
-    setNickname(generateNicknameCandidate());
-  }, []);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  // 저작권/공동창작 동의(docs/copyright_agreement_draft.md) — 셋 다 필수 체크.
-  // 실제 기록은 handle_new_user 트리거(0023_agreements)가 가입 성공 시 고정 버전으로 남긴다 —
-  // 여기서는 폼 제출을 막는 게이트 역할만 하고 별도로 서버에 값을 보내지 않는다.
   const [agreedContentRights, setAgreedContentRights] = useState(false);
   const [agreedCollabDisclaimer, setAgreedCollabDisclaimer] = useState(false);
   const [agreedLicenseGrant, setAgreedLicenseGrant] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingConfirm, setPendingConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    // Google/Kakao 프로필의 표시 이름을 실명 입력칸에 미리 채워준다(수정 가능) — 닉네임은
+    // 실명이 그대로 새면 안 되므로 예시 목록 기반 랜덤값으로 채운다(signup/page.tsx와 동일 패턴).
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      const metaName =
+        (user?.user_metadata?.name as string | undefined) ??
+        (user?.user_metadata?.full_name as string | undefined);
+      if (metaName) setName(metaName);
+    });
+    setNickname(generateNicknameCandidate());
+  }, [supabase]);
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
-      setError("비밀번호는 8자 이상이어야 합니다.");
+    if (!name.trim()) {
+      setError("실명을 입력해주세요.");
       return;
     }
     if (!nickname.trim()) {
@@ -51,57 +57,51 @@ export default function SignupPage() {
     }
 
     setLoading(true);
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name, nickname: nickname.trim() } },
-    });
-    setLoading(false);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      setError("세션이 만료됐어요. 다시 로그인해주세요.");
+      return;
+    }
 
-    if (signUpError) {
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ name: name.trim(), nickname: nickname.trim(), needs_onboarding: false })
+      .eq("id", user.id);
+
+    if (updateError) {
+      setLoading(false);
       setError(
-        signUpError.message.includes("already registered")
-          ? "이미 가입된 이메일입니다."
-          : signUpError.message.includes("duplicate")
-            ? "이미 사용 중인 닉네임이에요. 🎲로 다시 뽑거나 다른 닉네임을 입력해주세요."
-            : signUpError.message,
+        updateError.message.includes("duplicate")
+          ? "이미 사용 중인 닉네임이에요. 🎲로 다시 뽑거나 다른 닉네임을 입력해주세요."
+          : updateError.message,
       );
       return;
     }
 
-    // 이메일 인증(Confirm email)이 켜져 있으면 session이 바로 발급되지 않음
-    if (!data.session) {
-      setPendingConfirm(true);
+    const { error: agreementError } = await supabase.from("agreements").insert([
+      { user_id: user.id, type: "content_rights", version: AGREEMENT_VERSION },
+      { user_id: user.id, type: "collab_disclaimer", version: AGREEMENT_VERSION },
+      { user_id: user.id, type: "license_grant", version: AGREEMENT_VERSION },
+    ]);
+    setLoading(false);
+
+    if (agreementError) {
+      setError(agreementError.message);
       return;
     }
 
     router.push("/verify/type");
-  }
-
-  if (pendingConfirm) {
-    return (
-      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-3 p-6 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-2xl">
-          ✉️
-        </div>
-        <h1 className={pageTitle}>이메일을 확인해주세요</h1>
-        <p className="text-sm leading-relaxed text-gray-500">
-          <span className="font-medium text-gray-900">{email}</span> 로 인증 메일을 보냈습니다.
-          <br />
-          인증 후 다시 로그인해주세요.
-        </p>
-      </main>
-    );
+    router.refresh();
   }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
-      <h1 className={pageTitle}>회원가입</h1>
-      <SocialLoginButtons />
-      <div className="flex items-center gap-3 text-xs text-gray-400">
-        <span className="h-px flex-1 bg-gray-200" />
-        또는 이메일로 가입
-        <span className="h-px flex-1 bg-gray-200" />
+      <div className="flex flex-col gap-1.5">
+        <h1 className={pageTitle}>거의 다 됐어요</h1>
+        <p className={mutedText}>Comp에서 쓸 이름/닉네임을 확인하고, 마지막으로 동의만 하면 돼요.</p>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
@@ -133,27 +133,9 @@ export default function SignupPage() {
             </button>
           </div>
           <p className="px-1 text-xs text-gray-400">
-            Companion이 아닌 사람에게는 실명 대신 닉네임이 보여요. 마음에 안 들면 🎲로 다시
-            뽑거나 직접 수정할 수 있어요.
+            Companion이 아닌 사람에게는 실명 대신 닉네임이 보여요.
           </p>
         </div>
-        <input
-          type="email"
-          placeholder="이메일"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className={field}
-        />
-        <input
-          type="password"
-          placeholder="비밀번호 (8자 이상)"
-          required
-          minLength={8}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className={field}
-        />
 
         <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3.5">
           <label className="flex items-start gap-2 text-sm">
@@ -210,7 +192,7 @@ export default function SignupPage() {
 
         {error && <p className={errorText}>{error}</p>}
         <Button type="submit" disabled={loading} className="mt-1 w-full">
-          {loading ? "가입 중..." : "가입하기"}
+          {loading ? "확인 중..." : "시작하기"}
         </Button>
       </form>
     </main>

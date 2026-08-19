@@ -51,6 +51,9 @@ export interface Database {
           // 우측 사이드바 온라인/자리비움/오프라인 판정용(0025) — 클라이언트가 주기적으로 갱신,
           // 한 번도 접속 안 했으면 null(오프라인 취급).
           last_seen_at: string | null;
+          // 소셜로그인(0027) — OAuth로 처음 가입하면 true, /onboarding에서 실명/닉네임 확정 +
+          // 동의 체크박스를 받은 뒤 false로 바뀐다. 이메일 가입은 처음부터 false.
+          needs_onboarding: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -64,6 +67,7 @@ export interface Database {
           role?: UserRole;
           notifications_seen_at?: string;
           last_seen_at?: string | null;
+          needs_onboarding?: boolean;
           created_at?: string;
           updated_at?: string;
         };

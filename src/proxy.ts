@@ -7,7 +7,21 @@ import { NextResponse, type NextRequest } from "next/server";
 // /feed는 비로그인 방문자에게도 열어주지만, 실제로 뭘 보여줄지(DEMO만 공개, memo는 잠금)는
 // posts_select_public_anyone 등 RLS(0024)와 feed/page.tsx 안의 분기가 담당한다 — 여기서는
 // "리다이렉트하지 않는다"까지만 책임진다.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/feed"];
+// /reset-password는 이메일 링크의 access_token이 URL 해시로 붙어오는데, 해시는 서버로
+// 전달되지 않아 여기서는 그냥 "로그인 안 한 방문자"로만 보인다. 그래서 항상 public이어야
+// 클라이언트가 뜬 뒤 해시를 읽어 복구 세션을 만들 시간을 준다(reset-password/page.tsx 참고).
+// /auth/callback도 마찬가지 이유로 public — OAuth 콜백이 도착한 시점엔 아직 세션 쿠키가 없고
+// (콜백 라우트 핸들러 안에서 code를 세션으로 교환해야 비로소 생김), 여기서 막으면 그 교환이
+// 일어나기 전에 /login으로 튕겨버린다.
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/signup",
+  "/feed",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
+];
 const UNAPPROVED_ALLOWED_PATHS = ["/status", "/verify/type", "/verify/documents"];
 
 export async function proxy(request: NextRequest) {
@@ -46,11 +60,21 @@ export async function proxy(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("status, role")
+    .select("status, role, needs_onboarding")
     .eq("id", user.id)
     .single();
 
   const status = profile?.status ?? "pending";
+
+  // 소셜로그인(0027)으로 막 가입한 사용자 — 회원가입 폼의 체크박스 화면을 안 거쳤으므로
+  // 실명/닉네임 확정 + 저작권 동의를 여기서 먼저 받는다. status(pending/approved) 판정보다
+  // 우선한다 — 동의도 안 받은 사람을 심사 대기 화면으로 보내는 게 더 이상함.
+  if (profile?.needs_onboarding && pathname !== "/onboarding") {
+    return NextResponse.redirect(new URL("/onboarding", request.url));
+  }
+  if (!profile?.needs_onboarding && pathname === "/onboarding") {
+    return NextResponse.redirect(new URL("/status", request.url));
+  }
 
   // 승인된 사용자가 가입/로그인 또는 심사 관련 화면(승인 전에 보던 화면)에 남아있으면 피드로 보냄.
   // 관리자가 SQL로 수동 승인한 경우(서류 미제출) 특히 중요 — 승인 직후 새로고침/재방문 시

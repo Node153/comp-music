@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { field, errorText, pageTitle } from "@/components/ui/styles";
 
 // 로그인 화면 배경음악/배경 이미지 — 관리자가 /admin/login-screen에서 직접 올린 값
@@ -28,6 +29,15 @@ export default function LoginPage() {
   const [bgmSrc, setBgmSrc] = useState(FALLBACK_BGM_SRC);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    // /auth/callback이 소셜로그인 실패 시 ?error=...를 붙여 여기로 돌려보낸다.
+    // useSearchParams 대신 직접 읽는 이유: 클라이언트 컴포넌트에서 useSearchParams를 쓰면
+    // 빌드 시 Suspense 경계가 필요해지는데, 이 정도 용도로는 과함.
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("error");
+    if (oauthError) setError(oauthError);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,11 +132,23 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className={field}
           />
+          <Link
+            href="/forgot-password"
+            className="-mt-1 text-right text-xs text-gray-500 hover:text-gray-900"
+          >
+            비밀번호를 잊으셨나요?
+          </Link>
           {error && <p className={errorText}>{error}</p>}
           <Button type="submit" disabled={loading} className="mt-1 w-full">
             {loading ? "로그인 중..." : "로그인"}
           </Button>
         </form>
+        <div className="flex items-center gap-3 text-xs text-gray-400">
+          <span className="h-px flex-1 bg-gray-200" />
+          또는
+          <span className="h-px flex-1 bg-gray-200" />
+        </div>
+        <SocialLoginButtons />
         <Link href="/signup" className="text-center text-sm text-gray-500 hover:text-gray-900">
           아직 계정이 없으신가요? <span className="font-medium text-gray-900">가입하기</span>
         </Link>
