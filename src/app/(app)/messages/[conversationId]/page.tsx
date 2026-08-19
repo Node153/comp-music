@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getR2SignedUrl } from "@/lib/r2/storage";
+import { presenceStatus, avatarColorFor } from "@/lib/presence";
 import { MarkMessagesRead } from "./MarkMessagesRead";
 import { ConversationView } from "./ConversationView";
 
@@ -34,16 +35,17 @@ export default async function ConversationPage({
   const otherUserId =
     conversation.user_a_id === currentUser.id ? conversation.user_b_id : conversation.user_a_id;
   // 이름은 user_display 뷰(0018) — Companion이면 실명, 아니면 닉네임.
-  const { data: otherUserRow } = await supabase
-    .from("user_display")
-    .select("display_name")
-    .eq("id", otherUserId)
-    .single();
+  // 온라인 상태(last_seen_at)는 실명 공개 정책과 무관해서 users에서 따로 조회(RightSidebar와 동일).
+  const [{ data: otherUserRow }, { data: presenceRow }] = await Promise.all([
+    supabase.from("user_display").select("display_name").eq("id", otherUserId).single(),
+    supabase.from("users").select("last_seen_at").eq("id", otherUserId).maybeSingle(),
+  ]);
   const otherUser = otherUserRow ? { name: otherUserRow.display_name } : null;
+  const otherUserStatus = presenceStatus(presenceRow?.last_seen_at ?? null);
 
   const { data: messages } = await supabase
     .from("messages")
-    .select("id, sender_id, content, created_at, source_post_id")
+    .select("id, sender_id, content, created_at, read_at, source_post_id")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
@@ -76,10 +78,28 @@ export default async function ConversationPage({
     <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-[600px] flex-col bg-white p-6 md:my-6 md:h-[70vh] md:rounded-lg md:border md:border-gray-200 md:shadow-sm">
       <MarkMessagesRead conversationId={conversationId} currentUserId={currentUser.id} />
       <div className="flex items-center gap-3 pb-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500">
-          {(otherUser?.name ?? "?").slice(0, 1)}
+        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+          <span
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColorFor(otherUserId)}`}
+          >
+            {(otherUser?.name ?? "?").slice(0, 1)}
+          </span>
+          {otherUserStatus !== "offline" && (
+            <span
+              className={`absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-white ${
+                otherUserStatus === "online" ? "bg-emerald-500" : "bg-amber-400"
+              }`}
+            />
+          )}
         </span>
-        <h1 className="text-base font-semibold text-gray-900">{otherUser?.name ?? "알 수 없음"}</h1>
+        <div className="flex flex-col">
+          <h1 className="text-base font-semibold text-gray-900">{otherUser?.name ?? "알 수 없음"}</h1>
+          {otherUserStatus !== "offline" && (
+            <span className="text-xs text-gray-400">
+              {otherUserStatus === "online" ? "온라인" : "자리 비움"}
+            </span>
+          )}
+        </div>
       </div>
 
       {pinnedPost?.videoSrc && (
@@ -102,6 +122,8 @@ export default async function ConversationPage({
       <ConversationView
         conversationId={conversationId}
         currentUserId={currentUser.id}
+        otherUserId={otherUserId}
+        otherUserName={otherUser?.name ?? "알 수 없음"}
         initialMessages={messages ?? []}
         initialSourcePostId={sourcePostId ?? null}
       />

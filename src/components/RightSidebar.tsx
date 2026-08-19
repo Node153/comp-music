@@ -13,46 +13,17 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
+import { presenceStatus, avatarColorFor, type PresenceStatus } from "@/lib/presence";
 
-// 온라인/자리비움/오프라인 — PresenceHeartbeat가 60초마다 갱신하는 users.last_seen_at(0025) 기준
-// 근사치 판정. 오프라인인 Companion은 이 목록에 아예 안 보인다(헤더가 "온라인 — N명"이라
-// 오프라인까지 섞으면 숫자가 안 맞음 — Discord도 접속 안 한 사람은 기본 목록에서 접는다).
-const ONLINE_WINDOW_MS = 2 * 60 * 1000;
-const AWAY_WINDOW_MS = 15 * 60 * 1000;
-
-type PresenceStatus = "online" | "away";
-
+// 온라인/자리비움/오프라인 판정은 lib/presence(메시지 화면과 공유)를 그대로 쓴다. 오프라인인
+// Companion은 이 목록에 아예 안 보인다(헤더가 "온라인 — N명"이라 오프라인까지 섞으면 숫자가
+// 안 맞음 — Discord도 접속 안 한 사람은 기본 목록에서 접는다).
 type OnlineCompanion = {
   id: string;
   name: string;
-  status: PresenceStatus;
+  status: Exclude<PresenceStatus, "offline">;
   color: string;
 };
-
-function presenceStatus(lastSeenAt: string | null): PresenceStatus | "offline" {
-  if (!lastSeenAt) return "offline";
-  const elapsed = Date.now() - new Date(lastSeenAt).getTime();
-  if (elapsed <= ONLINE_WINDOW_MS) return "online";
-  if (elapsed <= AWAY_WINDOW_MS) return "away";
-  return "offline";
-}
-
-// 실제 프로필 색상 개념이 따로 없어서 id를 해시해 고정 팔레트에서 하나 골라 쓴다 — 같은
-// 사람은 새로고침해도 항상 같은 색.
-const AVATAR_COLORS = [
-  "bg-amber-700",
-  "bg-sky-700",
-  "bg-fuchsia-900",
-  "bg-orange-400",
-  "bg-emerald-700",
-  "bg-indigo-700",
-  "bg-rose-700",
-  "bg-teal-700",
-];
-function avatarColorFor(id: string) {
-  const hash = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
 
 const ONLINE_VISIBLE_LIMIT = 3;
 // 온라인 목록도 PresenceHeartbeat와 같은 주기로 다시 조회해서 "방금 나간 사람"이 계속 온라인으로
@@ -132,7 +103,10 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
 
       const presentCompanions: OnlineCompanion[] = (users ?? [])
         .map((u) => ({ id: u.id, name: u.name, status: presenceStatus(u.last_seen_at) }))
-        .filter((u): u is { id: string; name: string; status: PresenceStatus } => u.status !== "offline")
+        .filter(
+          (u): u is { id: string; name: string; status: Exclude<PresenceStatus, "offline"> } =>
+            u.status !== "offline",
+        )
         .sort((a, b) => (a.status === b.status ? 0 : a.status === "online" ? -1 : 1))
         .map((u) => ({ ...u, color: avatarColorFor(u.id) }));
 
