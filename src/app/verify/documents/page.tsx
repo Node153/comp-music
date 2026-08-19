@@ -3,11 +3,16 @@
 // S4 인증서류 업로드 (AUTH-03)
 // 전공생: 재학증명서/학생증/졸업증명서, 활동자: 음반발매·음원링크·공연포스터·크레딧
 // 파일당 10MB 제한(이미지/PDF), 최소 1종 이상 필수. 제출 후 verifications row 생성(status=pending) → /status
+// 학교/포지션도 여기서 같이 받는다 — 프로필 수정 화면은 가입 이후 아무도 자발적으로 안 들어가서
+// (ProfileDetailsForm.tsx 참고) 필수로 거치는 이 단계에 붙여야 실제로 채워진다. profiles 행은
+// verifications insert와 별개로 upsert(둘 다 같은 currentUser 트랜잭션은 아니지만, 실패해도
+// 인증 제출 자체는 막지 않도록 별도 처리).
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { field, errorText, pageTitle, mutedText, card } from "@/components/ui/styles";
+import { PositionTagPicker } from "@/components/PositionTagPicker";
+import { field, label, errorText, pageTitle, mutedText, card } from "@/components/ui/styles";
 import type { UserType } from "@/types/database";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -39,6 +44,8 @@ function VerifyDocumentsForm() {
   const [rows, setRows] = useState<DocRow[]>([
     { docType: options[0].value, file: null, url: "" },
   ]);
+  const [school, setSchool] = useState("");
+  const [instruments, setInstruments] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -111,13 +118,24 @@ function VerifyDocumentsForm() {
       documents,
     });
 
-    setLoading(false);
-
     if (insertError) {
+      setLoading(false);
       setError(`제출 실패: ${insertError.message}`);
       return;
     }
 
+    // 학교/포지션은 프로필 노출용 부가 정보라 여기서 실패해도 인증 제출 자체는 막지 않는다.
+    await supabase.from("profiles").upsert(
+      {
+        user_id: user.id,
+        user_type: userType,
+        school: school.trim() || null,
+        instruments: instruments.length > 0 ? instruments : null,
+      },
+      { onConflict: "user_id" },
+    );
+
+    setLoading(false);
     router.push("/status");
   }
 
@@ -130,6 +148,19 @@ function VerifyDocumentsForm() {
         </p>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className={`flex flex-col gap-4 ${card}`}>
+          <div className="flex flex-col gap-1.5">
+            <span className={label}>{userType === "activist" ? "출신 학교 (선택)" : "학교"}</span>
+            <input
+              type="text"
+              placeholder="학교명"
+              value={school}
+              onChange={(e) => setSchool(e.target.value)}
+              className={field}
+            />
+          </div>
+          <PositionTagPicker value={instruments} onChange={setInstruments} />
+        </div>
         {rows.map((row, i) => {
           const option = options.find((o) => o.value === row.docType) ?? options[0];
           return (

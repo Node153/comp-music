@@ -35,7 +35,7 @@ export default async function ProfilePage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("school, major, instruments, region, bio")
+    .select("school, instruments, region, bio")
     .eq("user_id", userId)
     .single();
 
@@ -104,7 +104,6 @@ export default async function ProfilePage({
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {profile?.school && <span className={badge}>{profile.school}</span>}
-        {profile?.major && <span className={badge}>{profile.major}</span>}
         {(profile?.instruments ?? []).map((inst) => (
           <span key={inst} className={badge}>
             {inst}

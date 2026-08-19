@@ -42,7 +42,7 @@ type MockSample = {
   userId: string;
   name: string;
   school: string;
-  major: string;
+  positions: string[];
   caption: string;
   contentType: ContentType;
   tags: string[];
@@ -68,7 +68,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     userId: "mock-user-1",
     name: "정하늘",
     school: "서울대",
-    major: "작곡과",
+    positions: ["작곡"],
     caption: "드디어 완성한 첫 발라드 싱글, 앨범 커버까지 다 뽑았어요!",
     contentType: "composition",
     tags: ["피아노", "발라드"],
@@ -86,7 +86,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     userId: "mock-user-2",
     name: "오세준",
     school: "한예종",
-    major: "실용음악과",
+    positions: ["기타"],
     caption: "6개월 준비한 합주 영상 최종본 공개합니다",
     contentType: "ensemble",
     tags: ["기타", "밴드"],
@@ -104,7 +104,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     userId: "mock-user-3",
     name: "한지민",
     school: "활동자",
-    major: "보컬",
+    positions: ["보컬"],
     caption: "제 보컬 커버 정식 업로드했어요, 많이 들어주세요!",
     contentType: "performance",
     tags: ["보컬"],
@@ -125,7 +125,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     userId: "mock-user-4",
     name: "이서연",
     school: "한예종",
-    major: "보컬",
+    positions: ["보컬"],
     caption: "첫 라이브 클립 편집 완료! 떨렸지만 재밌었어요",
     contentType: "performance",
     tags: ["보컬", "라이브"],
@@ -143,7 +143,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     userId: "mock-user-5",
     name: "박지훈",
     school: "활동자",
-    major: "드럼",
+    positions: ["드럼"],
     caption: "드럼 커버 영상 새로 올려요, 이번엔 좀 빠른 곡으로",
     contentType: "performance",
     tags: ["드럼"],
@@ -161,7 +161,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     userId: "mock-user-6",
     name: "최민아",
     school: "경희대",
-    major: "피아노",
+    positions: ["피아노/건반"],
     caption: "쇼팽 녹턴 연주 영상입니다, 편안하게 들어주세요",
     contentType: "performance",
     tags: ["피아노", "클래식"],
@@ -179,7 +179,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     userId: "mock-user-7",
     name: "김도윤",
     school: "서울대",
-    major: "작곡",
+    positions: ["작곡"],
     caption: "영화음악 샘플 트랙 공개합니다, 피드백 환영해요",
     contentType: "composition",
     tags: ["작곡", "필름스코어"],
@@ -197,7 +197,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     userId: "mock-user-8",
     name: "강태오",
     school: "활동자",
-    major: "베이스",
+    positions: ["베이스"],
     caption: "베이스 솔로 챌린지 영상, 다들 한번 도전해보세요!",
     contentType: "improv",
     tags: ["베이스", "챌린지"],
@@ -215,7 +215,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
 function buildDemoMockPosts(
   samples: MockSample[],
   userMap: Map<string, { id: string; name: string }>,
-  profileMap: Map<string, { user_id: string; school: string | null; major: string | null }>,
+  profileMap: Map<string, { user_id: string; school: string | null; instruments: string[] | null }>,
   likeCountMap: Map<string, number>,
   commentCountMap: Map<string, number>,
   weeklyLikeCountMap: Map<string, number>,
@@ -225,7 +225,7 @@ function buildDemoMockPosts(
   const now = Date.now();
   return samples.map((m) => {
     userMap.set(m.userId, { id: m.userId, name: m.name });
-    profileMap.set(m.userId, { user_id: m.userId, school: m.school, major: m.major });
+    profileMap.set(m.userId, { user_id: m.userId, school: m.school, instruments: m.positions });
     // likesMultiplier × 현재 peakThreshold로 계산 — 좋아요 수가 승인 회원 수를 넘는 비현실적인
     // 상황이 안 나오게 approvedMemberCount로 한 번 더 clamp한다(실제 likes 테이블도
     // post_id+user_id 유니크라 회원 수 이상은 물리적으로 불가능).
@@ -357,7 +357,7 @@ export default async function FeedPage({
       : { data: [] };
   const { data: profiles } =
     userIds.length > 0
-      ? await supabase.from("profiles").select("user_id, school, major").in("user_id", userIds)
+      ? await supabase.from("profiles").select("user_id, school, instruments").in("user_id", userIds)
       : { data: [] };
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
@@ -577,8 +577,8 @@ export default async function FeedPage({
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
           const weeklyLikeCount = weeklyLikeCountMap.get(post.id) ?? 0;
-          const schoolMajor = [profile?.school, profile?.major].filter(Boolean).join(" · ");
-          const headerMetaLine = `${schoolMajor}${schoolMajor ? " · " : ""}${timeAgo(post.published_at ?? new Date().toISOString())}`;
+          const schoolPositions = [profile?.school, ...(profile?.instruments ?? [])].filter(Boolean).join(" · ");
+          const headerMetaLine = `${schoolPositions}${schoolPositions ? " · " : ""}${timeAgo(post.published_at ?? new Date().toISOString())}`;
           // memo(complex) 탭 게시물은 미디어 박스를 따로 안 쓰고 ComplexPostChat의 mediaSlot으로
           // 넘겨서 재창작물 스택 + 실시간 채팅과 나란히 보여준다. "Companion 공개"(followers)
           // 게시물은 피드 쿼리 단계에서 이미 Companion만 걸러진 상태라(위 posts 필터) 항상 열람 가능.

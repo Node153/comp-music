@@ -40,7 +40,7 @@ export default async function CompanionsPage({
       : { data: [] };
   const { data: profiles } =
     otherUserIds.length > 0
-      ? await supabase.from("profiles").select("user_id, school, major").in("user_id", otherUserIds)
+      ? await supabase.from("profiles").select("user_id, school, instruments").in("user_id", otherUserIds)
       : { data: [] };
   const userMap = new Map((users ?? []).map((u) => [u.id, u]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
@@ -60,9 +60,9 @@ export default async function CompanionsPage({
           </span>
           <div className="flex flex-1 flex-col">
             <span className="text-sm font-medium text-gray-900">{u.display_name}</span>
-            {(profile?.school || profile?.major) && (
+            {(profile?.school || (profile?.instruments ?? []).length > 0) && (
               <span className="text-xs text-gray-500">
-                {[profile?.school, profile?.major].filter(Boolean).join(" · ")}
+                {[profile?.school, ...(profile?.instruments ?? [])].filter(Boolean).join(" · ")}
               </span>
             )}
           </div>

@@ -1,10 +1,12 @@
 "use client";
 
-// 학교/전공/지역/소개글 — profiles 테이블(0001_init) 저장.
+// 학교/포지션/지역/소개글 — profiles 테이블(0001_init) 저장.
 // 지금까지는 이 폼이 onSubmit 없는 정적 mock이었고, 실제로 profiles에 쓰는 화면이 하나도
-// 없어서 가입 이후 아무도 이 행을 만든 적이 없다(그래서 프로필 화면에 학교/전공 배지가
+// 없어서 가입 이후 아무도 이 행을 만든 적이 없다(그래서 프로필 화면에 학교/포지션 배지가
 // 아예 안 뜸). upsert로 처음 저장 시 행을 만들고, 이후엔 갱신한다(profiles_insert_self/
 // profiles_update_self RLS가 본인 행만 허용).
+// "전공"은 자유 텍스트라 정규 교육을 안 받은 활동자에게 애매했어서 포지션(instruments,
+// 다중 선택 태그)으로 교체했다 — major 컬럼은 그대로 남아있지만 더 이상 이 폼에서 쓰지 않는다.
 // user_type(전공생/활동자)은 profiles의 NOT NULL 컬럼인데 verify/documents 제출 화면이
 // verifications.type엔 저장해도 profiles엔 옮겨 적지 않는다 — 게다가 파일럿 테스터는 서류
 // 제출 없이 SQL로 바로 승인되니 verifications 행조차 없을 수 있다. 그래서 여기서 직접
@@ -12,6 +14,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { PositionTagPicker } from "@/components/PositionTagPicker";
 import { field, label, errorText } from "@/components/ui/styles";
 
 type UserType = "student" | "activist";
@@ -24,7 +27,7 @@ const USER_TYPE_OPTIONS: { value: UserType; label: string }[] = [
 type ProfileDetails = {
   userType: UserType | null;
   school: string;
-  major: string;
+  instruments: string[];
   region: string;
   bio: string;
 };
@@ -32,7 +35,7 @@ type ProfileDetails = {
 const EMPTY: ProfileDetails = {
   userType: null,
   school: "",
-  major: "",
+  instruments: [],
   region: "",
   bio: "",
 };
@@ -49,7 +52,7 @@ export function ProfileDetailsForm() {
       if (!data.user) return;
       const { data: row } = await supabase
         .from("profiles")
-        .select("user_type, school, major, region, bio")
+        .select("user_type, school, instruments, region, bio")
         .eq("user_id", data.user.id)
         .maybeSingle();
 
@@ -69,7 +72,7 @@ export function ProfileDetailsForm() {
         setDetails({
           userType,
           school: row.school ?? "",
-          major: row.major ?? "",
+          instruments: row.instruments ?? [],
           region: row.region ?? "",
           bio: row.bio ?? "",
         });
@@ -97,7 +100,7 @@ export function ProfileDetailsForm() {
         user_id: user.id,
         user_type: details.userType,
         school: details.school.trim() || null,
-        major: details.major.trim() || null,
+        instruments: details.instruments.length > 0 ? details.instruments : null,
         region: details.region.trim() || null,
         bio: details.bio.trim() || null,
       },
@@ -132,7 +135,7 @@ export function ProfileDetailsForm() {
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className={label}>학교</span>
+        <span className={label}>{details.userType === "activist" ? "출신 학교 (선택)" : "학교"}</span>
         <input
           type="text"
           placeholder="학교명"
@@ -142,17 +145,10 @@ export function ProfileDetailsForm() {
           className={field}
         />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <span className={label}>전공</span>
-        <input
-          type="text"
-          placeholder="전공명"
-          disabled={!loaded}
-          value={details.major}
-          onChange={(e) => setDetails((d) => ({ ...d, major: e.target.value }))}
-          className={field}
-        />
-      </div>
+      <PositionTagPicker
+        value={details.instruments}
+        onChange={(next) => setDetails((d) => ({ ...d, instruments: next }))}
+      />
       <div className="flex flex-col gap-1.5">
         <span className={label}>지역</span>
         <input
