@@ -90,13 +90,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/status", request.url));
   }
 
-  // 승인된 사용자가 가입/로그인 또는 심사 관련 화면(승인 전에 보던 화면)에 남아있으면 피드로 보냄.
+  // 로그인된 사용자는 랜딩/가입/로그인 화면에 머무를 이유가 없다 — 상태에 맞는 다음 화면으로
+  // 보낸다. 예전엔 "/"이 이 목록에 없어서, 소셜로그인 완료 후(또는 그냥 로그인한 채로) "/"에
+  // 들어오면 로그인 여부와 무관하게 항상 같은 랜딩 화면(가입하기/로그인 버튼)을 보여줬다 —
+  // "로그인했는데 로그인 화면이 또 뜬다"는 버그로 실제 발견됨. 승인 여부(approved 아닌 대기/
+  // 반려도 포함)와 무관하게 무조건 적용 — 예전엔 status==='approved'일 때만 이 리다이렉트가
+  // 됐어서, 대기 중인 사용자가 로그인한 채로 "/"·"/login"·"/signup"에 들어오면 아무 반응 없이
+  // 그대로 보여지는 것도 같은 원인의 버그였다.
+  if (pathname === "/" || pathname === "/login" || pathname === "/signup") {
+    return NextResponse.redirect(new URL(status === "approved" ? "/feed" : "/status", request.url));
+  }
+
+  // 승인된 사용자가 심사 관련 화면(승인 전에 보던 화면)에 남아있으면 피드로 보냄.
   // 관리자가 SQL로 수동 승인한 경우(서류 미제출) 특히 중요 — 승인 직후 새로고침/재방문 시
   // /status·/verify/type에 그대로 멈춰있지 않고 바로 피드로 넘어가야 한다.
-  if (
-    status === "approved" &&
-    (pathname === "/login" || pathname === "/signup" || UNAPPROVED_ALLOWED_PATHS.includes(pathname))
-  ) {
+  if (status === "approved" && UNAPPROVED_ALLOWED_PATHS.includes(pathname)) {
     return NextResponse.redirect(new URL("/feed", request.url));
   }
 
