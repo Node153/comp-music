@@ -12,13 +12,24 @@ const PROVIDERS = [
   { id: "kakao" as const, label: "Kakao로 계속하기", icon: "💬" },
 ];
 
+// Kakao는 Supabase가 기본으로 account_email/profile_image/profile_nickname 3개를 한꺼번에
+// 요청하는데, 우리 Kakao 앱은 "카카오계정(이메일)"이 사업자 인증 없이는 권한 자체가 안 열려서
+// (KOE205, "설정하지 않은 동의 항목" 에러) 이메일/프로필사진은 요청에서 빼고 실제로 켜둔
+// 닉네임만 요청한다 — 어차피 프로필 사진은 우리 앱이 쓰지도 않음.
+const SCOPES: Partial<Record<"google" | "kakao", string>> = {
+  kakao: "profile_nickname",
+};
+
 export function SocialLoginButtons() {
   const supabase = createClient();
 
   async function handleClick(provider: "google" | "kakao") {
     await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: SCOPES[provider],
+      },
     });
   }
 
