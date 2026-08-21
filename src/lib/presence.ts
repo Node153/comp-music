@@ -14,20 +14,9 @@ export function presenceStatus(lastSeenAt: string | null): PresenceStatus {
   return "offline";
 }
 
-// 실제 프로필 색상 개념이 따로 없어서 id를 해시해 고정 팔레트에서 하나 골라 쓴다 — 같은
-// 사람은 새로고침해도 항상 같은 색.
-const AVATAR_COLORS = [
-  "bg-amber-700",
-  "bg-sky-700",
-  "bg-fuchsia-900",
-  "bg-orange-400",
-  "bg-emerald-700",
-  "bg-indigo-700",
-  "bg-rose-700",
-  "bg-teal-700",
-];
-
-export function avatarColorFor(id: string) {
-  const hash = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+// 사람마다 다른 색을 주던 무지개 팔레트는 걷어냈다 — DEMO(주황)/memo(보라) 두 브랜드
+// 컬러 외에는 색을 최대한 죽이자는 방향이라, 실제 프로필 사진이 생기기 전까지는 전부
+// 같은 무채색 원으로 통일한다(사진 업로드 기능은 별도 작업으로 나중에).
+export function avatarColorFor(_id: string) {
+  return "bg-gray-500 dark:bg-gray-600";
 }

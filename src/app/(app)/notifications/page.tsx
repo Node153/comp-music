@@ -6,9 +6,11 @@ import { avatarColorFor } from "@/lib/presence";
 import { pageTitle, pageCard } from "@/components/ui/styles";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
-// 알림 목록 — 좋아요·댓글(1단계) + Companion 신청·PEAK(2단계). 공동창작 신청은 다음 단계.
-// 별도 notifications 테이블 없이 기존 테이블(likes/comments/companions)과 PEAK 판정 로직
-// (EngagementMeter와 동일 기준 — 이번 주 좋아요 수 ≥ 승인 회원 수/3)을 그대로 재사용해서 조립한다.
+// 알림 목록 — 좋아요·댓글(1단계) + Companion 신청·PEAK(2단계) + 노크(3단계). 공동창작 신청은 다음 단계.
+// 별도 notifications 테이블 없이 기존 테이블(likes/comments/companions/post_access)과 PEAK 판정
+// 로직(EngagementMeter와 동일 기준 — 이번 주 좋아요 수 ≥ 승인 회원 수/3)을 그대로 재사용해서 조립한다.
+// 노크(post_access status='pending')는 원래 본인 게시물을 직접 열어야만 보이던 걸, 좋아요/댓글처럼
+// 여기서도 놓치지 않게 추가했다(사용자 피드백: "노크도 알림에 떠야 할 것 같은데").
 // PEAK는 "이벤트"가 아니라 "지금 임계치를 넘은 상태"라 정확한 도달 시각이 없다 — 근사치로
 // 그 게시물의 이번 주 가장 최근 좋아요 시각을 쓴다.
 // 인스타그램 알림탭 참고 — 줄마다 붙던 ❤️/💬/🤝 아이콘이 좌측 사이드바 장르필터 아이콘과
@@ -33,7 +35,8 @@ type NotificationItem =
       actorName: string;
       createdAt: string;
     }
-  | { type: "peak"; id: string; postId: string; createdAt: string };
+  | { type: "peak"; id: string; postId: string; createdAt: string }
+  | { type: "knock"; id: string; postId: string; actorId: string; actorName: string; createdAt: string };
 
 type CategoryFilter = "all" | "engagement" | "request" | "peak";
 
@@ -47,7 +50,7 @@ const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
 function matchesCategory(item: NotificationItem, filter: CategoryFilter) {
   if (filter === "all") return true;
   if (filter === "engagement") return item.type === "like" || item.type === "comment";
-  if (filter === "request") return item.type === "companion_request";
+  if (filter === "request") return item.type === "companion_request" || item.type === "knock";
   return item.type === "peak";
 }
 
@@ -79,10 +82,11 @@ export default async function NotificationsPage({
   ]);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
+  const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
   const visibilityByPostId = new Map((myPosts ?? []).map((p) => [p.id, p.visibility]));
   const seenAt = me?.notifications_seen_at ?? new Date(0).toISOString();
 
-  const [{ data: likes }, { data: comments }, { data: weekLikes }, { count: approvedMemberCount }] =
+  const [{ data: likes }, { data: comments }, { data: weekLikes }, { count: approvedMemberCount }, { data: knocks }] =
     myPostIds.length > 0
       ? await Promise.all([
           supabase
@@ -102,13 +106,24 @@ export default async function NotificationsPage({
           // PEAK 판정용 — EngagementMeter와 동일하게 이번 주(캘린더) 좋아요 수만 쓴다(본인 반응 포함).
           supabase.from("likes").select("post_id, created_at").in("post_id", myPostIds).gte("created_at", currentWeekStartISO()),
           supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved"),
+          // 노크 = 내 초대전용(invite_only) 게시물에 status='pending'으로 들어온 post_access 행.
+          myInviteOnlyPostIds.length > 0
+            ? supabase
+                .from("post_access")
+                .select("id, post_id, user_id, created_at")
+                .in("post_id", myInviteOnlyPostIds)
+                .eq("status", "pending")
+                .order("created_at", { ascending: false })
+                .limit(50)
+            : Promise.resolve({ data: [] }),
         ])
-      : [{ data: [] }, { data: [] }, { data: [] }, { count: 0 }];
+      : [{ data: [] }, { data: [] }, { data: [] }, { count: 0 }, { data: [] }];
 
   const actorIds = new Set([
     ...(incomingRequests ?? []).map((r) => r.requester_id),
     ...(likes ?? []).map((l) => l.user_id),
     ...(comments ?? []).map((c) => c.user_id),
+    ...(knocks ?? []).map((k) => k.user_id),
   ]);
   const { data: actors } =
     actorIds.size > 0
@@ -168,6 +183,16 @@ export default async function NotificationsPage({
         createdAt: r.created_at,
       }),
     ),
+    ...(knocks ?? []).map(
+      (k): NotificationItem => ({
+        type: "knock",
+        id: k.id,
+        postId: k.post_id,
+        actorId: k.user_id,
+        actorName: actorNameById.get(k.user_id) ?? "알 수 없음",
+        createdAt: k.created_at,
+      }),
+    ),
   ]
     .filter((item) => matchesCategory(item, activeCategory))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -176,7 +201,12 @@ export default async function NotificationsPage({
   return (
     <main className={pageCard}>
       <MarkNotificationsSeen userId={user.id} />
-      <h1 className={pageTitle}>알림</h1>
+      <div className="flex items-center justify-between">
+        <h1 className={pageTitle}>알림</h1>
+        <Link href="/notifications/settings" className="text-sm text-gray-400 hover:text-gray-600">
+          알림 설정
+        </Link>
+      </div>
 
       <div className="mt-4 flex gap-1.5 overflow-x-auto">
         {CATEGORY_OPTIONS.map((option) => (
@@ -206,7 +236,7 @@ export default async function NotificationsPage({
                 : `/feed?feed=${visibilityByPostId.get(item.postId) === "public" ? "completion" : "complex"}#${item.postId}`;
             const avatar =
               item.type === "peak" ? (
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-red-500 text-base">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-500 text-base dark:bg-gray-600">
                   🔥
                 </span>
               ) : (
@@ -235,6 +265,7 @@ export default async function NotificationsPage({
                         {item.type === "like" && "님이 회원님의 게시물을 좋아합니다"}
                         {item.type === "comment" && "님이 댓글을 남겼습니다"}
                         {item.type === "companion_request" && "님이 Companion을 신청했어요"}
+                        {item.type === "knock" && "님이 비공개 게시물에 노크했어요"}
                       </>
                     )}
                   </p>
