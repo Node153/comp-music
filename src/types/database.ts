@@ -61,6 +61,15 @@ export interface Database {
           needs_onboarding: boolean;
           // 동명이인 판별 보조용(0031) — 기존 회원은 null, 새 가입자부터 앱에서 필수로 받음.
           birth_date: string | null;
+          // 이메일 알림 설정(0033) — 모바일 앱이 없어서 이메일이 사실상 유일한 알림 채널이라
+          // 종류별로 켜고 끌 수 있게 했다. "답해야 하는" 것(노크/신청/메시지)은 기본 켜짐,
+          // "참고용"인 것(좋아요/댓글/PEAK)은 기본 꺼짐.
+          email_notify_like: boolean;
+          email_notify_comment: boolean;
+          email_notify_knock: boolean;
+          email_notify_companion_request: boolean;
+          email_notify_message: boolean;
+          email_notify_peak: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -76,6 +85,12 @@ export interface Database {
           last_seen_at?: string | null;
           needs_onboarding?: boolean;
           birth_date?: string | null;
+          email_notify_like?: boolean;
+          email_notify_comment?: boolean;
+          email_notify_knock?: boolean;
+          email_notify_companion_request?: boolean;
+          email_notify_message?: boolean;
+          email_notify_peak?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -122,12 +137,15 @@ export interface Database {
         Row: {
           user_id: string;
           user_type: UserType;
+          user_type_public: boolean;
           school: string | null;
+          school_public: boolean;
           major: string | null;
           instruments: string[] | null;
           // 좋아하는 장르(정확히 3개, 0028) — instruments(포지션)와 대칭되는 스타일 축.
           favorite_genres: string[] | null;
           region: string | null;
+          region_public: boolean;
           bio: string | null;
           portfolio_links: Record<string, string> | null;
           profile_image_url: string | null;
@@ -135,11 +153,14 @@ export interface Database {
         Insert: {
           user_id: string;
           user_type: UserType;
+          user_type_public?: boolean;
           school?: string | null;
+          school_public?: boolean;
           major?: string | null;
           instruments?: string[] | null;
           favorite_genres?: string[] | null;
           region?: string | null;
+          region_public?: boolean;
           bio?: string | null;
           portfolio_links?: Record<string, string> | null;
           profile_image_url?: string | null;

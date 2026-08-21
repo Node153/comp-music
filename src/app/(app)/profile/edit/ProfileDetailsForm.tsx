@@ -11,10 +11,13 @@
 // verifications.type엔 저장해도 profiles엔 옮겨 적지 않는다 — 게다가 파일럿 테스터는 서류
 // 제출 없이 SQL로 바로 승인되니 verifications 행조차 없을 수 있다. 그래서 여기서 직접
 // 고르게 하고, 기존 값이 있으면(profiles → 없으면 verifications 순) 미리 채워준다.
+// 필드별 공개 범위(0028) — 닉네임/포지션/소개글은 항상 전체공개라 토글이 없고, 활동
+// 유형/학교/지역만 "공개" 체크박스로 켜고 끌 수 있다(기본값 공개, 원하는 사람만 끔).
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { PositionTagPicker } from "@/components/PositionTagPicker";
+import { VisibilityToggle } from "@/components/VisibilityToggle";
 import { field, label, errorText } from "@/components/ui/styles";
 
 type UserType = "student" | "activist";
@@ -26,19 +29,26 @@ const USER_TYPE_OPTIONS: { value: UserType; label: string }[] = [
 
 type ProfileDetails = {
   userType: UserType | null;
+  userTypePublic: boolean;
   school: string;
+  schoolPublic: boolean;
   instruments: string[];
   region: string;
+  regionPublic: boolean;
   bio: string;
 };
 
 const EMPTY: ProfileDetails = {
   userType: null,
+  userTypePublic: true,
   school: "",
+  schoolPublic: true,
   instruments: [],
   region: "",
+  regionPublic: true,
   bio: "",
 };
+
 
 export function ProfileDetailsForm() {
   const supabase = createClient();
@@ -52,7 +62,7 @@ export function ProfileDetailsForm() {
       if (!data.user) return;
       const { data: row } = await supabase
         .from("profiles")
-        .select("user_type, school, instruments, region, bio")
+        .select("user_type, user_type_public, school, school_public, instruments, region, region_public, bio")
         .eq("user_id", data.user.id)
         .maybeSingle();
 
@@ -71,9 +81,12 @@ export function ProfileDetailsForm() {
       if (row) {
         setDetails({
           userType,
+          userTypePublic: row.user_type_public,
           school: row.school ?? "",
+          schoolPublic: row.school_public,
           instruments: row.instruments ?? [],
           region: row.region ?? "",
+          regionPublic: row.region_public,
           bio: row.bio ?? "",
         });
       } else {
@@ -99,9 +112,12 @@ export function ProfileDetailsForm() {
       {
         user_id: user.id,
         user_type: details.userType,
+        user_type_public: details.userTypePublic,
         school: details.school.trim() || null,
+        school_public: details.schoolPublic,
         instruments: details.instruments.length > 0 ? details.instruments : null,
         region: details.region.trim() || null,
+        region_public: details.regionPublic,
         bio: details.bio.trim() || null,
       },
       { onConflict: "user_id" },
@@ -115,7 +131,14 @@ export function ProfileDetailsForm() {
   return (
     <form onSubmit={save} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <span className={label}>활동 유형</span>
+        <div className="flex items-center justify-between">
+          <span className={label}>활동 유형</span>
+          <VisibilityToggle
+            checked={details.userTypePublic}
+            disabled={!loaded}
+            onChange={(next) => setDetails((d) => ({ ...d, userTypePublic: next }))}
+          />
+        </div>
         <div className="grid grid-cols-2 gap-2">
           {USER_TYPE_OPTIONS.map((option) => (
             <button
@@ -135,7 +158,14 @@ export function ProfileDetailsForm() {
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className={label}>{details.userType === "activist" ? "출신 학교 (선택)" : "학교"}</span>
+        <div className="flex items-center justify-between">
+          <span className={label}>{details.userType === "activist" ? "출신 학교 (선택)" : "학교"}</span>
+          <VisibilityToggle
+            checked={details.schoolPublic}
+            disabled={!loaded}
+            onChange={(next) => setDetails((d) => ({ ...d, schoolPublic: next }))}
+          />
+        </div>
         <input
           type="text"
           placeholder="학교명"
@@ -150,7 +180,14 @@ export function ProfileDetailsForm() {
         onChange={(next) => setDetails((d) => ({ ...d, instruments: next }))}
       />
       <div className="flex flex-col gap-1.5">
-        <span className={label}>지역</span>
+        <div className="flex items-center justify-between">
+          <span className={label}>지역</span>
+          <VisibilityToggle
+            checked={details.regionPublic}
+            disabled={!loaded}
+            onChange={(next) => setDetails((d) => ({ ...d, regionPublic: next }))}
+          />
+        </div>
         <input
           type="text"
           placeholder="활동 지역"

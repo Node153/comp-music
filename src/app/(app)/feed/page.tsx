@@ -215,7 +215,10 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
 function buildDemoMockPosts(
   samples: MockSample[],
   userMap: Map<string, { id: string; name: string }>,
-  profileMap: Map<string, { user_id: string; school: string | null; instruments: string[] | null }>,
+  profileMap: Map<
+    string,
+    { user_id: string; school: string | null; school_public: boolean; instruments: string[] | null }
+  >,
   likeCountMap: Map<string, number>,
   commentCountMap: Map<string, number>,
   weeklyLikeCountMap: Map<string, number>,
@@ -225,7 +228,7 @@ function buildDemoMockPosts(
   const now = Date.now();
   return samples.map((m) => {
     userMap.set(m.userId, { id: m.userId, name: m.name });
-    profileMap.set(m.userId, { user_id: m.userId, school: m.school, instruments: m.positions });
+    profileMap.set(m.userId, { user_id: m.userId, school: m.school, school_public: true, instruments: m.positions });
     // likesMultiplier × 현재 peakThreshold로 계산 — 좋아요 수가 승인 회원 수를 넘는 비현실적인
     // 상황이 안 나오게 approvedMemberCount로 한 번 더 clamp한다(실제 likes 테이블도
     // post_id+user_id 유니크라 회원 수 이상은 물리적으로 불가능).
@@ -357,7 +360,7 @@ export default async function FeedPage({
       : { data: [] };
   const { data: profiles } =
     userIds.length > 0
-      ? await supabase.from("profiles").select("user_id, school, instruments").in("user_id", userIds)
+      ? await supabase.from("profiles").select("user_id, school, school_public, instruments").in("user_id", userIds)
       : { data: [] };
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
@@ -577,7 +580,8 @@ export default async function FeedPage({
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
           const weeklyLikeCount = weeklyLikeCountMap.get(post.id) ?? 0;
-          const schoolPositions = [profile?.school, ...(profile?.instruments ?? [])].filter(Boolean).join(" · ");
+          const visibleSchool = profile?.school_public ? profile.school : null;
+          const schoolPositions = [visibleSchool, ...(profile?.instruments ?? [])].filter(Boolean).join(" · ");
           const headerMetaLine = `${schoolPositions}${schoolPositions ? " · " : ""}${timeAgo(post.published_at ?? new Date().toISOString())}`;
           // memo(complex) 탭 게시물은 미디어 박스를 따로 안 쓰고 ComplexPostChat의 mediaSlot으로
           // 넘겨서 재창작물 스택 + 실시간 채팅과 나란히 보여준다. "Companion 공개"(followers)

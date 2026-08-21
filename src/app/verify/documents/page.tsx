@@ -24,6 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { PositionTagPicker } from "@/components/PositionTagPicker";
 import { GenreTagPicker } from "@/components/GenreTagPicker";
+import { VisibilityToggle } from "@/components/VisibilityToggle";
 import { field, label, errorText, pageTitle, mutedText, card } from "@/components/ui/styles";
 import { DOCUMENT_VERIFICATION_ENABLED } from "@/lib/featureFlags";
 import type { UserType } from "@/types/database";
@@ -58,6 +59,7 @@ function VerifyDocumentsForm() {
     { docType: options[0].value, file: null, url: "" },
   ]);
   const [school, setSchool] = useState("");
+  const [schoolPublic, setSchoolPublic] = useState(true);
   const [instruments, setInstruments] = useState<string[]>([]);
   const [favoriteGenres, setFavoriteGenres] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +155,7 @@ function VerifyDocumentsForm() {
         user_id: user.id,
         user_type: userType,
         school: school.trim() || null,
+        school_public: schoolPublic,
         instruments: instruments.length > 0 ? instruments : null,
         favorite_genres: favoriteGenres,
       },
@@ -177,7 +180,10 @@ function VerifyDocumentsForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className={`flex flex-col gap-4 ${card}`}>
           <div className="flex flex-col gap-1.5">
-            <span className={label}>{userType === "activist" ? "출신 학교 (선택)" : "학교"}</span>
+            <div className="flex items-center justify-between">
+              <span className={label}>{userType === "activist" ? "출신 학교 (선택)" : "학교"}</span>
+              <VisibilityToggle checked={schoolPublic} disabled={false} onChange={setSchoolPublic} />
+            </div>
             <input
               type="text"
               placeholder="학교명"

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label, errorText } from "@/components/ui/styles";
-import { randomNicknameExample } from "@/lib/nicknameExamples";
+import { randomNicknameExample, generateNicknameCandidate } from "@/lib/nicknameExamples";
 
 export function NicknameForm() {
   const supabase = createClient();
@@ -76,6 +76,15 @@ export function NicknameForm() {
           onChange={(e) => setNickname(e.target.value)}
           className={field}
         />
+        <button
+          type="button"
+          onClick={() => setNickname(generateNicknameCandidate())}
+          title="다른 닉네임 뽑기"
+          disabled={!loaded}
+          className="shrink-0 rounded-xl border border-gray-300 px-3.5 text-sm text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+        >
+          🎲
+        </button>
         <Button type="submit" disabled={saving || !loaded} className="shrink-0 px-4">
           {saving ? "저장 중..." : "저장"}
         </Button>
