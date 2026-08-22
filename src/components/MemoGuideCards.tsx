@@ -42,7 +42,7 @@ export function MemoGuideCards() {
               </span>
             ))}
           </p>
-          <p className="text-[11px] leading-tight text-gray-400 opacity-70 dark:text-gray-600">{card.sub}</p>
+          <p className="text-[11px] leading-tight text-gray-400 dark:text-gray-500">{card.sub}</p>
         </div>
       ))}
     </div>
