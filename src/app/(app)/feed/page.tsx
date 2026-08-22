@@ -10,6 +10,7 @@ import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
 import { ComplexAccessGate } from "@/components/ComplexAccessGate";
 import { PostFocusToggle } from "@/components/PostFocusToggle";
+import { MemoGuideCards } from "@/components/MemoGuideCards";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import { GuestEngagementRow } from "./GuestEngagementRow";
@@ -284,14 +285,17 @@ export default async function FeedPage({
   // Companion 전용 공간이라 존재 형태조차 안 보여주고 완전히 잠근다(0024_public_feed_preview).
   if (isComplex && !currentUser) {
     return (
-      <main className="mx-auto flex max-w-[900px] flex-col items-center justify-center gap-3 px-4 py-24 text-center">
-        <span className="text-4xl">🔒</span>
+      <main className="mx-auto flex max-w-[900px] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           memo는 아는 사람들끼리만 보는 공간이에요
         </p>
         <p className="max-w-xs text-sm text-gray-500 dark:text-gray-400">
-          가입하고 Companion을 만들면 서로의 비공개 작업물을 볼 수 있어요.
+          가입하고 Companion을 만들면 서로의 비공개 작업물을 볼 수 있어요. 미리 어떤 걸
+          할 수 있는지 보여드릴게요.
         </p>
+        <div className="mt-2 w-full">
+          <MemoGuideCards />
+        </div>
         <Link
           href="/signup"
           className="mt-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
@@ -564,7 +568,17 @@ export default async function FeedPage({
           </Link>
         </div>
       )}
-      {allPosts.length === 0 && (
+      {allPosts.length === 0 && isComplex && (
+        <div className="flex flex-col items-center justify-center gap-2 py-12">
+          <p className="text-sm text-gray-400 dark:text-gray-500">
+            아직 Companion의 게시물이 없어요 — memo에서는 이런 걸 할 수 있어요
+          </p>
+          <div className="mt-2 w-full">
+            <MemoGuideCards />
+          </div>
+        </div>
+      )}
+      {allPosts.length === 0 && !isComplex && (
         <div className="flex flex-col items-center justify-center gap-2 py-24">
           <span className="text-3xl">🎬</span>
           <p className="text-sm text-gray-400 dark:text-gray-500">아직 게시물이 없습니다</p>
