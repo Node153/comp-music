@@ -67,7 +67,7 @@ export function GlobalPlayerBar() {
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video ref={videoRef} className="hidden" playsInline />
       {track && (
-        <div className="fixed inset-x-0 bottom-14 z-50 border-t border-gray-800 bg-black text-white md:bottom-0">
+        <div className="fixed inset-x-0 bottom-14 z-50 border-t border-gray-800 bg-[#1c1c1e] text-white md:bottom-0">
           <button
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
@@ -75,7 +75,7 @@ export function GlobalPlayerBar() {
               const video = videoRef.current;
               if (video && duration > 0) video.currentTime = ratio * duration;
             }}
-            className="relative h-10 w-full cursor-pointer bg-black px-1"
+            className="relative h-10 w-full cursor-pointer bg-[#1c1c1e] px-1"
             aria-label="탐색 바 (파형)"
           >
             <div className="flex h-full items-center gap-[2px]">

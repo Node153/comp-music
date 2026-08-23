@@ -144,11 +144,11 @@ export function ComplexAccessGate({
       )}
 
       {useInlineChatLayout ? null : (
-        <div className="relative flex items-center justify-center bg-black">
+        <div className="relative flex items-center justify-center bg-[#1c1c1e]">
           {canViewMedia ? (
             <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
           ) : (
-            <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-gray-900 px-6 text-center">
+            <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-[#1c1c1e] px-6 text-center">
               <span className="text-4xl">🔒</span>
               <p className="max-w-xs text-sm text-gray-300">
                 {authorName}님이 특정 인원에게만 공개한 게시물이에요.

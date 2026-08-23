@@ -77,7 +77,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <NowPlayingProvider>
       <ThemeSync />
-      <div className="min-h-screen bg-gray-100 transition-colors duration-300 dark:bg-black md:bg-[#f0f2f5] md:dark:bg-black">
+      <div className="min-h-screen bg-gray-100 transition-colors duration-300 dark:bg-[#1c1c1e] md:bg-[#f0f2f5] md:dark:bg-[#1c1c1e]">
         {user ? (
           <>
             <PresenceHeartbeat userId={user.id} />
