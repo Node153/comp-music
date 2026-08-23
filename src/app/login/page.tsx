@@ -49,10 +49,7 @@ export default function LoginPage() {
       .then((res) => res.json())
       .then((data: { bgmUrl: string | null; backgroundUrl: string | null }) => {
         if (cancelled) return;
-        if (data.bgmUrl) {
-          setBgmSrc(data.bgmUrl);
-          audioRef.current?.load();
-        }
+        if (data.bgmUrl) setBgmSrc(data.bgmUrl);
         if (data.backgroundUrl) setBackgroundUrl(data.backgroundUrl);
       })
       .catch(() => {});
@@ -61,6 +58,14 @@ export default function LoginPage() {
       audioRef.current?.pause();
     };
   }, []);
+
+  // bgmSrc가 바뀌면 <audio src={bgmSrc}>가 리렌더링돼서 DOM에 새 src가 반영된 "다음"에
+  // load()를 불러야 한다 — 예전엔 fetch 콜백 안에서 setBgmSrc 직후 바로 load()를 불러서,
+  // 그 시점 DOM엔 아직 이전 src가 남아있어 관리자가 올린 곡이 아니라 기본곡을 다시 불러오는
+  // 버그가 있었다(재생은 되는데 항상 fallback 트랙만 나옴).
+  useEffect(() => {
+    audioRef.current?.load();
+  }, [bgmSrc]);
 
   // 저장해둔 볼륨을 불러와서 audio 엘리먼트에 반영(없으면 기본 0.6).
   useEffect(() => {

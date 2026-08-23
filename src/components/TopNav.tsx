@@ -34,7 +34,7 @@ export function TopNav({
   const activeFeedTab = searchParams.get("feed") ?? "completion";
 
   return (
-    <header className="sticky top-0 z-40 hidden h-14 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-black md:flex">
+    <header className="sticky top-0 z-40 hidden h-14 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-[#1c1c1e] md:flex">
       <div className="flex flex-1 items-center gap-2">
         <Link href="/feed" className="flex shrink-0 items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-xs font-bold text-white dark:bg-white dark:text-black">
