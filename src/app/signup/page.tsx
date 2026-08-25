@@ -177,8 +177,9 @@ export default function SignupPage() {
             </button>
           </div>
           <p className="px-1 text-xs text-gray-400">
-            Companion이 아닌 사람에게는 실명 대신 닉네임이 보여요. 마음에 안 들면 🎲로 다시
-            뽑거나 직접 수정할 수 있어요.
+            Companion이 아닌 사람에게는 실명 대신 닉네임이 보여요. 다른 사람이 이 닉네임으로
+            나를 검색해서 찾을 수 있으니, 활동명이 있다면 그걸로 적는 걸 추천해요. 마음에 안
+            들면 🎲로 다시 뽑거나 직접 수정할 수 있어요.
           </p>
         </div>
         <input

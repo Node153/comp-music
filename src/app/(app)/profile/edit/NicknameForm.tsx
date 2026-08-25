@@ -62,7 +62,8 @@ export function NicknameForm() {
     <form onSubmit={save} className="flex flex-col gap-1.5">
       <span className={label}>닉네임</span>
       <p className="text-xs text-gray-400">
-        Companion이 아닌 사람에게는 실명 대신 이 닉네임이 보여요.
+        Companion이 아닌 사람에게는 실명 대신 이 닉네임이 보여요. 다른 사람이 이 닉네임으로
+        나를 검색해서 찾을 수 있으니, 활동명이 있다면 그걸로 적는 걸 추천해요.
       </p>
       <div className="flex gap-1.5">
         <input
