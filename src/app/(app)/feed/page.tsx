@@ -267,9 +267,9 @@ function buildDemoMockPosts(
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ feed?: string }>;
+  searchParams: Promise<{ feed?: string; tag?: string }>;
 }) {
-  const { feed: feedParam } = await searchParams;
+  const { feed: feedParam, tag: tagParam } = await searchParams;
   // Demo(전체공개, 노출영구) 기본값 · Complex(비공개, 노출시간필수 — 팔로워공개 또는 특정인 초대)는
   // 0012_complex_access_and_chat부터 실제 posts에 저장됨. visibility='public'이 demo, 그 외
   // ('followers'/'invite_only')가 Complex — 같은 posts 테이블을 이 컬럼으로 나눠서 쓴다.
@@ -550,9 +550,15 @@ export default async function FeedPage({
         approvedMemberCount ?? 0,
       );
 
-  const allPosts = [...postsWithVideo, ...mockPosts].sort(
+  const allPostsUnfiltered = [...postsWithVideo, ...mockPosts].sort(
     (a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime(),
   );
+  // 해시태그 클릭 시 그 태그가 달린 게시물만 보기(DEMO 전용 — memo는 태그 개념이 없음).
+  // 목록을 DB에서부터 다시 걸러오는 대신 이미 불러온 목록을 한 번 더 좁히는 방식 — feed가
+  // 어차피 최근 20개 + mock 소량이라 성능상 문제없고, mock 게시물도 똑같이 걸러진다.
+  const allPosts = tagParam
+    ? allPostsUnfiltered.filter((p) => (p.instrument_tags ?? []).includes(tagParam))
+    : allPostsUnfiltered;
 
   return (
     <main className="mx-auto max-w-[900px] px-0 pb-24 pt-0 md:px-4 md:pb-8 md:pt-4">
@@ -569,6 +575,16 @@ export default async function FeedPage({
           </Link>
         </div>
       )}
+      {tagParam && (
+        <div className="mx-3 mb-4 flex items-center justify-between gap-3 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 md:mx-0">
+          <span className="text-sm text-gray-600">
+            <span className="font-semibold text-gray-900">#{tagParam}</span> 태그 게시물만 보고 있어요
+          </span>
+          <Link href="/feed?feed=completion" className="shrink-0 text-sm font-medium text-gray-500 hover:text-gray-900">
+            필터 지우기
+          </Link>
+        </div>
+      )}
       {allPosts.length === 0 && isComplex && (
         <div className="flex flex-col items-center justify-center gap-2 py-12">
           <p className="text-sm text-gray-400 dark:text-gray-500">
@@ -582,7 +598,9 @@ export default async function FeedPage({
       {allPosts.length === 0 && !isComplex && (
         <div className="flex flex-col items-center justify-center gap-2 py-24">
           <span className="text-3xl">🎬</span>
-          <p className="text-sm text-gray-400 dark:text-gray-500">아직 게시물이 없습니다</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">
+            {tagParam ? `#${tagParam} 태그를 단 게시물이 아직 없어요` : "아직 게시물이 없습니다"}
+          </p>
         </div>
       )}
 
@@ -754,15 +772,17 @@ export default async function FeedPage({
                       </span>
                     )}
                     {/* 해시태그는 demo 전용 개념(업로드 폼에도 memo 쪽엔 태그 입력 자체가 없음) —
-                        memo(Companion)는 태그로 탐색하는 구조가 아니라 여기서는 표시하지 않는다. */}
+                        memo(Companion)는 태그로 탐색하는 구조가 아니라 여기서는 표시하지 않는다.
+                        클릭하면 같은 태그가 달린 게시물만 걸러본다(위 allPosts 필터와 대응). */}
                     {!isComplex &&
                       (post.instrument_tags ?? []).map((tag) => (
-                        <span
+                        <Link
                           key={tag}
-                          className={`rounded-full px-2 py-1 text-xs font-medium ${tagColorClass(tag)}`}
+                          href={`/feed?feed=completion&tag=${encodeURIComponent(tag)}`}
+                          className={`rounded-full px-2 py-1 text-xs font-medium transition hover:opacity-70 ${tagColorClass(tag)}`}
                         >
                           #{tag}
-                        </span>
+                        </Link>
                       ))}
                     {post.collab_available && (
                       <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
