@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
+import { Avatar } from "@/components/Avatar";
 
 type CommentRow = {
   id: string;
@@ -108,9 +109,7 @@ export function CommentPanel({
           <div className="flex flex-col gap-3">
             {topLevel.map((c) => (
               <div key={c.id} className="flex gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
-                  {c.authorName.slice(0, 1)}
-                </span>
+                <Avatar userId={c.user_id} name={c.authorName} className="h-8 w-8 text-xs" />
                 <div className="flex flex-col gap-1">
                   <div className="rounded-2xl bg-gray-100 px-3 py-2">
                     <p className="text-xs font-semibold text-gray-900">{c.authorName}</p>
@@ -124,9 +123,7 @@ export function CommentPanel({
                   </button>
                   {(repliesByParent.get(c.id) ?? []).map((r) => (
                     <div key={r.id} className="ml-4 flex gap-2">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
-                        {r.authorName.slice(0, 1)}
-                      </span>
+                      <Avatar userId={r.user_id} name={r.authorName} className="h-7 w-7 text-xs" />
                       <div className="rounded-2xl bg-gray-100 px-3 py-2">
                         <p className="text-xs font-semibold text-gray-900">{r.authorName}</p>
                         <p className="text-sm text-gray-800">{r.content}</p>

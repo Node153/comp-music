@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { pageTitle, pageCard } from "@/components/ui/styles";
+import { Avatar } from "@/components/Avatar";
 
 // Companion 목록(0017_companions) — 팔로워/팔로잉 두 탭이던 follows 페이지를 대체.
 // 맞팔 전용이라 목록이 하나뿐이고, accepted 관계만 보여준다(본인 프로필이면 받은 신청도 위에 표시
@@ -58,9 +59,7 @@ export default async function CompanionsPage({
           href={`/profile/${id}`}
           className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500">
-            {u.display_name.slice(0, 1)}
-          </span>
+          <Avatar userId={id} name={u.display_name} className="h-10 w-10 text-sm" />
           <div className="flex flex-1 flex-col">
             <span className="text-sm font-medium text-gray-900">{u.display_name}</span>
             {(() => {

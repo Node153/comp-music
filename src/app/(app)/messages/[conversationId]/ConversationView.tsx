@@ -5,7 +5,7 @@
 // 보여주고(연속 메시지는 스페이서로 정렬만 맞춤), 각 묶음 끝에 시간과(내 메시지면) 읽음 표시를 곁들인다.
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { avatarColorFor } from "@/lib/presence";
+import { Avatar } from "@/components/Avatar";
 import { timeAgo } from "@/lib/timeAgo";
 
 type MessageRow = {
@@ -119,11 +119,7 @@ export function ConversationView({
             <div key={m.id} className={`mb-1 flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
               {!isMe &&
                 (isLastInGroup ? (
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white ${avatarColorFor(otherUserId)}`}
-                  >
-                    {otherUserName.slice(0, 1)}
-                  </span>
+                  <Avatar userId={otherUserId} name={otherUserName} className="h-7 w-7 text-xs" />
                 ) : (
                   <span className="w-7 shrink-0" />
                 ))}

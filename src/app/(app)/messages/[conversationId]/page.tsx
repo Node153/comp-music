@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getR2SignedUrl } from "@/lib/r2/storage";
-import { presenceStatus, avatarColorFor } from "@/lib/presence";
+import { presenceStatus } from "@/lib/presence";
+import { Avatar } from "@/components/Avatar";
 import { MarkMessagesRead } from "./MarkMessagesRead";
 import { ConversationView } from "./ConversationView";
 
@@ -79,11 +80,7 @@ export default async function ConversationPage({
       <MarkMessagesRead conversationId={conversationId} currentUserId={currentUser.id} />
       <div className="flex items-center gap-3 pb-3">
         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
-          <span
-            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColorFor(otherUserId)}`}
-          >
-            {(otherUser?.name ?? "?").slice(0, 1)}
-          </span>
+          <Avatar userId={otherUserId} name={otherUser?.name ?? "?"} className="h-9 w-9 text-sm" />
           {otherUserStatus !== "offline" && (
             <span
               className={`absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-white ${

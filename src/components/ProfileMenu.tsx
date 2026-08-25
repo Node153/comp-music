@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { UserIcon } from "@/components/icons";
+import { Avatar } from "@/components/Avatar";
 
 export function ProfileMenu({ userId, userName }: { userId: string; userName: string }) {
   const router = useRouter();
@@ -20,13 +20,8 @@ export function ProfileMenu({ userId, userName }: { userId: string; userName: st
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        title="Me"
-        aria-label="Me"
-        className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-      >
-        <UserIcon />
+      <button onClick={() => setOpen((v) => !v)} title="Me" aria-label="Me" className="block">
+        <Avatar userId={userId} name={userName} className="h-9 w-9 text-sm" />
       </button>
 
       {open && (
@@ -42,9 +37,7 @@ export function ProfileMenu({ userId, userName }: { userId: string; userName: st
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-900"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                {userName.slice(0, 1)}
-              </span>
+              <Avatar userId={userId} name={userName} className="h-8 w-8 text-xs" />
               <span>
                 <span className="block font-medium text-gray-900 dark:text-gray-100">{userName}</span>
                 <span className="block text-xs text-gray-500 dark:text-gray-400">프로필 보기</span>

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { pageTitle, pageCard } from "@/components/ui/styles";
-import { presenceStatus, avatarColorFor } from "@/lib/presence";
+import { presenceStatus } from "@/lib/presence";
+import { Avatar } from "@/components/Avatar";
 import { timeAgo } from "@/lib/timeAgo";
 
 // S12 DM 목록 (DM-02)
@@ -83,11 +84,7 @@ export default async function MessagesPage() {
                 className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50"
               >
                 <span className="relative flex h-12 w-12 shrink-0 items-center justify-center">
-                  <span
-                    className={`flex h-12 w-12 items-center justify-center rounded-full text-base font-semibold text-white ${avatarColorFor(otherUserId)}`}
-                  >
-                    {otherName.slice(0, 1)}
-                  </span>
+                  <Avatar userId={otherUserId} name={otherName} className="h-12 w-12 text-base" />
                   {status !== "offline" && (
                     <span
                       className={`absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${

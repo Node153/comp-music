@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { timeAgo } from "@/lib/timeAgo";
-import { avatarColorFor } from "@/lib/presence";
+import { Avatar } from "@/components/Avatar";
 import { pageTitle, pageCard } from "@/components/ui/styles";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
@@ -240,11 +240,7 @@ export default async function NotificationsPage({
                   🔥
                 </span>
               ) : (
-                <span
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColorFor(item.actorId)}`}
-                >
-                  {item.actorName.slice(0, 1)}
-                </span>
+                <Avatar userId={item.actorId} name={item.actorName} className="h-9 w-9 text-sm" />
               );
             return (
               <Link

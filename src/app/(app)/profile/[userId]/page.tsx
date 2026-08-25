@@ -6,6 +6,7 @@ import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { MessageButton } from "@/components/MessageButton";
 import { LogoutButton } from "@/components/LogoutButton";
 import { badge, pageCard } from "@/components/ui/styles";
+import { Avatar } from "@/components/Avatar";
 import { CompanionButton, type CompanionRelation } from "./CompanionButton";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
@@ -85,9 +86,7 @@ export default async function ProfilePage({
       {isOwnProfile && <MarkNotificationsSeen userId={userId} />}
 
       <div className="flex items-start gap-4">
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gray-100 text-2xl font-semibold text-gray-500">
-          {user.display_name.slice(0, 1)}
-        </span>
+        <Avatar userId={userId} name={user.display_name} className="h-16 w-16 text-2xl" />
         <div className="flex flex-1 flex-col gap-1 pt-1">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-gray-900">{user.display_name}</h1>

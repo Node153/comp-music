@@ -635,7 +635,7 @@ export default async function FeedPage({
                 peakThreshold={peakThreshold}
               >
               <PostFocusToggle
-                authorInitial={(author?.name ?? "?").slice(0, 1)}
+                authorId={post.user_id}
                 authorName={author?.name ?? "알 수 없음"}
                 metaLine={headerMetaLine}
                 expiresAt={post.expires_at}

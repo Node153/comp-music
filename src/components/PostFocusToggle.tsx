@@ -8,16 +8,17 @@
 // 건너기 때문에(RSC 직렬화 제약) 렌더 prop 패턴 대신 이 구조를 쓴다.
 import { useState } from "react";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
+import { Avatar } from "@/components/Avatar";
 
 export function PostFocusToggle({
-  authorInitial,
+  authorId,
   authorName,
   metaLine,
   expiresAt,
   isComplex,
   children,
 }: {
-  authorInitial: string;
+  authorId: string;
   authorName: string;
   metaLine: string;
   expiresAt: string | null;
@@ -35,9 +36,7 @@ export function PostFocusToggle({
       }
     >
       <div className="flex items-center gap-2 p-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500 dark:bg-gray-900 dark:text-gray-400">
-          {authorInitial}
-        </span>
+        <Avatar userId={authorId} name={authorName} className="h-8 w-8 text-xs" />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">{authorName}</span>
           <span className="truncate text-xs text-gray-400 dark:text-gray-500">{metaLine}</span>

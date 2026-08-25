@@ -13,7 +13,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
-import { presenceStatus, avatarColorFor, type PresenceStatus } from "@/lib/presence";
+import { presenceStatus, type PresenceStatus } from "@/lib/presence";
+import { Avatar } from "@/components/Avatar";
 
 // 온라인/자리비움/오프라인 판정은 lib/presence(메시지 화면과 공유)를 그대로 쓴다. 오프라인인
 // Companion은 이 목록에 아예 안 보인다(헤더가 "온라인 — N명"이라 오프라인까지 섞으면 숫자가
@@ -22,7 +23,6 @@ type OnlineCompanion = {
   id: string;
   name: string;
   status: Exclude<PresenceStatus, "offline">;
-  color: string;
 };
 
 const ONLINE_VISIBLE_LIMIT = 3;
@@ -107,8 +107,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
           (u): u is { id: string; name: string; status: Exclude<PresenceStatus, "offline"> } =>
             u.status !== "offline",
         )
-        .sort((a, b) => (a.status === b.status ? 0 : a.status === "online" ? -1 : 1))
-        .map((u) => ({ ...u, color: avatarColorFor(u.id) }));
+        .sort((a, b) => (a.status === b.status ? 0 : a.status === "online" ? -1 : 1));
 
       if (!cancelled) setOnlineCompanions(presentCompanions);
     }
@@ -286,10 +285,8 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                 key={person.id}
                 className="group flex items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-gray-200/60 dark:hover:bg-gray-900"
               >
-                <span
-                  className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${person.color}`}
-                >
-                  {person.name.slice(0, 1)}
+                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+                  <Avatar userId={person.id} name={person.name} className="h-9 w-9 text-sm" />
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-black ${
                       person.status === "online" ? "bg-emerald-500" : "bg-amber-400"
