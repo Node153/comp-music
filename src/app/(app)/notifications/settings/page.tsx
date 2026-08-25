@@ -1,10 +1,9 @@
 "use client";
 
-// 이메일 알림 설정(0029) — 모바일 앱이 없어서 실시간 푸시가 불가능해 이메일이 사실상
+// 이메일 알림 설정(0033) — 모바일 앱이 없어서 실시간 푸시가 불가능해 이메일이 사실상
 // 유일한 알림 채널이다. 다만 이메일은 스팸처럼 느껴지기 쉬워서 종류별로 켜고 끌 수
 // 있게 한다. 토글마다 바로 저장(별도 "저장" 버튼 없음) — 설정 화면에서 흔한 패턴.
-// 실제 발송(이메일 서비스 연동)은 별도 작업이라 여기 토글은 지금 저장만 되고, 발송은
-// 아직 연결 전이다 — 그래서 안내 문구를 하나 붙여둔다.
+// 실제 발송은 api/cron/send-notification-emails가 하루 1회 다이제스트로 처리한다.
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -115,7 +114,7 @@ export default function NotificationSettingsPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <p className="mt-6 text-xs text-gray-400">
-        메일 발송 기능은 아직 준비 중이에요 — 지금은 설정만 저장돼요.
+        하루에 한 번, 켜둔 알림을 모아서 보내드려요.
       </p>
     </main>
   );

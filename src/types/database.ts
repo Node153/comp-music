@@ -70,6 +70,9 @@ export interface Database {
           email_notify_companion_request: boolean;
           email_notify_message: boolean;
           email_notify_peak: boolean;
+          // 이메일 다이제스트 발송 커서(0035) — 크론이 "이 시각 이후로 새로 생긴 것"만 골라
+          // 보내고 나면 여기를 now()로 갱신한다.
+          last_notification_emailed_at: string;
           created_at: string;
           updated_at: string;
         };
@@ -91,6 +94,7 @@ export interface Database {
           email_notify_companion_request?: boolean;
           email_notify_message?: boolean;
           email_notify_peak?: boolean;
+          last_notification_emailed_at?: string;
           created_at?: string;
           updated_at?: string;
         };
