@@ -508,6 +508,7 @@ export default async function FeedPage({
       content: row.content,
       fileUrl,
       fileName: row.file_key ? (row.file_key.split("/").pop() ?? null) : null,
+      fileKey: row.file_key,
       isWork: row.is_work,
       createdAt: row.created_at,
     };

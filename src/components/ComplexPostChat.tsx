@@ -7,10 +7,13 @@
 // 음원 파일만 올릴 수 있었고(0015_work_uploads_audio_only) 올릴 때마다 원본(1차)을 이어받은
 // 재창작물(2차, 3차...)로 취급해 스택처럼 쌓아 보여준다. 일반 텍스트 채팅과는 구분됨(텍스트는
 // 항상 잡담일 뿐 재창작물이 될 수 없음).
-// 0012_complex_access_and_chat로 실제 DB(post_chat_messages) 연동됨 — Realtime 구독은 이번
-// 범위에서 보류(전송/새로고침 시에만 반영). 파일 업로드는 기존 R2 파이프라인(uploadFileToR2)을
-// 그대로 재사용.
-import { useRef, useState } from "react";
+// 0012_complex_access_and_chat로 실제 DB(post_chat_messages) 연동됨. Realtime은 처음엔 이번
+// 범위에서 보류하고 새로고침 버튼(🔄)에만 의존했었는데, 0036에서 DM(messages 테이블)과
+// 동일하게 켰다 — INSERT/DELETE 신호를 받으면 /api/complex/chat로 다시 받아온다(file_key
+// → signed URL 변환이 서버 전용이라 realtime payload만으로는 파일을 못 그림). 새로고침
+// 버튼은 실시간이 늦거나 놓쳤을 때 수동으로도 맞출 수 있게 그대로 남겨둠. 파일 업로드는
+// 기존 R2 파이프라인(uploadFileToR2)을 그대로 재사용.
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
 
@@ -22,6 +25,8 @@ export type ChatMessage = {
   content?: string | null;
   fileUrl?: string | null;
   fileName?: string | null;
+  // 삭제 시 R2 오브젝트도 같이 지우려면 signed URL이 아니라 원본 키가 필요하다.
+  fileKey?: string | null;
   isWork: boolean;
   createdAt: string;
 };
@@ -121,6 +126,7 @@ export function ComplexPostChat({
           type: "audio",
           fileUrl: localUrl,
           fileName: file.name,
+          fileKey,
           isWork: true,
           createdAt: data.created_at,
         },
@@ -150,6 +156,40 @@ export function ComplexPostChat({
     }
   }
 
+  // 실시간 반영(0036) — INSERT/DELETE 둘 다 신호로만 쓰고, 실제 최신 목록은 매번
+  // /api/complex/chat로 다시 받아온다. file_key → signed URL 변환이 서버 전용이라
+  // realtime payload(원본 row)만으로는 재창작물 파일을 바로 못 그리기 때문.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`post-chat:${postId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "post_chat_messages", filter: `post_id=eq.${postId}` },
+        () => {
+          void refreshMessages();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
+
+  async function deleteMessage(m: ChatMessage) {
+    if (!window.confirm("메시지를 삭제할까요?")) return;
+    setMessages((prev) => prev.filter((msg) => msg.id !== m.id));
+    await supabase.from("post_chat_messages").delete().eq("id", m.id);
+    if (m.fileKey) {
+      await fetch("/api/storage/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: m.fileKey }),
+      });
+    }
+  }
+
   function renderMessages() {
     return (
       <>
@@ -157,7 +197,19 @@ export function ComplexPostChat({
           const isMe = m.senderId === currentUserId;
           return (
             <div key={m.id} className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
-              <span className="text-[11px] text-gray-400">{m.senderName}</span>
+              <span className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                {m.senderName}
+                {isMe && (
+                  <button
+                    type="button"
+                    onClick={() => deleteMessage(m)}
+                    title="삭제"
+                    className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
+                  >
+                    ✕
+                  </button>
+                )}
+              </span>
               {m.type === "text" && (
                 <span
                   className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-sm ${

@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       content: row.content,
       fileUrl: row.file_key ? await getR2SignedUrl(row.file_key, SIGNED_URL_EXPIRY_SECONDS) : null,
       fileName: row.file_key ? (row.file_key.split("/").pop() ?? null) : null,
+      fileKey: row.file_key,
       isWork: row.is_work,
       createdAt: row.created_at,
     })),
