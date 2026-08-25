@@ -11,6 +11,7 @@ import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat"
 import { ComplexAccessGate } from "@/components/ComplexAccessGate";
 import { PostFocusToggle } from "@/components/PostFocusToggle";
 import { MemoGuideCards } from "@/components/MemoGuideCards";
+import { PostOptionsMenu } from "@/components/PostOptionsMenu";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import { GuestEngagementRow } from "./GuestEngagementRow";
@@ -659,6 +660,16 @@ export default async function FeedPage({
                 metaLine={headerMetaLine}
                 expiresAt={post.expires_at}
                 isComplex={isComplex}
+                optionsMenu={
+                  isOwnPost && !isComplex && !post.isMock ? (
+                    <PostOptionsMenu
+                      postId={post.id}
+                      mediaPath={post.image_url ?? post.audio_url ?? post.video_url ?? ""}
+                      initialCaption={post.caption}
+                      initialTags={post.instrument_tags ?? []}
+                    />
+                  ) : undefined
+                }
               >
               {post.caption && (
                 <p className="px-3 pb-2 text-sm text-gray-700 dark:text-gray-300">{post.caption}</p>

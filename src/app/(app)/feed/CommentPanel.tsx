@@ -1,6 +1,10 @@
 "use client";
 
-// INTERACT-02: 텍스트 댓글, 대댓글(1단계만) — 페이스북처럼 게시물 카드 안에서 인라인으로 펼침
+// INTERACT-02: 텍스트 댓글, 대댓글(1단계만) — 페이스북처럼 게시물 카드 안에서 인라인으로 펼침.
+// 수정/삭제(0037_comments_update_self)는 본인 댓글에만 가능 — 답글이 달린 최상위 댓글을
+// 지우려고 하면 parent_id 외래키 제약(on delete 지정 없음, 기본 NO ACTION)에 걸려 DB가
+// 거부한다. 남의 답글을 대신 지우는 건 소유권 침해라 앱에서 대신 지워주지 않고, 그 경우
+// 에러를 그대로 안내한다("답글이 있어서 삭제할 수 없어요").
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
@@ -31,6 +35,9 @@ export function CommentPanel({
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<{ id: string; authorName: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   async function togglePanel() {
     const next = !open;
@@ -61,7 +68,7 @@ export function CommentPanel({
     if (!text.trim() || submitting) return;
     setSubmitting(true);
 
-    const { data: inserted, error } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from("comments")
       .insert({
         post_id: postId,
@@ -73,12 +80,46 @@ export function CommentPanel({
       .single();
 
     setSubmitting(false);
-    if (error || !inserted) return;
+    if (insertError || !inserted) return;
 
     setComments((prev) => [...prev, { ...inserted, authorName: "나" }]);
     setCommentCount((c) => c + 1);
     setText("");
     setReplyTo(null);
+  }
+
+  function startEdit(c: CommentRow) {
+    setError(null);
+    setEditingId(c.id);
+    setEditText(c.content);
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editText.trim()) return;
+    const { error: updateError } = await supabase
+      .from("comments")
+      .update({ content: editText.trim() })
+      .eq("id", editingId);
+    if (updateError) {
+      setError("수정에 실패했어요.");
+      return;
+    }
+    setComments((prev) =>
+      prev.map((c) => (c.id === editingId ? { ...c, content: editText.trim() } : c)),
+    );
+    setEditingId(null);
+  }
+
+  async function deleteComment(c: CommentRow) {
+    if (!window.confirm("댓글을 삭제할까요?")) return;
+    setError(null);
+    const { error: deleteError } = await supabase.from("comments").delete().eq("id", c.id);
+    if (deleteError) {
+      setError("답글이 있어서 삭제할 수 없어요. 답글을 먼저 지워달라고 해주세요.");
+      return;
+    }
+    setComments((prev) => prev.filter((x) => x.id !== c.id));
+    setCommentCount((n) => Math.max(0, n - 1));
   }
 
   const topLevel = comments.filter((c) => !c.parent_id);
@@ -89,6 +130,58 @@ export function CommentPanel({
       list.push(c);
       repliesByParent.set(c.parent_id, list);
     }
+  }
+
+  function renderBubble(c: CommentRow) {
+    const isMine = c.user_id === userId;
+    if (editingId === c.id) {
+      return (
+        <div className="flex flex-col gap-1">
+          <input
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            autoFocus
+            className="rounded-full border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+          />
+          <div className="flex gap-2 px-1 text-xs font-medium text-gray-500">
+            <button onClick={saveEdit} className="hover:underline">
+              저장
+            </button>
+            <button onClick={() => setEditingId(null)} className="hover:underline">
+              취소
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <>
+        <div className="rounded-2xl bg-gray-100 px-3 py-2">
+          <p className="text-xs font-semibold text-gray-900">{c.authorName}</p>
+          <p className="text-sm text-gray-800">{c.content}</p>
+        </div>
+        <div className="flex gap-2 px-1 text-xs font-medium text-gray-500">
+          {c.parent_id === null && (
+            <button
+              onClick={() => setReplyTo({ id: c.id, authorName: c.authorName })}
+              className="hover:underline"
+            >
+              답글
+            </button>
+          )}
+          {isMine && (
+            <>
+              <button onClick={() => startEdit(c)} className="hover:underline">
+                수정
+              </button>
+              <button onClick={() => deleteComment(c)} className="hover:underline">
+                삭제
+              </button>
+            </>
+          )}
+        </div>
+      </>
+    );
   }
 
   return (
@@ -111,29 +204,19 @@ export function CommentPanel({
               <div key={c.id} className="flex gap-2">
                 <Avatar userId={c.user_id} name={c.authorName} className="h-8 w-8 text-xs" />
                 <div className="flex flex-col gap-1">
-                  <div className="rounded-2xl bg-gray-100 px-3 py-2">
-                    <p className="text-xs font-semibold text-gray-900">{c.authorName}</p>
-                    <p className="text-sm text-gray-800">{c.content}</p>
-                  </div>
-                  <button
-                    onClick={() => setReplyTo({ id: c.id, authorName: c.authorName })}
-                    className="w-fit px-3 text-xs font-medium text-gray-500 hover:underline"
-                  >
-                    답글
-                  </button>
+                  {renderBubble(c)}
                   {(repliesByParent.get(c.id) ?? []).map((r) => (
                     <div key={r.id} className="ml-4 flex gap-2">
                       <Avatar userId={r.user_id} name={r.authorName} className="h-7 w-7 text-xs" />
-                      <div className="rounded-2xl bg-gray-100 px-3 py-2">
-                        <p className="text-xs font-semibold text-gray-900">{r.authorName}</p>
-                        <p className="text-sm text-gray-800">{r.content}</p>
-                      </div>
+                      <div className="flex flex-col gap-1">{renderBubble(r)}</div>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
           </div>
+
+          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
 
           <div className="mt-3">
             {replyTo && (

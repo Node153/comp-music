@@ -16,6 +16,7 @@ export function PostFocusToggle({
   metaLine,
   expiresAt,
   isComplex,
+  optionsMenu,
   children,
 }: {
   authorId: string;
@@ -23,6 +24,8 @@ export function PostFocusToggle({
   metaLine: string;
   expiresAt: string | null;
   isComplex: boolean;
+  // 게시물 작성자 본인일 때만 부모(feed/page.tsx)가 <PostOptionsMenu>를 넘겨준다.
+  optionsMenu?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [focused, setFocused] = useState(false);
@@ -61,6 +64,7 @@ export function PostFocusToggle({
             {focused ? "✕" : "⛶"}
           </button>
         )}
+        {optionsMenu}
       </div>
       {children}
     </div>
