@@ -10,7 +10,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
-import { PlusIcon, ChatIcon, BellIcon, HelpIcon } from "@/components/icons";
+import { PlusIcon, ChatIcon, BellIcon, HelpIcon, SearchIcon } from "@/components/icons";
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
 // 특정인 초대) 두 피드 탭.
@@ -72,6 +72,18 @@ export function TopNav({
       </nav>
 
       <div className="flex flex-1 items-center justify-end gap-2">
+        <Link
+          href="/search"
+          title="검색"
+          aria-label="검색"
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+            pathname === "/search"
+              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
+          }`}
+        >
+          <SearchIcon />
+        </Link>
         <Link
           href="/upload"
           title="Drop"

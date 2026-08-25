@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 
 const TABS = (currentUserId: string) => [
   { href: "/feed", label: "피드", icon: "🏠" },
+  { href: "/search", label: "검색", icon: "🔍" },
   { href: "/messages", label: "메시지", icon: "✉️" },
   { href: "/upload", label: "업로드", icon: "➕" },
   { href: `/profile/${currentUserId}`, label: "프로필", icon: "👤" },
