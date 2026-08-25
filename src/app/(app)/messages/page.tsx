@@ -69,7 +69,17 @@ export default async function MessagesPage() {
 
   return (
     <main className={pageCard}>
-      <h1 className={pageTitle}>메시지</h1>
+      <div className="flex items-center justify-between">
+        <h1 className={pageTitle}>메시지</h1>
+        <Link
+          href="/search"
+          title="새 대화 시작"
+          aria-label="새 대화 시작"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+        >
+          ✏️
+        </Link>
+      </div>
       <ul className="mt-4 flex flex-col">
         {(conversations ?? []).map((c) => {
           const otherUserId = c.user_a_id === currentUser.id ? c.user_b_id : c.user_a_id;
@@ -112,7 +122,16 @@ export default async function MessagesPage() {
           );
         })}
         {(conversations ?? []).length === 0 && (
-          <p className="py-10 text-center text-sm text-gray-400">대화가 없습니다</p>
+          <li className="flex flex-col items-center gap-3 py-16 text-center">
+            <span className="text-3xl">✉️</span>
+            <p className="text-sm text-gray-400">아직 대화가 없어요</p>
+            <Link
+              href="/search"
+              className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+            >
+              사람 찾아 대화 시작하기
+            </Link>
+          </li>
         )}
       </ul>
     </main>

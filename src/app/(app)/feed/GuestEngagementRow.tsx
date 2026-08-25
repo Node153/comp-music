@@ -19,8 +19,8 @@ export function GuestEngagementRow({
       onClick={prompt}
       className="flex w-full items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-left text-base font-semibold text-gray-600 transition hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-900"
     >
-      <span>❤️ 좋아요 {likeCount}</span>
-      <span>💬 댓글 {commentCount}</span>
+      <span>❤️ {likeCount > 0 ? likeCount : ""}</span>
+      <span>💬 {commentCount > 0 ? commentCount : ""}</span>
     </button>
   );
 }

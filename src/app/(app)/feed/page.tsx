@@ -731,9 +731,11 @@ export default async function FeedPage({
 
                       {post.isMock ? (
                         <div
-                          className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br text-6xl ${post.gradient}`}
+                          className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br ${post.gradient}`}
                         >
-                          {post.emoji}
+                          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-black/15 text-4xl backdrop-blur-sm">
+                            {post.emoji}
+                          </span>
                           {post.demoVideoSrc && (
                             <MockPlayOverlay
                               postId={post.id}
@@ -819,8 +821,8 @@ export default async function FeedPage({
                       className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
                       title="샘플 게시물이라 실제로 누를 수는 없어요"
                     >
-                      <span>❤️ 좋아요 {likeCount}</span>
-                      <span>💬 댓글 {commentCount}</span>
+                      <span>❤️ {likeCount > 0 ? likeCount : ""}</span>
+                      <span>💬 {commentCount > 0 ? commentCount : ""}</span>
                     </div>
                   ) : (
                 currentUser && (

@@ -56,7 +56,7 @@ export function LikeButton({
       } ${className}`}
     >
       <span className="text-lg">{liked ? "❤️" : "🤍"}</span>
-      좋아요{likeCount > 0 ? ` ${likeCount}` : ""}
+      {likeCount > 0 ? likeCount : ""}
     </button>
   );
 }

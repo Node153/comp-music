@@ -42,7 +42,7 @@ export default async function ProfilePage({
 
   const { data: posts } = await supabase
     .from("posts")
-    .select("id, video_url, image_url, audio_url, media_type, content_type, status")
+    .select("id, video_url, image_url, audio_url, media_type, content_type, status, caption")
     .eq("user_id", userId)
     .in("status", ["published", "expired"])
     .order("created_at", { ascending: false });
@@ -155,7 +155,12 @@ export default async function ProfilePage({
             {post.videoSrc && post.media_type === "image" ? (
               <img src={post.videoSrc} alt="" className="h-full w-full object-cover" />
             ) : post.videoSrc && post.media_type === "audio" ? (
-              <div className="flex h-full w-full items-center justify-center bg-gray-800 text-2xl">🎵</div>
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gray-800 p-3 text-center">
+                <span className="text-2xl">🎵</span>
+                {post.caption && (
+                  <span className="line-clamp-3 text-xs text-gray-300">{post.caption}</span>
+                )}
+              </div>
             ) : post.videoSrc ? (
               <video src={post.videoSrc} className="h-full w-full object-cover" muted preload="metadata" />
             ) : null}

@@ -95,7 +95,7 @@ export function LeftSidebar() {
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "장르 사이드바 접기" : "장르 사이드바 펼치기"}
         title={open ? "접기" : "장르 필터 보기"}
-        className={`flex h-9 shrink-0 items-center gap-2 rounded-lg text-sm font-semibold text-gray-500 transition hover:bg-gray-200/60 dark:text-gray-400 dark:hover:bg-gray-900 ${
+        className={`flex h-9 shrink-0 items-center gap-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-500 shadow-sm transition hover:bg-gray-200/60 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 ${
           open ? "px-2.5" : "w-9 justify-center"
         }`}
       >

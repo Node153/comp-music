@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
+import { MobileTopBar } from "@/components/MobileTopBar";
 import { GuestTopNav } from "@/components/GuestTopNav";
 import { GuestSignupPromptProvider } from "@/components/GuestSignupPrompt";
 import { LeftSidebar } from "@/components/LeftSidebar";
@@ -86,6 +87,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               userName={userName}
               unseenNotifications={unseenNotifications}
             />
+            <MobileTopBar unseenNotifications={unseenNotifications} />
             <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
               <LeftSidebar />
               <div>{children}</div>

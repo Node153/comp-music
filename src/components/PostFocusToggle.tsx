@@ -45,15 +45,6 @@ export function PostFocusToggle({
           <span className="truncate text-xs text-gray-400 dark:text-gray-500">{metaLine}</span>
         </div>
         {expiresAt && <TimeLimitBadge expiresAt={expiresAt} />}
-        <span
-          className={`shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-            isComplex
-              ? "border-violet-500 bg-black text-violet-300"
-              : "border-yellow-400 bg-white text-yellow-600"
-          }`}
-        >
-          {isComplex ? "☾ memo" : "☀ DEMO"}
-        </span>
         {isComplex && (
           <button
             type="button"

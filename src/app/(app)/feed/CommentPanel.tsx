@@ -191,7 +191,7 @@ export function CommentPanel({
         className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 ${buttonClassName}`}
       >
         <span className="text-lg">💬</span>
-        댓글{commentCount > 0 ? ` ${commentCount}` : ""}
+        {commentCount > 0 ? commentCount : ""}
       </button>
 
       {open && (
