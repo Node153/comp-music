@@ -1,5 +1,7 @@
 // 게시물 반응(좋아요+댓글) 수준을 세로 오디오 레벨미터로 시각화("Comp" 컴프레서 브랜딩).
 // level이 1을 넘기면 신호가 클리핑된 것처럼 "PEAK" 칩을 띄운다 — PEAK 게시물 = 지금 핫한 게시물.
+import { FlameIcon } from "@/components/icons";
+
 const SEGMENTS = 10;
 
 function segmentColor(index: number, litCount: number): string {
@@ -19,7 +21,7 @@ export function VerticalVolumeMeter({ level }: { level: number }) {
     <div className="flex flex-col items-center gap-1.5">
       {isPeak && (
         <span className="flex animate-pulse items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wider text-white shadow-lg">
-          🔥 PEAK
+          <FlameIcon className="h-2.5 w-2.5" /> PEAK
         </span>
       )}
       <div className="flex h-28 w-3 flex-col-reverse gap-[3px] rounded-full bg-black/30 p-1 backdrop-blur">

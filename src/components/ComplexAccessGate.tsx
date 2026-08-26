@@ -22,6 +22,7 @@ import { PostVideo } from "@/components/PostVideo";
 import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
 import type { MediaType } from "@/types/database";
+import { LockIcon, UsersIcon } from "@/components/icons";
 
 type PendingRequest = { userId: string; name: string };
 
@@ -125,7 +126,7 @@ export function ComplexAccessGate({
     <>
       {canViewMedia && invitedNames.length > 0 && (
         <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-          <span>🔒 초대됨:</span>
+          <span className="inline-flex items-center gap-1"><LockIcon className="h-3.5 w-3.5" /> 초대됨:</span>
           <span className="truncate">{invitedNames.join(", ")}</span>
         </div>
       )}
@@ -139,7 +140,8 @@ export function ComplexAccessGate({
       )}
       {!canViewMedia && (
         <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-          <span>🔒 특정 인원에게만 공개된 게시물</span>
+          <LockIcon className="h-3.5 w-3.5" />
+          <span>특정 인원에게만 공개된 게시물</span>
         </div>
       )}
 
@@ -149,7 +151,7 @@ export function ComplexAccessGate({
             <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
           ) : (
             <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-[#1c1c1e] px-6 text-center">
-              <span className="text-4xl">🔒</span>
+              <LockIcon className="h-10 w-10 text-gray-400" />
               <p className="max-w-xs text-sm text-gray-300">
                 {authorName}님이 특정 인원에게만 공개한 게시물이에요.
                 {canKnock
@@ -185,8 +187,8 @@ export function ComplexAccessGate({
           </span>
         )}
         {collabAvailable && (
-          <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
-            🤝 공동창작{collabRoleNeeded ? `: ${collabRoleNeeded}` : ""}
+          <span className="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
+            <UsersIcon className="h-3.5 w-3.5" /> 공동창작{collabRoleNeeded ? `: ${collabRoleNeeded}` : ""}
           </span>
         )}
       </div>
@@ -243,8 +245,8 @@ export function ComplexAccessGate({
           mediaSlot={inlineMediaEl}
         />
       ) : (
-        <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
-          🔒 초대된 인원만 채팅과 작업물을 볼 수 있어요
+        <div className="flex items-center gap-1.5 border-t border-gray-100 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
+          <LockIcon className="h-3.5 w-3.5" /> 초대된 인원만 채팅과 작업물을 볼 수 있어요
         </div>
       )}
     </>

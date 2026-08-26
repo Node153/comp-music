@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
+import { HeartIcon } from "@/components/icons";
 
 export function LikeButton({
   postId,
@@ -55,7 +56,7 @@ export function LikeButton({
         liked ? "text-red-600" : "text-gray-600"
       } ${className}`}
     >
-      <span className="text-lg">{liked ? "❤️" : "🤍"}</span>
+      <HeartIcon className="h-5 w-5" filled={liked} />
       {likeCount > 0 ? likeCount : ""}
     </button>
   );

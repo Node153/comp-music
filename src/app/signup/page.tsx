@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { field, label, errorText, pageTitle } from "@/components/ui/styles";
 import { generateNicknameCandidate } from "@/lib/nicknameExamples";
+import { MailIcon, DiceIcon } from "@/components/icons";
 import {
   isValidPassword,
   PASSWORD_MIN_LENGTH,
@@ -95,7 +96,7 @@ export default function SignupPage() {
         signUpError.message.includes("already registered")
           ? "이미 가입된 이메일입니다."
           : signUpError.message.includes("duplicate")
-            ? "이미 사용 중인 닉네임이에요. 🎲로 다시 뽑거나 다른 닉네임을 입력해주세요."
+            ? "이미 사용 중인 닉네임이에요. 다시 뽑거나 다른 닉네임을 입력해주세요."
             : signUpError.message,
       );
       return;
@@ -113,8 +114,8 @@ export default function SignupPage() {
   if (pendingConfirm) {
     return (
       <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-3 p-6 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-2xl">
-          ✉️
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+          <MailIcon className="h-6 w-6 text-gray-500" />
         </div>
         <h1 className={pageTitle}>이메일을 확인해주세요</h1>
         <p className="text-sm leading-relaxed text-gray-500">
@@ -171,15 +172,15 @@ export default function SignupPage() {
               type="button"
               onClick={() => setNickname(generateNicknameCandidate())}
               title="다른 닉네임 뽑기"
-              className="shrink-0 rounded-xl border border-gray-300 px-3.5 text-sm text-gray-600 transition hover:bg-gray-50"
+              className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50"
             >
-              🎲
+              <DiceIcon className="h-4 w-4" />
             </button>
           </div>
           <p className="px-1 text-xs text-gray-400">
             Companion이 아닌 사람에게는 실명 대신 닉네임이 보여요. 다른 사람이 이 닉네임으로
             나를 검색해서 찾을 수 있으니, 활동명이 있다면 그걸로 적는 걸 추천해요. 마음에 안
-            들면 🎲로 다시 뽑거나 직접 수정할 수 있어요.
+            들면 다시 뽑거나 직접 수정할 수 있어요.
           </p>
         </div>
         <input

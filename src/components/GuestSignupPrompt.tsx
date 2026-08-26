@@ -6,6 +6,7 @@
 // 닫아도 계속 둘러볼 수 있다 — 파일럿 초기엔 강제로 막기보다 자연스럽게 설득하는 쪽이 낫다.
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { XIcon } from "@/components/icons";
 
 const AUTO_SHOW_DELAY_MS = 35_000;
 
@@ -50,7 +51,7 @@ export function GuestSignupPromptProvider({ children }: { children: React.ReactN
                 aria-label="닫기"
                 className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                ✕
+                <XIcon className="h-4 w-4" />
               </button>
             </div>
             <div className="-mt-4 flex flex-col items-center gap-3 text-center">

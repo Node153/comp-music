@@ -12,6 +12,7 @@
 // 1~5티어로 묶어서 색으로 구분. 실제 인기도 집계 로직은 Phase 1 예정.
 import { useEffect, useMemo, useState } from "react";
 import { ALL_GENRES } from "@/lib/genres";
+import { HeadphonesIcon, XIcon } from "@/components/icons";
 
 const STORAGE_KEY = "music-network:interested-genres";
 
@@ -99,7 +100,7 @@ export function LeftSidebar() {
           open ? "px-2.5" : "w-9 justify-center"
         }`}
       >
-        <span className="text-lg">🎧</span>
+        <HeadphonesIcon className="h-4 w-4" />
         {open && "장르 필터"}
       </button>
 
@@ -114,9 +115,9 @@ export function LeftSidebar() {
                     key={genre}
                     onClick={() => toggleGenre(genre)}
                     title="클릭하면 관심 장르에서 제거돼요"
-                    className="rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
+                    className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/60"
                   >
-                    #{genre} ✕
+                    #{genre} <XIcon className="h-3 w-3" />
                   </button>
                 ))}
               </div>

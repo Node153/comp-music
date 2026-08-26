@@ -4,6 +4,7 @@
 // (app) 레이아웃에 마운트돼 페이지 이동에도 언마운트되지 않아 음악이 끊기지 않는다.
 import { useEffect, useMemo, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
+import { PlayIcon, PauseIcon, XIcon } from "@/components/icons";
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds)) return "0:00";
@@ -104,9 +105,9 @@ export function GlobalPlayerBar() {
           <div className="flex items-center gap-3 px-4 py-2">
             <button
               onClick={toggle}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-base text-black"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-black"
             >
-              {isPlaying ? "⏸" : "▶"}
+              {isPlaying ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
             </button>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-semibold">{track.title}</span>
@@ -120,7 +121,7 @@ export function GlobalPlayerBar() {
               aria-label="플레이어 닫기"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-800"
             >
-              ✕
+              <XIcon className="h-4 w-4" />
             </button>
           </div>
         </div>

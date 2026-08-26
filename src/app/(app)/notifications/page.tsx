@@ -5,6 +5,7 @@ import { timeAgo } from "@/lib/timeAgo";
 import { Avatar } from "@/components/Avatar";
 import { pageTitle, pageCard } from "@/components/ui/styles";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
+import { FlameIcon } from "@/components/icons";
 
 // 알림 목록 — 좋아요·댓글(1단계) + Companion 신청·PEAK(2단계) + 노크(3단계). 공동창작 신청은 다음 단계.
 // 별도 notifications 테이블 없이 기존 테이블(likes/comments/companions/post_access)과 PEAK 판정
@@ -237,7 +238,7 @@ export default async function NotificationsPage({
             const avatar =
               item.type === "peak" ? (
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-500 text-base dark:bg-gray-600">
-                  🔥
+                  <FlameIcon className="h-4 w-4 text-white" />
                 </span>
               ) : (
                 <Avatar userId={item.actorId} name={item.actorName} className="h-9 w-9 text-sm" />

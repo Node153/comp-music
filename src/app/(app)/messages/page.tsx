@@ -5,6 +5,7 @@ import { pageTitle, pageCard } from "@/components/ui/styles";
 import { presenceStatus } from "@/lib/presence";
 import { Avatar } from "@/components/Avatar";
 import { timeAgo } from "@/lib/timeAgo";
+import { EditIcon, MailIcon } from "@/components/icons";
 
 // S12 DM 목록 (DM-02)
 // "다정한 말풍선" 톤(인스타그램/메신저 참고)으로 개편 — RightSidebar와 같은 색상 아바타 +
@@ -75,9 +76,9 @@ export default async function MessagesPage() {
           href="/search"
           title="새 대화 시작"
           aria-label="새 대화 시작"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
         >
-          ✏️
+          <EditIcon className="h-5 w-5" />
         </Link>
       </div>
       <ul className="mt-4 flex flex-col">
@@ -123,7 +124,7 @@ export default async function MessagesPage() {
         })}
         {(conversations ?? []).length === 0 && (
           <li className="flex flex-col items-center gap-3 py-16 text-center">
-            <span className="text-3xl">✉️</span>
+            <MailIcon className="h-8 w-8 text-gray-300" />
             <p className="text-sm text-gray-400">아직 대화가 없어요</p>
             <Link
               href="/search"

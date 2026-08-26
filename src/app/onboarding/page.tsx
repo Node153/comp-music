@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label, errorText, pageTitle, mutedText } from "@/components/ui/styles";
 import { generateNicknameCandidate } from "@/lib/nicknameExamples";
+import { DiceIcon } from "@/components/icons";
 
 // signup/page.tsx의 handle_new_user 트리거(0023/0029)가 이메일 가입자에게 남기는 것과 동일한
 // 버전 문자열 — 동의 이력을 한 기준으로 통일하기 위해 하드코딩 값도 그대로 맞춘다.
@@ -101,7 +102,7 @@ export default function OnboardingPage() {
       setLoading(false);
       setError(
         updateError.message.includes("duplicate")
-          ? "이미 사용 중인 닉네임이에요. 🎲로 다시 뽑거나 다른 닉네임을 입력해주세요."
+          ? "이미 사용 중인 닉네임이에요. 다시 뽑거나 다른 닉네임을 입력해주세요."
           : updateError.message,
       );
       return;
@@ -167,9 +168,9 @@ export default function OnboardingPage() {
               type="button"
               onClick={() => setNickname(generateNicknameCandidate())}
               title="다른 닉네임 뽑기"
-              className="shrink-0 rounded-xl border border-gray-300 px-3.5 text-sm text-gray-600 transition hover:bg-gray-50"
+              className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50"
             >
-              🎲
+              <DiceIcon className="h-4 w-4" />
             </button>
           </div>
           <p className="px-1 text-xs text-gray-400">

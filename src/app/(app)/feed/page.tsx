@@ -18,6 +18,7 @@ import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
+import { HeartIcon, CommentIcon, UsersIcon, MailIcon } from "@/components/icons";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -798,8 +799,8 @@ export default async function FeedPage({
                         </Link>
                       ))}
                     {post.collab_available && (
-                      <span className="rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
-                        🤝 공동창작{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
+                        <UsersIcon className="h-3.5 w-3.5" /> 공동창작{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
                       </span>
                     )}
                   </div>
@@ -821,8 +822,8 @@ export default async function FeedPage({
                       className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
                       title="샘플 게시물이라 실제로 누를 수는 없어요"
                     >
-                      <span>❤️ {likeCount > 0 ? likeCount : ""}</span>
-                      <span>💬 {commentCount > 0 ? commentCount : ""}</span>
+                      <span className="inline-flex items-center gap-1"><HeartIcon className="h-5 w-5" /> {likeCount > 0 ? likeCount : ""}</span>
+                      <span className="inline-flex items-center gap-1"><CommentIcon className="h-5 w-5" /> {commentCount > 0 ? commentCount : ""}</span>
                     </div>
                   ) : (
                 currentUser && (
@@ -841,7 +842,7 @@ export default async function FeedPage({
                         sourcePostId={post.id}
                         className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 ${buttonBasis}`}
                       >
-                        <span className="text-lg">✉️</span>
+                        <MailIcon className="h-5 w-5" />
                         메시지
                       </MessageButton>
                     )}

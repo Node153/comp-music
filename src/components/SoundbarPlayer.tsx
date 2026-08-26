@@ -8,6 +8,7 @@
 // 둘을 동시에 보여주지 않는다(커버를 넣은 이유가 파형 대신 앨범아트를 보여주려는 것이므로).
 import { useEffect, useRef, useState } from "react";
 import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
+import { PlayIcon, PauseIcon } from "@/components/icons";
 
 export function SoundbarPlayer({
   src,
@@ -84,8 +85,8 @@ export function SoundbarPlayer({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={posterSrc} alt={title} className="max-h-[420px] w-auto object-contain" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition group-hover:bg-black/45">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-2xl text-black">
-            {isPlaying ? "⏸" : "▶"}
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black">
+            {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}
           </span>
         </div>
         <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
@@ -103,9 +104,9 @@ export function SoundbarPlayer({
         <button
           type="button"
           onClick={togglePlay}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500 text-sm text-white transition hover:bg-violet-400"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500 text-white transition hover:bg-violet-400"
         >
-          {isPlaying ? "⏸" : "▶"}
+          {isPlaying ? <PauseIcon className="h-3.5 w-3.5" /> : <PlayIcon className="h-3.5 w-3.5" />}
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-white">{title}</p>

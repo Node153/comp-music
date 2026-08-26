@@ -6,11 +6,13 @@
 import { useState } from "react";
 import { GENRE_TAGS } from "@/lib/genres";
 import { label as labelClass } from "@/components/ui/styles";
+import { XIcon } from "@/components/icons";
 
 const REQUIRED_COUNT = 3;
 
 function chipClass(active: boolean, disabled: boolean) {
-  if (active) return "rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white transition";
+  if (active)
+    return "inline-flex items-center gap-1 rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white transition";
   if (disabled) return "rounded-full bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-300";
   return "rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-200";
 }
@@ -44,7 +46,7 @@ export function GenreTagPicker({
         <div className="flex flex-wrap gap-1.5">
           {value.map((tag) => (
             <button key={tag} type="button" onClick={() => toggle(tag)} className={chipClass(true, false)}>
-              #{tag} ✕
+              #{tag} <XIcon className="h-3 w-3" />
             </button>
           ))}
         </div>

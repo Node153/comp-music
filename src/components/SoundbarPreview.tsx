@@ -8,6 +8,7 @@
 // 이미지는 별도로 첨부해서 미리보기(aside)에 보여준다(업로드 폼 참고).
 import { useEffect, useRef, useState } from "react";
 import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
+import { PlayIcon, PauseIcon } from "@/components/icons";
 
 // 부모가 파일이 바뀔 때마다 다른 key를 넘겨줘야 함 — 그래야 리마운트되면서 bars 상태가
 // 새 파일 기준으로 깨끗하게 초기화됨(effect 안에서 직접 setState로 리셋하지 않음).
@@ -68,9 +69,9 @@ export function SoundbarPreview({ file, src }: { file: File; src: string }) {
         <button
           type="button"
           onClick={togglePlay}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500 text-sm text-white transition hover:bg-violet-400"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500 text-white transition hover:bg-violet-400"
         >
-          {isPlaying ? "⏸" : "▶"}
+          {isPlaying ? <PauseIcon className="h-3.5 w-3.5" /> : <PlayIcon className="h-3.5 w-3.5" />}
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-white">{file.name}</p>

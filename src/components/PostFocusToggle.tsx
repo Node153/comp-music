@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { Avatar } from "@/components/Avatar";
+import { XIcon, ExpandIcon } from "@/components/icons";
 
 export function PostFocusToggle({
   authorId,
@@ -50,9 +51,9 @@ export function PostFocusToggle({
             type="button"
             onClick={() => setFocused((v) => !v)}
             title={focused ? "집중 모드 닫기" : "집중 모드로 크게 보기"}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
-            {focused ? "✕" : "⛶"}
+            {focused ? <XIcon className="h-4 w-4" /> : <ExpandIcon className="h-4 w-4" />}
           </button>
         )}
         {optionsMenu}

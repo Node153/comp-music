@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
+import { LockIcon } from "@/components/icons";
 import { field, label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
 import type { ExpireHours } from "@/types/database";
@@ -864,7 +865,11 @@ export default function UploadPage() {
                         "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition",
                       )}
                     >
-                      <span className="text-base">{option.icon}</span>
+                      {option.value === "specific" ? (
+                        <LockIcon className="h-4 w-4" />
+                      ) : (
+                        <span className="text-base">{option.icon}</span>
+                      )}
                       {option.label}
                     </button>
                   ))}

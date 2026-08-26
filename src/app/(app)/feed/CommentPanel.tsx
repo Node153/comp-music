@@ -9,6 +9,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
 import { Avatar } from "@/components/Avatar";
+import { CommentIcon } from "@/components/icons";
 
 type CommentRow = {
   id: string;
@@ -190,7 +191,7 @@ export function CommentPanel({
         onClick={togglePanel}
         className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 ${buttonClassName}`}
       >
-        <span className="text-lg">💬</span>
+        <CommentIcon className="h-5 w-5" />
         {commentCount > 0 ? commentCount : ""}
       </button>
 

@@ -4,6 +4,7 @@
 // 재생 버튼을 얹어서 하단 GlobalPlayerBar로 넘겨준다. Demo 게시물만 재생 가능하게
 // 하기 위해 이 오버레이는 demoVideoSrc가 있는 게시물에만 렌더링된다(feed/page.tsx에서 제어).
 import { useNowPlaying } from "@/components/NowPlayingContext";
+import { PlayIcon, PauseIcon } from "@/components/icons";
 
 export function MockPlayOverlay({
   postId,
@@ -25,8 +26,8 @@ export function MockPlayOverlay({
       aria-label={isThisPlaying ? "일시정지" : "재생"}
       className="absolute inset-0 flex items-center justify-center bg-black/0 transition hover:bg-black/20"
     >
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-3xl text-black shadow-lg">
-        {isThisPlaying ? "⏸" : "▶"}
+      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-black shadow-lg">
+        {isThisPlaying ? <PauseIcon className="h-7 w-7" /> : <PlayIcon className="h-7 w-7" />}
       </span>
     </button>
   );

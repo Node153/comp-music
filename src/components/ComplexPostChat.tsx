@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
+import { XIcon } from "@/components/icons";
 
 export type ChatMessage = {
   id: string;
@@ -206,7 +207,7 @@ export function ComplexPostChat({
                     title="삭제"
                     className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
                   >
-                    ✕
+                    <XIcon className="h-3 w-3" />
                   </button>
                 )}
               </span>

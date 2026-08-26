@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ALL_GENRES } from "@/lib/genres";
 import { field, errorText } from "@/components/ui/styles";
+import { DotsIcon } from "@/components/icons";
 
 const MIN_TAGS = 3;
 
@@ -89,7 +90,7 @@ export function PostOptionsMenu({
           aria-label="게시물 메뉴"
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
         >
-          ⋯
+          <DotsIcon className="h-4 w-4 rotate-90" />
         </button>
         {menuOpen && (
           <>

@@ -16,6 +16,7 @@ import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedCon
 import { presenceStatus, type PresenceStatus } from "@/lib/presence";
 import { Avatar } from "@/components/Avatar";
 import { MessageButton } from "@/components/MessageButton";
+import { LockIcon, FlameIcon, DotsIcon } from "@/components/icons";
 
 // 온라인/자리비움/오프라인 판정은 lib/presence(메시지 화면과 공유)를 그대로 쓴다. 오프라인인
 // Companion은 이 목록에 아예 안 보인다(헤더가 "온라인 — N명"이라 오프라인까지 섞으면 숫자가
@@ -312,7 +313,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                       openMenuId === person.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                     }`}
                   >
-                    ⋮
+                    <DotsIcon className="h-4 w-4" />
                   </button>
                   {openMenuId === person.id && (
                     <>
@@ -356,12 +357,12 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
 
       <section>
         {isMemoTab ? (
-          <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-            🔒 노크 가능한 게시물
+          <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            <LockIcon className="h-3 w-3" /> 노크 가능한 게시물
           </h2>
         ) : (
           <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-red-500 dark:text-red-400">
-            🔥 금주의 Peak 게시물
+            <FlameIcon className="h-3.5 w-3.5" /> 금주의 Peak 게시물
             <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-red-500" />
           </h2>
         )}
@@ -382,7 +383,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                   className="animate-peak-in flex items-center gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 transition hover:bg-violet-100 dark:border-violet-900/40 dark:bg-violet-950/30 dark:hover:bg-violet-950/50"
                 >
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs dark:bg-black/30">
-                    🔒
+                    <LockIcon className="h-3.5 w-3.5" />
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex items-center gap-1.5">
@@ -417,11 +418,11 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                   className="animate-peak-in flex flex-col gap-1 rounded-lg border-2 border-red-300 bg-red-50 p-2.5 transition hover:bg-red-100 dark:border-red-800/70 dark:bg-red-950/40 dark:hover:bg-red-950/60"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                      🔥 1위
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                      <FlameIcon className="h-2.5 w-2.5" /> 1위
                     </span>
-                    <span className="shrink-0 text-base font-bold text-red-600 dark:text-red-400">
-                      🔥 {post.weeklyLikeCount}
+                    <span className="inline-flex shrink-0 items-center gap-1 text-base font-bold text-red-600 dark:text-red-400">
+                      <FlameIcon className="h-4 w-4" /> {post.weeklyLikeCount}
                     </span>
                   </div>
                   <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
@@ -445,7 +446,9 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate text-sm text-gray-700 dark:text-gray-200">{post.authorName}</span>
-                      <span className="shrink-0 text-[10px] font-bold text-red-500">🔥 {post.weeklyLikeCount}</span>
+                      <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-red-500">
+                        <FlameIcon className="h-2.5 w-2.5" /> {post.weeklyLikeCount}
+                      </span>
                     </div>
                     <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">
                       {post.caption || "게시물"} · {timeAgo(post.publishedAt)}

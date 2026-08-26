@@ -5,12 +5,13 @@
 import { useState } from "react";
 import { ROLE_TAGS } from "@/lib/genres";
 import { label as labelClass } from "@/components/ui/styles";
+import { XIcon } from "@/components/icons";
 
 function chipClass(active: boolean) {
   const colors = active
     ? "bg-black text-white"
     : "bg-gray-100 text-gray-600 hover:bg-gray-200";
-  return `rounded-full px-3 py-1.5 text-sm font-medium transition ${colors}`;
+  return `inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${colors}`;
 }
 
 export function PositionTagPicker({
@@ -34,7 +35,7 @@ export function PositionTagPicker({
         <div className="flex flex-wrap gap-1.5">
           {value.map((tag) => (
             <button key={tag} type="button" onClick={() => toggle(tag)} className={chipClass(true)}>
-              #{tag} ✕
+              #{tag} <XIcon className="h-3 w-3" />
             </button>
           ))}
         </div>

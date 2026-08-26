@@ -7,6 +7,7 @@
 // 고른 GIF는 우리 R2에 다시 올리지 않고 GIPHY 자체 CDN URL을 그대로 저장한다(posts.thumbnail_url,
 // resolveMediaUrl이 R2 key와 외부 URL을 구분해서 읽음).
 import { useEffect, useState } from "react";
+import { XIcon } from "@/components/icons";
 
 const GIPHY_API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
 
@@ -100,7 +101,7 @@ export function GiphyPicker({
             aria-label="닫기"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            ✕
+            <XIcon className="h-4 w-4" />
           </button>
         </div>
         <p className="-mt-1 text-xs text-gray-400 dark:text-gray-500">
