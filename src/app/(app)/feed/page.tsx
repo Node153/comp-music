@@ -61,7 +61,6 @@ type MockSample = {
   publishedHoursAgo: number;
   expireHours: number | null;
   gradient: string;
-  emoji: string;
   demoVideoSrc?: string;
 };
 
@@ -81,8 +80,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     commentRatio: 0.28,
     publishedHoursAgo: 20,
     expireHours: null,
-    gradient: "from-slate-700 to-slate-900",
-    emoji: "🎹",
+    gradient: "from-gray-700 to-gray-900",
   },
   {
     postId: "mock-completion-2",
@@ -99,8 +97,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     commentRatio: 0.24,
     publishedHoursAgo: 30,
     expireHours: null,
-    gradient: "from-indigo-600 to-purple-700",
-    emoji: "🎸",
+    gradient: "from-gray-700 to-gray-900",
   },
   {
     postId: "mock-completion-3",
@@ -117,8 +114,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     commentRatio: 0.35,
     publishedHoursAgo: 5,
     expireHours: null,
-    gradient: "from-rose-600 to-orange-500",
-    emoji: "🎤",
+    gradient: "from-gray-700 to-gray-900",
     // Demo 게시물만 우선 재생 가능하게 테스트하기 위한 데모 오디오(하단 GlobalPlayerBar 확인용).
     demoVideoSrc: "/demo-completion-track.wav",
   },
@@ -138,8 +134,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     commentRatio: 0.2,
     publishedHoursAgo: 2,
     expireHours: null,
-    gradient: "from-sky-600 to-cyan-700",
-    emoji: "🎙️",
+    gradient: "from-gray-700 to-gray-900",
   },
   {
     postId: "mock-completion-5",
@@ -156,8 +151,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     commentRatio: 0.2,
     publishedHoursAgo: 9,
     expireHours: null,
-    gradient: "from-amber-700 to-yellow-600",
-    emoji: "🥁",
+    gradient: "from-gray-700 to-gray-900",
   },
   {
     postId: "mock-completion-6",
@@ -174,8 +168,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     commentRatio: 0.25,
     publishedHoursAgo: 14,
     expireHours: null,
-    gradient: "from-emerald-700 to-teal-800",
-    emoji: "🎹",
+    gradient: "from-gray-700 to-gray-900",
   },
   {
     postId: "mock-completion-7",
@@ -192,8 +185,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     commentRatio: 0.24,
     publishedHoursAgo: 26,
     expireHours: null,
-    gradient: "from-orange-700 to-red-700",
-    emoji: "🎬",
+    gradient: "from-gray-700 to-gray-900",
   },
   {
     postId: "mock-completion-8",
@@ -210,8 +202,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     commentRatio: 0.25,
     publishedHoursAgo: 40,
     expireHours: null,
-    gradient: "from-fuchsia-700 to-pink-800",
-    emoji: "🎸",
+    gradient: "from-gray-700 to-gray-900",
   },
 ];
 
@@ -260,7 +251,6 @@ function buildDemoMockPosts(
       canViewMedia: true,
       isMock: true as const,
       gradient: m.gradient,
-      emoji: m.emoji,
       demoVideoSrc: m.demoVideoSrc ?? null,
     };
   });
@@ -533,7 +523,6 @@ export default async function FeedPage({
         canViewMedia: canView,
         isMock: false as const,
         gradient: "",
-        emoji: "",
         demoVideoSrc: null,
       };
     }),
@@ -734,9 +723,6 @@ export default async function FeedPage({
                         <div
                           className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br ${post.gradient}`}
                         >
-                          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-black/15 text-4xl backdrop-blur-sm">
-                            {post.emoji}
-                          </span>
                           {post.demoVideoSrc && (
                             <MockPlayOverlay
                               postId={post.id}
