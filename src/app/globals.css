@@ -22,10 +22,13 @@
 }
 
 /* 기본은 라이트 테마 고정(시스템 다크모드 설정과 무관) — Complex 탭에서만 .dark 클래스로 명시적 전환 */
+/* 폰트는 Geist(layout.tsx에서 next/font로 로드, --font-geist-sans) — 예전엔 여기서
+   Arial로 덮어써서 실제로는 한 번도 적용된 적이 없었다(한글은 어차피 Arial에 글자가
+   없어서 OS 기본 한글 폰트로 자동 대체되므로 이 변경으로 한글 표기는 그대로다). */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
