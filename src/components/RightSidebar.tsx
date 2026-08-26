@@ -15,6 +15,7 @@ import { timeAgo } from "@/lib/timeAgo";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { presenceStatus, type PresenceStatus } from "@/lib/presence";
 import { Avatar } from "@/components/Avatar";
+import { MessageButton } from "@/components/MessageButton";
 
 // 온라인/자리비움/오프라인 판정은 lib/presence(메시지 화면과 공유)를 그대로 쓴다. 오프라인인
 // Companion은 이 목록에 아예 안 보인다(헤더가 "온라인 — N명"이라 오프라인까지 섞으면 숫자가
@@ -63,6 +64,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
   const [onlineCompanions, setOnlineCompanions] = useState<OnlineCompanion[] | null>(null);
 
   const [showAllOnline, setShowAllOnline] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const visibleCompanions =
     onlineCompanions === null
@@ -301,12 +303,43 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                     {person.status === "online" ? "온라인" : "자리 비움"}
                   </span>
                 </div>
-                <button
-                  aria-label="더 보기"
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  ⋮
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setOpenMenuId((v) => (v === person.id ? null : person.id))}
+                    aria-label="더 보기"
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${
+                      openMenuId === person.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    ⋮
+                  </button>
+                  {openMenuId === person.id && (
+                    <>
+                      <button
+                        aria-label="메뉴 닫기"
+                        onClick={() => setOpenMenuId(null)}
+                        className="fixed inset-0 z-40 cursor-default"
+                      />
+                      <div className="absolute right-0 z-50 mt-1 w-36 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-800 dark:bg-gray-950">
+                        <Link
+                          href={`/profile/${person.id}`}
+                          onClick={() => setOpenMenuId(null)}
+                          className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-900"
+                        >
+                          프로필 보기
+                        </Link>
+                        <MessageButton
+                          currentUserId={currentUserId}
+                          otherUserId={person.id}
+                          className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-900"
+                        >
+                          메시지 보내기
+                        </MessageButton>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             ))
           )}
