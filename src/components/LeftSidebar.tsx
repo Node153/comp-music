@@ -16,31 +16,34 @@ import { HeadphonesIcon, XIcon } from "@/components/icons";
 
 const STORAGE_KEY = "music-network:interested-genres";
 
+// 5티어 전부 다른 색(amber/violet/sky/emerald/slate)이었던 걸 memo 시그니처 컬러(violet)
+// 하나의 진하기 그라데이션으로 통일 — 1티어가 가장 진하고 5티어로 갈수록 옅어지다 거의
+// 무채색에 가까워져서, "색이 다양하다"가 아니라 "순위가 진하기로 표현된다"는 느낌이 되게 했다.
 const TIERS = [
   {
     label: "1티어",
-    dot: "bg-amber-500",
-    chip: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-400",
+    dot: "bg-violet-700",
+    chip: "border-violet-300 bg-violet-100 text-violet-800 dark:border-violet-600 dark:bg-violet-900/60 dark:text-violet-100",
   },
   {
     label: "2티어",
-    dot: "bg-violet-500",
-    chip: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-400",
+    dot: "bg-violet-600",
+    chip: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-200",
   },
   {
     label: "3티어",
-    dot: "bg-sky-500",
-    chip: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-400",
+    dot: "bg-violet-500",
+    chip: "border-violet-200 bg-violet-50 text-violet-600 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
   },
   {
     label: "4티어",
-    dot: "bg-emerald-500",
-    chip: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-400",
+    dot: "bg-violet-400",
+    chip: "border-violet-100 bg-white text-violet-500 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-400",
   },
   {
     label: "5티어",
-    dot: "bg-slate-400",
-    chip: "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400",
+    dot: "bg-violet-300",
+    chip: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-400",
   },
 ] as const;
 
