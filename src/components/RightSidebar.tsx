@@ -361,9 +361,8 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
             <LockIcon className="h-3 w-3" /> 노크 가능한 게시물
           </h2>
         ) : (
-          <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-red-500 dark:text-red-400">
-            <FlameIcon className="h-3.5 w-3.5" /> 금주의 Peak 게시물
-            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-red-500" />
+          <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <FlameIcon className="h-3.5 w-3.5 text-red-500 dark:text-red-400" /> 금주의 Peak 게시물
           </h2>
         )}
         <div className="mt-1 flex flex-col gap-1">
