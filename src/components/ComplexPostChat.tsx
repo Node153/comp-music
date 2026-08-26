@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
-import { XIcon } from "@/components/icons";
+import { XIcon, UploadIcon } from "@/components/icons";
 
 export type ChatMessage = {
   id: string;
@@ -351,16 +351,16 @@ export function ComplexPostChat({
           disabled={!canUploadWork || sending}
           title={canUploadWork ? "음원 작업물 올리기" : "공동창작 게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
           onClick={() => audioInputRef.current?.click()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:bg-gray-800"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:text-gray-300 dark:hover:bg-gray-800"
         >
-          🎵
+          <UploadIcon className="h-4 w-4" />
         </button>
         <input
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="메시지 보내기..."
-          className="w-full flex-1 rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 dark:bg-gray-900 dark:text-gray-200"
+          className="w-full flex-1 rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-300 dark:bg-gray-900 dark:text-gray-200 dark:focus:ring-violet-700"
         />
         <button
           type="submit"

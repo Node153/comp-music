@@ -4,6 +4,7 @@
 // 서버 렌더 시점과 클라이언트 hydration 시점의 Date.now()가 달라 값이 어긋날 수 있으므로,
 // 초기값은 항상 placeholder로 고정하고 마운트 이후에만 실제 카운트다운을 시작한다.
 import { useEffect, useState } from "react";
+import { ClockIcon } from "@/components/icons";
 
 function formatRemaining(ms: number): string {
   if (ms <= 0) return "마감";
@@ -33,11 +34,11 @@ export function TimeLimitBadge({ expiresAt }: { expiresAt: string }) {
   return (
     <span
       className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold text-white shadow-lg ${
-        isExpired ? "bg-gray-500" : isUrgent ? "animate-pulse bg-red-600" : "bg-orange-500"
+        isExpired ? "bg-gray-500" : isUrgent ? "animate-pulse bg-red-600" : "bg-violet-500"
       }`}
       title="노출 시간이 지나면 메인 피드에서 사라져요 (프로필에는 계속 남아요)"
     >
-      ⏰ {remainingMs === null ? "--:--:--" : formatRemaining(remainingMs)}
+      <ClockIcon className="h-3 w-3" /> {remainingMs === null ? "--:--:--" : formatRemaining(remainingMs)}
     </span>
   );
 }

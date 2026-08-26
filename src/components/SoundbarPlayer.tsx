@@ -127,7 +127,7 @@ export function SoundbarPlayer({
             <div
               key={i}
               className={`w-full rounded-full transition-colors ${
-                i < playedBarCount ? "bg-cyan-300" : "bg-cyan-800"
+                i < playedBarCount ? "bg-gray-300" : "bg-gray-700"
               }`}
               style={{ height: `${Math.max(4, v * 100)}%` }}
             />

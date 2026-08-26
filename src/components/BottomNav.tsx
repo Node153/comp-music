@@ -4,13 +4,14 @@
 // 미승인/가입/관리자 화면에서는 노출하지 않는다 ((app) 라우트 그룹의 layout에서만 렌더링).
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { HomeIcon, SearchIcon, MailIcon, PlusIcon, UserIcon } from "@/components/icons";
 
 const TABS = (currentUserId: string) => [
-  { href: "/feed", label: "피드", icon: "🏠" },
-  { href: "/search", label: "검색", icon: "🔍" },
-  { href: "/messages", label: "메시지", icon: "✉️" },
-  { href: "/upload", label: "업로드", icon: "➕" },
-  { href: `/profile/${currentUserId}`, label: "프로필", icon: "👤" },
+  { href: "/feed", label: "피드", Icon: HomeIcon },
+  { href: "/search", label: "검색", Icon: SearchIcon },
+  { href: "/messages", label: "메시지", Icon: MailIcon },
+  { href: "/upload", label: "업로드", Icon: PlusIcon },
+  { href: `/profile/${currentUserId}`, label: "프로필", Icon: UserIcon },
 ];
 
 export function BottomNav({
@@ -35,7 +36,7 @@ export function BottomNav({
             href={tab.href}
             className={`relative flex flex-col items-center gap-0.5 text-xs ${isActive ? "opacity-100" : "opacity-60"}`}
           >
-            <span className="text-lg leading-none">{tab.icon}</span>
+            <tab.Icon className="h-5 w-5" />
             {tab.label}
             {isProfileTab && unseenNotifications > 0 && (
               <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
