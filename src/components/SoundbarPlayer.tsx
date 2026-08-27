@@ -130,7 +130,9 @@ export function SoundbarPlayer({
   return (
     <div className="flex w-full flex-col gap-2 rounded-xl bg-neutral-900 p-2.5">
       {audioEl}
-      <div className="flex items-center gap-2">
+      {/* 게시물 캡션이 이미 카드 위쪽에 한 번 보이므로(feed/page.tsx) 여기서 title을
+          또 텍스트로 보여주진 않는다 — poster 모드의 alt 속성 등 접근성 용도로만 쓰인다. */}
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={togglePlay}
@@ -138,9 +140,6 @@ export function SoundbarPlayer({
         >
           {isPlaying ? <PauseIcon className="h-3 w-3" /> : <PlayIcon className="h-3 w-3" />}
         </button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-white">{title}</p>
-        </div>
         <span className="shrink-0 text-[11px] text-neutral-400">
           {formatWaveformTime(currentTime)} / {formatWaveformTime(duration)}
         </span>

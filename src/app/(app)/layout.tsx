@@ -6,6 +6,8 @@ import { GuestTopNav } from "@/components/GuestTopNav";
 import { GuestSignupPromptProvider } from "@/components/GuestSignupPrompt";
 import { NowPlayingProvider } from "@/components/NowPlayingContext";
 import { GlobalPlayerBar } from "@/components/GlobalPlayerBar";
+import { SearchOverlayProvider } from "@/components/SearchOverlayContext";
+import { SearchOverlay } from "@/components/SearchOverlay";
 import { ThemeSync } from "@/components/ThemeSync";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
@@ -79,7 +81,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <ThemeSync />
       <div className="min-h-screen bg-gray-100 transition-colors duration-300 dark:bg-[#1c1c1e] md:bg-[#f0f2f5] md:dark:bg-[#1c1c1e]">
         {user ? (
-          <>
+          <SearchOverlayProvider>
             <PresenceHeartbeat userId={user.id} />
             <TopNav
               currentUserId={user.id}
@@ -90,7 +92,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {children}
             <BottomNav currentUserId={user.id} unseenNotifications={unseenNotifications} />
             <GlobalPlayerBar />
-          </>
+            <SearchOverlay />
+          </SearchOverlayProvider>
         ) : (
           // GuestTopNav와 children(익명 미리보기 피드)이 같은 GuestSignupPromptProvider
           // 안에 있어야 좋아요/댓글 클릭 시 뜨는 가입 유도 모달 상태를 공유한다.
