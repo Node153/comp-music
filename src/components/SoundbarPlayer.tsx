@@ -153,7 +153,7 @@ export function SoundbarPlayer({
           {bars.map((v, i) => (
             <div
               key={i}
-              className="w-full flex-1 rounded-[1px]"
+              className="w-full flex-1 transition-colors duration-150"
               style={{
                 height: `${Math.max(8, v * 100)}%`,
                 background: i < playedBarCount ? style.playedColor(v) : "rgba(255,255,255,0.15)",
@@ -161,7 +161,7 @@ export function SoundbarPlayer({
             />
           ))}
           <div
-            className="pointer-events-none absolute top-0 h-full w-px"
+            className="pointer-events-none absolute top-0 h-full w-px transition-[left] duration-200 ease-linear"
             style={{ left: `${playedRatio * 100}%`, background: style.playheadColor }}
           />
         </div>
