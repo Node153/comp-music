@@ -4,6 +4,7 @@
 // (app) 레이아웃에 마운트돼 페이지 이동에도 언마운트되지 않아 음악이 끊기지 않는다.
 import { useEffect, useMemo, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
+import { useMediaProgress } from "@/lib/useMediaProgress";
 import { PlayIcon, PauseIcon, XIcon } from "@/components/icons";
 
 function formatTime(seconds: number) {
@@ -15,8 +16,9 @@ function formatTime(seconds: number) {
 
 // /goal 사운드바 개편(SoundbarPlayer 참고) — 여기는 mock 트랙도 재생하니 실제 오디오
 // 분석은 못 하지만(디코딩할 실제 파일이 없음), 모양·색만 같은 언어로 맞춘다: 얇고
-// 촘촘한 막대(64→120개), 재생된 구간은 진폭(시드 높이)에 따라 골드 3단계로.
-const WAVEFORM_BAR_COUNT = 220;
+// 촘촘한 막대(64→400개, 화면 전체 폭을 쓰다 보니 넓은 모니터에서도 얇게 유지하려고
+// SoundbarPlayer보다 훨씬 많이 잡음), 재생된 구간은 진폭(시드 높이)에 따라 골드 3단계로.
+const WAVEFORM_BAR_COUNT = 400;
 
 function demoBandColor(heightPct: number): string {
   const amplitude = (heightPct - 20) / 80; // 20~99% 범위를 0~1로 정규화
@@ -40,8 +42,8 @@ function buildWaveformHeights(seed: string): number[] {
 
 export function GlobalPlayerBar() {
   const { track, isPlaying, setIsPlaying, toggle, close, videoRef } = useNowPlaying();
-  const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [progress] = useMediaProgress(videoRef, isPlaying);
   const waveform = useMemo(() => buildWaveformHeights(track?.id ?? ""), [track?.id]);
 
   useEffect(() => {
@@ -58,14 +60,11 @@ export function GlobalPlayerBar() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const onTime = () => setProgress(video.currentTime);
     const onLoaded = () => setDuration(video.duration || 0);
     const onEnded = () => close();
-    video.addEventListener("timeupdate", onTime);
     video.addEventListener("loadedmetadata", onLoaded);
     video.addEventListener("ended", onEnded);
     return () => {
-      video.removeEventListener("timeupdate", onTime);
       video.removeEventListener("loadedmetadata", onLoaded);
       video.removeEventListener("ended", onEnded);
     };
@@ -95,7 +94,7 @@ export function GlobalPlayerBar() {
               ))}
             </div>
             <div
-              className="absolute inset-0 flex h-full items-center gap-px px-1 transition-[clip-path] duration-200 ease-linear"
+              className="absolute inset-0 flex h-full items-center gap-px px-1"
               style={{ clipPath: `inset(0 ${100 - pct}% 0 0)` }}
             >
               {waveform.map((h, i) => (
@@ -107,7 +106,7 @@ export function GlobalPlayerBar() {
               ))}
             </div>
             <div
-              className="pointer-events-none absolute top-0 h-full w-px bg-[#f5d999] transition-[left] duration-200 ease-linear"
+              className="pointer-events-none absolute top-0 h-full w-px bg-[#f5d999]"
               style={{ left: `${pct}%` }}
             />
           </button>

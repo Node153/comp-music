@@ -116,7 +116,7 @@ export default async function MessagesPage() {
                   {lastMessage && (
                     <span className="text-[11px] text-gray-400">{timeAgo(lastMessage.created_at)}</span>
                   )}
-                  {isUnread && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" />}
+                  {isUnread && <span className="h-2 w-2 shrink-0 rounded-full bg-black" />}
                 </div>
               </Link>
             </li>

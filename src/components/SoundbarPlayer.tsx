@@ -14,9 +14,12 @@
 // memo는 채팅 속에서 짧게 확인하는 용도라 DEMO만큼 화려할 필요는 없다는 판단.
 import { useEffect, useRef, useState } from "react";
 import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
+import { useMediaProgress } from "@/lib/useMediaProgress";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
-const SLIM_BAR_COUNT = 120;
+// 화면이 넓어질수록(카드 너비 최대 900px) 막대가 굵어 보이지 않도록 넉넉하게 잡음 —
+// flex-1로 폭을 다 채우는 구조라 막대 수가 적으면 넓은 화면에서 각져 보인다.
+const SLIM_BAR_COUNT = 200;
 
 const TONE = {
   demo: {
@@ -49,9 +52,9 @@ export function SoundbarPlayer({
   const [bars, setBars] = useState<number[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [currentTime, setCurrentTime] = useMediaProgress(audioRef, isPlaying);
   const style = TONE[tone];
 
   useEffect(() => {
@@ -161,7 +164,7 @@ export function SoundbarPlayer({
             />
           ))}
           <div
-            className="pointer-events-none absolute top-0 h-full w-px transition-[left] duration-200 ease-linear"
+            className="pointer-events-none absolute top-0 h-full w-px"
             style={{ left: `${playedRatio * 100}%`, background: style.playheadColor }}
           />
         </div>
