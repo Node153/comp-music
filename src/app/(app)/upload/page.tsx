@@ -622,20 +622,15 @@ export default function UploadPage() {
                 </button>
               ))}
             </div>
-            {uploadType === "complex" ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                memo는 Companion공개 또는 특정인초대로만 게시돼요. 노출 시간이 지나면 자동으로
-                피드에서 사라집니다.
-              </p>
-            ) : (
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                DEMO는 전체공개로 게시돼요. 노출 시간 제한 없이 피드에 영구 노출됩니다.
-              </p>
-            )}
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {uploadType === "complex"
+                ? "Companion공개 또는 특정인초대 · 노출 시간 지나면 자동 삭제"
+                : "전체공개 · 노출 시간 제한 없음"}
+            </p>
           </div>
 
           {uploadType === "demo" ? (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
               <span className={darkLabel}>업로드</span>
               <UploadDropbox
                 file={mediaFile}
@@ -665,10 +660,10 @@ export default function UploadPage() {
                   src={mediaObjectUrl}
                 />
               )}
-              <span className={darkLabel}>커버 이미지 (필수)</span>
-              <p className="-mt-1 text-xs text-gray-400 dark:text-gray-500">
-                세로 4:5 ~ 가로 1.91:1 사이 비율(Instagram 게시물과 동일)
-              </p>
+              <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
+                <span className={darkLabel}>커버 이미지 (필수)</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
+              </div>
               {coverGifUrl ? (
                 <div className="flex items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
