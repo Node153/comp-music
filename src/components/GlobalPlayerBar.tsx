@@ -13,7 +13,17 @@ function formatTime(seconds: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-const WAVEFORM_BAR_COUNT = 64;
+// /goal 사운드바 개편(SoundbarPlayer 참고) — 여기는 mock 트랙도 재생하니 실제 오디오
+// 분석은 못 하지만(디코딩할 실제 파일이 없음), 모양·색만 같은 언어로 맞춘다: 얇고
+// 촘촘한 막대(64→120개), 재생된 구간은 진폭(시드 높이)에 따라 골드 3단계로.
+const WAVEFORM_BAR_COUNT = 120;
+
+function demoBandColor(heightPct: number): string {
+  const amplitude = (heightPct - 20) / 80; // 20~99% 범위를 0~1로 정규화
+  if (amplitude < 0.35) return "#8a6a2e";
+  if (amplitude < 0.65) return "#c9a668";
+  return "#f5d999";
+}
 
 // 실제 오디오 분석 없이, 트랙 id로 시드를 고정한 프리셋 파형 — 트랙이 바뀔 때만 다시 계산되고
 // timeupdate(진행률)마다 재계산되지 않아야 막대가 계속 흔들리지 않는다.
@@ -79,27 +89,24 @@ export function GlobalPlayerBar() {
             className="relative h-10 w-full cursor-pointer bg-[#1c1c1e] px-1"
             aria-label="탐색 바 (파형)"
           >
-            <div className="flex h-full items-center gap-[2px]">
+            <div className="flex h-full items-center gap-px">
               {waveform.map((h, i) => (
-                <span
-                  key={i}
-                  className="min-w-[2px] flex-1 rounded-full bg-gray-700"
-                  style={{ height: `${h}%` }}
-                />
+                <span key={i} className="w-full flex-1 rounded-[1px] bg-white/15" style={{ height: `${h}%` }} />
               ))}
             </div>
             <div
-              className="absolute inset-0 flex h-full items-center gap-[2px] px-1"
+              className="absolute inset-0 flex h-full items-center gap-px px-1"
               style={{ clipPath: `inset(0 ${100 - pct}% 0 0)` }}
             >
               {waveform.map((h, i) => (
                 <span
                   key={i}
-                  className="min-w-[2px] flex-1 rounded-full bg-orange-400"
-                  style={{ height: `${h}%` }}
+                  className="w-full flex-1 rounded-[1px]"
+                  style={{ height: `${h}%`, background: demoBandColor(h) }}
                 />
               ))}
             </div>
+            <div className="pointer-events-none absolute top-0 h-full w-px bg-[#f5d999]" style={{ left: `${pct}%` }} />
           </button>
 
           <div className="flex items-center gap-3 px-4 py-2">
