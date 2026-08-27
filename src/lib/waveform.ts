@@ -3,7 +3,10 @@
 // 이후 디코딩·다운샘플링 과정은 동일해서 여기로 뺐다.
 export const WAVEFORM_BAR_COUNT = 56;
 
-export async function computeWaveformBars(arrayBuffer: ArrayBuffer): Promise<number[]> {
+export async function computeWaveformBars(
+  arrayBuffer: ArrayBuffer,
+  barCount: number = WAVEFORM_BAR_COUNT,
+): Promise<number[]> {
   const AudioContextCtor =
     window.AudioContext ??
     (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -11,9 +14,9 @@ export async function computeWaveformBars(arrayBuffer: ArrayBuffer): Promise<num
   try {
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
     const channelData = audioBuffer.getChannelData(0);
-    const blockSize = Math.max(1, Math.floor(channelData.length / WAVEFORM_BAR_COUNT));
+    const blockSize = Math.max(1, Math.floor(channelData.length / barCount));
     const bars: number[] = [];
-    for (let i = 0; i < WAVEFORM_BAR_COUNT; i++) {
+    for (let i = 0; i < barCount; i++) {
       let sum = 0;
       const start = i * blockSize;
       for (let j = 0; j < blockSize; j++) sum += Math.abs(channelData[start + j] ?? 0);

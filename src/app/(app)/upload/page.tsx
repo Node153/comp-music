@@ -658,6 +658,7 @@ export default function UploadPage() {
                   key={`${mediaFile.name}-${mediaFile.size}-${mediaFile.lastModified}`}
                   file={mediaFile}
                   src={mediaObjectUrl}
+                  tone="demo"
                 />
               )}
               <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">

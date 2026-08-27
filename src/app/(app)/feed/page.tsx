@@ -744,6 +744,7 @@ export default async function FeedPage({
                             src={post.videoSrc}
                             title={post.caption || "음원"}
                             posterSrc={post.posterSrc}
+                            tone="demo"
                           />
                         </div>
                       ) : post.videoSrc ? (
