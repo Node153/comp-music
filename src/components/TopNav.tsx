@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { PlusIcon, ChatIcon, BellIcon, HelpIcon, SearchIcon } from "@/components/icons";
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
@@ -32,6 +33,7 @@ export function TopNav({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeFeedTab = searchParams.get("feed") ?? "completion";
+  const search = useSearchOverlay();
 
   return (
     <header className="sticky top-0 z-40 hidden h-14 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-[#1c1c1e] md:flex">
@@ -72,18 +74,19 @@ export function TopNav({
       </nav>
 
       <div className="flex flex-1 items-center justify-end gap-2">
-        <Link
-          href="/search"
+        <button
+          type="button"
+          onClick={search.open}
           title="검색"
           aria-label="검색"
           className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-            pathname === "/search"
+            search.isOpen
               ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
           }`}
         >
           <SearchIcon />
-        </Link>
+        </button>
         <Link
           href="/upload"
           title="Drop"

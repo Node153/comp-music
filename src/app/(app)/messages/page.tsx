@@ -6,6 +6,7 @@ import { presenceStatus } from "@/lib/presence";
 import { Avatar } from "@/components/Avatar";
 import { timeAgo } from "@/lib/timeAgo";
 import { EditIcon, MailIcon } from "@/components/icons";
+import { SearchTriggerButton } from "@/components/SearchTriggerButton";
 
 // S12 DM 목록 (DM-02)
 // "다정한 말풍선" 톤(인스타그램/메신저 참고)으로 개편 — RightSidebar와 같은 색상 아바타 +
@@ -72,14 +73,13 @@ export default async function MessagesPage() {
     <main className={pageCard}>
       <div className="flex items-center justify-between">
         <h1 className={pageTitle}>메시지</h1>
-        <Link
-          href="/search"
+        <SearchTriggerButton
           title="새 대화 시작"
           aria-label="새 대화 시작"
           className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           <EditIcon className="h-5 w-5" />
-        </Link>
+        </SearchTriggerButton>
       </div>
       <ul className="mt-4 flex flex-col">
         {(conversations ?? []).map((c) => {
@@ -126,12 +126,9 @@ export default async function MessagesPage() {
           <li className="flex flex-col items-center gap-3 py-16 text-center">
             <MailIcon className="h-8 w-8 text-gray-300" />
             <p className="text-sm text-gray-400">아직 대화가 없어요</p>
-            <Link
-              href="/search"
-              className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-            >
+            <SearchTriggerButton className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
               사람 찾아 대화 시작하기
-            </Link>
+            </SearchTriggerButton>
           </li>
         )}
       </ul>
