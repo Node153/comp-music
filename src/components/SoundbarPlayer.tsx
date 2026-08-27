@@ -107,11 +107,11 @@ export function SoundbarPlayer({
       <button
         type="button"
         onClick={togglePlay}
-        className="group relative block max-h-[420px] w-auto overflow-hidden rounded-xl"
+        className="group relative block aspect-[4/5] w-full overflow-hidden rounded-xl"
       >
         {audioEl}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={posterSrc} alt={title} className="max-h-[420px] w-auto object-contain" />
+        <img src={posterSrc} alt={title} className="h-full w-full object-cover" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition group-hover:bg-black/45">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black">
             {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}

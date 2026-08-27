@@ -736,7 +736,7 @@ export default async function FeedPage({
                         <img
                           src={post.videoSrc}
                           alt={post.caption ?? "이미지 게시물"}
-                          className="max-h-[780px] w-auto object-contain"
+                          className="aspect-[4/5] w-full object-cover"
                         />
                       ) : post.videoSrc && post.media_type === "audio" ? (
                         <div className="flex w-full flex-col items-center gap-3 p-4">
@@ -758,6 +758,7 @@ export default async function FeedPage({
                             author={author?.name ?? "알 수 없음"}
                             videoSrc={post.videoSrc}
                             posterSrc={post.posterSrc}
+                            tone="demo"
                           />
                         </div>
                       ) : (

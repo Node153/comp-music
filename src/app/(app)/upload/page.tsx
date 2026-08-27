@@ -935,7 +935,7 @@ export default function UploadPage() {
             <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800">
               <div className="relative flex aspect-square items-center justify-center bg-black">
                 {previewVideoSrc ? (
-                  <video src={previewVideoSrc} poster={previewCoverSrc ?? undefined} controls muted className="h-full w-full object-contain" />
+                  <video src={previewVideoSrc} poster={previewCoverSrc ?? undefined} controls muted className="h-full w-full object-cover" />
                 ) : previewCoverSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={previewCoverSrc} alt="커버 미리보기" className="h-full w-full object-cover" />
