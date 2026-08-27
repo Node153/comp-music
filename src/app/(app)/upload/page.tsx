@@ -116,7 +116,7 @@ function selectableButtonClass(active: boolean, base: string) {
   return `${base} ${colors}`;
 }
 
-// 게시 유형 토글 전용 — DEMO(메인 화이트/포인트 옐로우) vs complex(메인 블랙/포인트 퍼플)를
+// 게시 유형 토글 전용 — DEMO(메인 화이트/포인트 골드) vs complex(메인 블랙/포인트 퍼플)를
 // 다른 selectableButtonClass 사용처와 다르게 각자 고유 색으로 구분한다.
 function uploadTypeButtonClass(value: UploadType, active: boolean, base: string) {
   if (!active) {
@@ -125,7 +125,7 @@ function uploadTypeButtonClass(value: UploadType, active: boolean, base: string)
   const colors =
     value === "complex"
       ? "border-violet-500 bg-black text-violet-300"
-      : "border-yellow-400 bg-white text-yellow-600";
+      : "border-demo-gold bg-white text-demo-gold";
   return `${base} ${colors}`;
 }
 

@@ -19,6 +19,10 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* DEMO 탭 시그니처 컬러 — 원래 Tailwind yellow-400/600을 쓰다가, 사운드바 레퍼런스
+     작업 중 나온 "매트 브라스(놋쇠)" 톤이 더 낫다고 판단돼 이걸로 통일(memo의 violet과
+     짝을 맞추는 DEMO 쪽 색). bg-demo-gold/text-demo-gold/border-demo-gold로 쓴다. */
+  --color-demo-gold: #c9a668;
 }
 
 /* 기본은 라이트 테마 고정(시스템 다크모드 설정과 무관) — Complex 탭에서만 .dark 클래스로 명시적 전환 */

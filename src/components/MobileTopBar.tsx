@@ -36,7 +36,7 @@ export function MobileTopBar({ unseenNotifications = 0 }: { unseenNotifications?
                 isActive
                   ? tab.value === "complex"
                     ? "bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300"
-                    : "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/50 dark:text-yellow-300"
+                    : "bg-demo-gold/15 text-demo-gold"
                   : "text-gray-400"
               }`}
             >

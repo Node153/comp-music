@@ -45,7 +45,7 @@ export function GuestTopNav() {
                 isActive
                   ? tab.value === "complex"
                     ? "border-violet-500 text-violet-600 dark:text-violet-300"
-                    : "border-yellow-400 text-yellow-600 dark:text-yellow-300"
+                    : "border-demo-gold text-demo-gold"
                   : "border-transparent text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900"
               }`}
             >

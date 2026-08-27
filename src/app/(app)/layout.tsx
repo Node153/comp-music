@@ -4,8 +4,6 @@ import { TopNav } from "@/components/TopNav";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { GuestTopNav } from "@/components/GuestTopNav";
 import { GuestSignupPromptProvider } from "@/components/GuestSignupPrompt";
-import { LeftSidebar } from "@/components/LeftSidebar";
-import { RightSidebar } from "@/components/RightSidebar";
 import { NowPlayingProvider } from "@/components/NowPlayingContext";
 import { GlobalPlayerBar } from "@/components/GlobalPlayerBar";
 import { ThemeSync } from "@/components/ThemeSync";
@@ -13,8 +11,9 @@ import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
 // 승인된 사용자 전용 화면(S6 피드, S8 업로드, S9 프로필, S12/S13 DM) 공통 레이아웃.
-// 웹(md 이상)은 상단 네비 + 좌우 사이드바(페이스북 3단 레이아웃 참고)가 기본,
-// 모바일은 하단 탭바(BottomNav)만 노출하고 사이드바는 숨김.
+// 좌우 사이드바(장르 필터 / 온라인·PEAK)는 피드 전용 보조 정보라 여기 없음 —
+// feed/layout.tsx에서만 붙인다(인스타그램이 작성·DM·알림 화면엔 피드 사이드바를
+// 안 보여주는 것과 같은 원칙 — 화면마다 그 화면의 할 일에만 집중하게).
 // 각 화면 콘텐츠는 모바일에서 하단 탭바(56px, h-14) 높이만큼 자체적으로 여백을 확보해야 한다.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -88,11 +87,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               unseenNotifications={unseenNotifications}
             />
             <MobileTopBar unseenNotifications={unseenNotifications} />
-            <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
-              <LeftSidebar />
-              <div>{children}</div>
-              <RightSidebar currentUserId={user.id} />
-            </div>
+            {children}
             <BottomNav currentUserId={user.id} unseenNotifications={unseenNotifications} />
             <GlobalPlayerBar />
           </>
