@@ -79,7 +79,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <NowPlayingProvider>
       <ThemeSync />
-      <div className="min-h-screen bg-gray-100 transition-colors duration-300 dark:bg-[#1c1c1e] md:bg-[#f0f2f5] md:dark:bg-[#1c1c1e]">
+      {/* 캔버스는 인스타그램 참고 — 예전엔 페이스북처럼 그레이 캔버스+그림자 카드였는데,
+          인스타는 캔버스가 거의 흰색이고 카드는 그림자 없이 테두리로만 구분한다(/goal 논의). */}
+      <div className="min-h-screen bg-white transition-colors duration-300 dark:bg-[#1c1c1e] md:bg-[#fafafa] md:dark:bg-[#1c1c1e]">
         {user ? (
           <SearchOverlayProvider>
             <PresenceHeartbeat userId={user.id} />
