@@ -64,12 +64,14 @@ export default function TermsPage() {
       <Article title="제5조 (회원가입)">
         <ol className="list-decimal pl-5">
           <li>이용자는 운영자가 정한 절차에 따라 이메일 또는 소셜로그인(Google/Kakao/Spotify)으로 가입 신청을 합니다.</li>
+          <li>만 14세 미만인 자는 회원으로 가입할 수 없으며, 가입 시 입력한 생년월일을 기준으로 확인합니다.</li>
           <li>
             운영자는 다음 각 호에 해당하는 경우 회원가입을 거부하거나 사후에 이용계약을 해지할 수
             있습니다.
             <ul className="list-disc pl-5">
               <li>타인의 정보를 도용한 경우</li>
               <li>허위 정보를 기재하거나 인증서류를 위·변조한 경우</li>
+              <li>만 14세 미만임에도 나이를 허위로 기재하여 가입한 경우</li>
               <li>기타 회원으로 등록하는 것이 서비스 운영상 현저히 지장이 있다고 판단되는 경우</li>
             </ul>
           </li>
