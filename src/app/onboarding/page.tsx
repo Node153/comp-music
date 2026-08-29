@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { BirthDateScrollPicker } from "@/components/BirthDateScrollPicker";
 import { field, label, errorText, pageTitle, mutedText } from "@/components/ui/styles";
 import { generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
-import { DiceIcon } from "@/components/icons";
+import { DiceIcon, BackArrowIcon } from "@/components/icons";
 import { isOldEnough } from "@/lib/age";
 
 // signup/page.tsx의 handle_new_user 트리거(0023/0029/0039)가 이메일 가입자에게 남기는 것과
@@ -79,6 +79,15 @@ export default function OnboardingPage() {
     });
     setNickname(generateNicknameCandidate());
   }, [supabase]);
+
+  // 뒤로가기(사용자 요청) — 이 화면은 소셜로그인 직후 자동으로 오게 되는데, 브라우저 뒤로가기는
+  // OAuth 제공자(Google/Spotify) 화면으로 돌아가버릴 뿐 도움이 안 되고, 그냥 /login으로 이동만
+  // 하면 proxy.ts의 needs_onboarding 리다이렉트(0027) 때문에 다시 여기로 튕겨온다. 로그인
+  // 자체를 취소하려면 세션을 끊어야만 로그인 화면에 실제로 머무를 수 있다.
+  async function handleBack() {
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -167,6 +176,14 @@ export default function OnboardingPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
+      <button
+        type="button"
+        onClick={handleBack}
+        className="-mb-2 flex w-fit items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+      >
+        <BackArrowIcon className="h-4 w-4" />
+        뒤로
+      </button>
       <div className="flex flex-col gap-1.5">
         <h1 className={pageTitle}>거의 다 됐어요</h1>
         <p className={mutedText}>Comp에서 쓸 이름/닉네임을 확인하고, 마지막으로 동의만 하면 돼요.</p>
