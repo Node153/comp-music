@@ -451,13 +451,9 @@ export interface Database {
         Args: { pid: string };
         Returns: { display_name: string; is_companion: boolean }[];
       };
-      // 0032: 닉네임 자동추천 겹침 방지용 — candidates 중 이미 사용 중인 닉네임만 돌려준다.
-      // users 테이블 전체를 안 열어주고 이 좁은 함수 하나만 익명/미승인 상태에서도 호출 가능.
-      // returns setof text라 knock_context(테이블 반환)와 달리 스칼라 배열로 그대로 온다.
-      public_taken_nicknames: {
-        Args: { candidates: string[] };
-        Returns: string[];
-      };
+      // public_taken_nicknames(0032)는 닉네임 겹침 방지 기능 자체를 되돌리면서(2026-08-20,
+      // 익명성 강화 목적으로 숫자 접미사 재도입) 호출부가 없어짐 — DB 함수는 그대로 남아있지만
+      // (재사용 가능성 있어 별도 마이그레이션으로 안 지움) 여기 타입 선언은 정리.
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

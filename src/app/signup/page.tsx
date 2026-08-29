@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { field, label, errorText, pageTitle } from "@/components/ui/styles";
-import { generateNicknameCandidate, fetchTakenNicknames } from "@/lib/nicknameExamples";
+import { generateNicknameCandidate } from "@/lib/nicknameExamples";
 import { MailIcon, DiceIcon } from "@/components/icons";
 import {
   isValidPassword,
@@ -35,15 +35,8 @@ export default function SignupPage() {
   // 서버(SSR)와 클라이언트가 다른 랜덤값을 만들면 하이드레이션이 꼬이므로, 초기값은 빈
   // 문자열로 두고 마운트 후 useEffect에서만 채운다(NicknameForm의 비동기 로드와 같은 패턴).
   const [nickname, setNickname] = useState("");
-  // 이미 다른 회원이 쓰고 있는 문구는 추천에서 제외(35개짜리 문구뱅크라 회원이 늘수록 금방
-  // 겹침 — 실사용자 문의로 발견). IN 쿼리라 회원 수와 무관하게 가벼움.
-  const [takenNicknames, setTakenNicknames] = useState<Set<string>>(new Set());
   useEffect(() => {
-    fetchTakenNicknames(supabase).then((taken) => {
-      setTakenNicknames(taken);
-      setNickname(generateNicknameCandidate(taken));
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setNickname(generateNicknameCandidate());
   }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -177,7 +170,7 @@ export default function SignupPage() {
             />
             <button
               type="button"
-              onClick={() => setNickname(generateNicknameCandidate(takenNicknames))}
+              onClick={() => setNickname(generateNicknameCandidate())}
               title="다른 닉네임 뽑기"
               className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50"
             >
