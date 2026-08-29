@@ -39,7 +39,8 @@ export type AgreementType =
   | "license_grant"
   | "terms_of_service"
   | "privacy_policy"
-  | "community_guidelines";
+  | "community_guidelines"
+  | "age_over_14";
 
 export interface Database {
   public: {

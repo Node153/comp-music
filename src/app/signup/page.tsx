@@ -55,6 +55,10 @@ export default function SignupPage() {
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
   const [agreedCommunityGuidelines, setAgreedCommunityGuidelines] = useState(false);
+  // 만 14세 이상 자기신고 체크박스(2026-08-29, 사용자 요청) — 생년월일로 실제 나이를 검증하는
+  // 로직(handleSubmit의 isOldEnough)이 이미 있지만, 생년월일을 조작해서 입력할 수도 있으므로
+  // 명시적 동의도 별도로 받는다(데이터 검증 + 자기신고 이중 장치).
+  const [agreedOver14, setAgreedOver14] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -93,7 +97,8 @@ export default function SignupPage() {
       !agreedLicenseGrant ||
       !agreedTerms ||
       !agreedPrivacy ||
-      !agreedCommunityGuidelines
+      !agreedCommunityGuidelines ||
+      !agreedOver14
     ) {
       setError("아래 동의 항목에 모두 체크해주세요.");
       return;
@@ -277,6 +282,16 @@ export default function SignupPage() {
               </Link>
               에 동의합니다.
             </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              required
+              checked={agreedOver14}
+              onChange={(e) => setAgreedOver14(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>[필수] 만 14세 이상입니다.</span>
           </label>
           <label className="flex items-start gap-2 text-sm">
             <input

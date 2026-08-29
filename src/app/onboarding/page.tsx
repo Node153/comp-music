@@ -20,6 +20,7 @@ import { isOldEnough } from "@/lib/age";
 const AGREEMENT_VERSION = "2026-08-10";
 const TERMS_PRIVACY_VERSION = "2026-08-19";
 const COMMUNITY_GUIDELINES_VERSION = "2026-08-20";
+const AGE_OVER_14_VERSION = "2026-08-29";
 
 const today = new Date();
 const MAX_BIRTH_DATE = today.toISOString().slice(0, 10);
@@ -47,6 +48,9 @@ export default function OnboardingPage() {
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedPrivacy, setAgreedPrivacy] = useState(false);
   const [agreedCommunityGuidelines, setAgreedCommunityGuidelines] = useState(false);
+  // 만 14세 이상 자기신고 체크박스(2026-08-29, 사용자 요청) — signup/page.tsx와 동일한 이유
+  // (생년월일 데이터 검증만으론 조작 가능성이 있어 명시적 동의도 같이 받음).
+  const [agreedOver14, setAgreedOver14] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -99,7 +103,8 @@ export default function OnboardingPage() {
       !agreedLicenseGrant ||
       !agreedTerms ||
       !agreedPrivacy ||
-      !agreedCommunityGuidelines
+      !agreedCommunityGuidelines ||
+      !agreedOver14
     ) {
       setError("아래 동의 항목에 모두 체크해주세요.");
       return;
@@ -140,6 +145,7 @@ export default function OnboardingPage() {
       { user_id: user.id, type: "terms_of_service", version: TERMS_PRIVACY_VERSION },
       { user_id: user.id, type: "privacy_policy", version: TERMS_PRIVACY_VERSION },
       { user_id: user.id, type: "community_guidelines", version: COMMUNITY_GUIDELINES_VERSION },
+      { user_id: user.id, type: "age_over_14", version: AGE_OVER_14_VERSION },
     ]);
     setLoading(false);
 
@@ -261,6 +267,16 @@ export default function OnboardingPage() {
               </Link>
               에 동의합니다.
             </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              required
+              checked={agreedOver14}
+              onChange={(e) => setAgreedOver14(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>[필수] 만 14세 이상입니다.</span>
           </label>
           <label className="flex items-start gap-2 text-sm">
             <input
