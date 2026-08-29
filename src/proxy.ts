@@ -80,8 +80,18 @@ export async function proxy(request: NextRequest) {
   // /onboarding으로 돌려보내는 무한 리다이렉트 루프가 생긴다(실제로 겪은 버그 — 로컬 Google
   // 로그인 테스트 중 Safari "너무 많은 재이동" 에러로 발견). early return으로 완전히 분리해야
   // 이런 상호작용 자체가 안 생긴다.
+  // ⚠️ /terms·/privacy·/community-guidelines는 예외로 허용한다 — 온보딩 화면의 동의
+  // 체크박스가 이 문서들을 새 탭으로 여는데, 새 탭도 같은 로그인 세션(쿠키)을 공유하므로
+  // 여기서 막으면 그 새 탭조차 곧장 /onboarding으로 튕겨버린다. 실제로 겪은 버그 — Safari에서
+  // 새 탭은 열리는데 약관 대신 온보딩 화면이 또 뜨는 것처럼 보였음(원인은 label/버튼 구조가
+  // 아니라 이 서버 리다이렉트였다).
   if (profile?.needs_onboarding) {
-    if (pathname !== "/onboarding") {
+    if (
+      pathname !== "/onboarding" &&
+      pathname !== "/terms" &&
+      pathname !== "/privacy" &&
+      pathname !== "/community-guidelines"
+    ) {
       return NextResponse.redirect(new URL("/onboarding", request.url));
     }
     return response;
