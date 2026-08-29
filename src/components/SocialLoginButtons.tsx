@@ -7,6 +7,7 @@
 // 로그인/가입 화면 어디서 눌러도 동일하게 signInWithOAuth 하나만 부르면 된다.
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { KAKAO_LOGIN_ENABLED } from "@/lib/featureFlags";
 
 // 각 제공자 공식 마크를 인라인 SVG로 재현하되, 브랜드 컬러 대신 흑백 단색으로 통일
 // (앱 전체가 중성적인 흑백 톤 — src/components/ui/styles.ts 참고). currentColor를 써서
@@ -48,11 +49,15 @@ function SpotifyIcon() {
   );
 }
 
-const PROVIDERS: { id: "google" | "kakao" | "spotify"; label: string; icon: ReactNode }[] = [
+const ALL_PROVIDERS: { id: "google" | "kakao" | "spotify"; label: string; icon: ReactNode }[] = [
   { id: "google", label: "Google로 계속하기", icon: <GoogleIcon /> },
   { id: "kakao", label: "Kakao로 계속하기", icon: <KakaoIcon /> },
   { id: "spotify", label: "Spotify로 계속하기", icon: <SpotifyIcon /> },
 ];
+
+// 사업자 등록 전까지 Kakao 버튼 숨김(featureFlags.ts) — 목록에서만 빼고 handleClick 등
+// 나머지 로직은 그대로 둔다(다시 켤 때 값만 뒤집으면 됨).
+const PROVIDERS = ALL_PROVIDERS.filter((p) => p.id !== "kakao" || KAKAO_LOGIN_ENABLED);
 
 // Kakao는 Supabase가 기본으로 account_email/profile_image/profile_nickname 3개를 한꺼번에
 // 요청하는데, 우리 Kakao 앱은 "카카오계정(이메일)"이 사업자 인증 없이는 권한 자체가 안 열려서
