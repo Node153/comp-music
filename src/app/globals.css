@@ -52,3 +52,14 @@ body {
 .animate-peak-in {
   animation: peak-slide-in 0.4s ease-out both;
 }
+
+/* 생년월일 스크롤 휠 피커(BirthDateScrollPicker)의 각 열 스크롤바 숨김 — 네이티브 앱
+   피커처럼 보이려면 스크롤바가 안 보여야 한다. Tailwind 기본 유틸에는 없어서 직접 추가. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* 레거시 Edge/IE */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}

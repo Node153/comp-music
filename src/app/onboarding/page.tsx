@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { BirthDateScrollPicker } from "@/components/BirthDateScrollPicker";
 import { field, label, errorText, pageTitle, mutedText } from "@/components/ui/styles";
 import { generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
 import { DiceIcon } from "@/components/icons";
@@ -183,14 +184,11 @@ export default function OnboardingPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           <span className={label}>생년월일</span>
-          <input
-            type="date"
-            required
-            min={MIN_BIRTH_DATE}
-            max={MAX_BIRTH_DATE}
+          <BirthDateScrollPicker
             value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className={field}
+            onChange={setBirthDate}
+            minDate={MIN_BIRTH_DATE}
+            maxDate={MAX_BIRTH_DATE}
           />
         </div>
         <div className="flex flex-col gap-1">
