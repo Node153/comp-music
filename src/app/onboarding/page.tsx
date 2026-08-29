@@ -35,6 +35,10 @@ export default function OnboardingPage() {
   // — signup/page.tsx와 같은 이유(동명이인 판별 보조).
   const [birthDate, setBirthDate] = useState("");
   const [nickname, setNickname] = useState("");
+  // 화면에 "이 계정으로 로그인했다"는 걸 보여주기 위한 용도(사용자 요청) — 소셜로그인은
+  // 이메일 입력칸 자체가 없어서 회원이 자기가 어느 이메일로 가입됐는지 확인할 방법이
+  // 없었다(특히 Spotify 이메일 인증 이슈를 겪은 뒤 나온 요청). 폼 제출과는 무관, 읽기 전용 표시.
+  const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
   const [agreedContentRights, setAgreedContentRights] = useState(false);
   const [agreedCollabDisclaimer, setAgreedCollabDisclaimer] = useState(false);
   const [agreedLicenseGrant, setAgreedLicenseGrant] = useState(false);
@@ -47,13 +51,20 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Google/Kakao 프로필의 표시 이름을 실명 입력칸에 미리 채워준다(수정 가능) — 닉네임은
-    // 실명이 그대로 새면 안 되므로 예시 목록 기반 랜덤값으로 채운다(signup/page.tsx와 동일 패턴).
+    // Google 프로필의 표시 이름을 실명 입력칸에 미리 채워준다(수정 가능) — 닉네임은 실명이
+    // 그대로 새면 안 되므로 예시 목록 기반 랜덤값으로 채운다(signup/page.tsx와 동일 패턴).
+    // Spotify는 여기서 제외(사용자 요청) — Spotify의 'name'은 실명이 아니라 사용자가 자유롭게
+    // 정한 표시 이름(예: "노래좋으면벽봄" 같은 닉네임)이라 실명 입력칸에 미리 채우면 오히려
+    // 헷갈린다. Google은 보통 실제 이름을 쓰므로 그대로 둔다.
     supabase.auth.getUser().then(({ data: { user } }) => {
-      const metaName =
-        (user?.user_metadata?.name as string | undefined) ??
-        (user?.user_metadata?.full_name as string | undefined);
-      if (metaName) setName(metaName);
+      setConnectedEmail(user?.email ?? null);
+      const provider = user?.app_metadata?.provider;
+      if (provider !== "spotify") {
+        const metaName =
+          (user?.user_metadata?.name as string | undefined) ??
+          (user?.user_metadata?.full_name as string | undefined);
+        if (metaName) setName(metaName);
+      }
     });
     setNickname(generateNicknameCandidate());
   }, [supabase]);
@@ -146,6 +157,11 @@ export default function OnboardingPage() {
       <div className="flex flex-col gap-1.5">
         <h1 className={pageTitle}>거의 다 됐어요</h1>
         <p className={mutedText}>Comp에서 쓸 이름/닉네임을 확인하고, 마지막으로 동의만 하면 돼요.</p>
+        {connectedEmail && (
+          <p className={mutedText}>
+            연결된 이메일: <span className="font-medium text-gray-700">{connectedEmail}</span>
+          </p>
+        )}
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
