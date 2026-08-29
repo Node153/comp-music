@@ -224,8 +224,12 @@ export default function OnboardingPage() {
         </div>
 
         <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3.5">
-          <label className="flex items-start gap-2 text-sm">
+          {/* 체크박스(<label>)와 새 탭 버튼이 완전히 분리된 구조(사용자 요청, Safari 새탭
+              버그 재수정) — signup/page.tsx와 같은 이유(window.open으로 바꿔도 <button>이
+              <label> "안"에 있으면 여전히 실기기 Safari에서 새 탭 이동이 안 됐음). */}
+          <div className="flex items-start gap-2 text-sm">
             <input
+              id="onboarding-agree-terms"
               type="checkbox"
               required
               checked={agreedTerms}
@@ -233,22 +237,24 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              [필수]{" "}
+              <label htmlFor="onboarding-agree-terms" className="cursor-pointer">
+                [필수]{" "}
+              </label>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openInNewTab("/terms");
-                }}
+                onClick={() => openInNewTab("/terms")}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 서비스 이용약관
               </button>
-              에 동의합니다.
+              <label htmlFor="onboarding-agree-terms" className="cursor-pointer">
+                에 동의합니다.
+              </label>
             </span>
-          </label>
-          <label className="flex items-start gap-2 text-sm">
+          </div>
+          <div className="flex items-start gap-2 text-sm">
             <input
+              id="onboarding-agree-privacy"
               type="checkbox"
               required
               checked={agreedPrivacy}
@@ -256,22 +262,24 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              [필수]{" "}
+              <label htmlFor="onboarding-agree-privacy" className="cursor-pointer">
+                [필수]{" "}
+              </label>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openInNewTab("/privacy");
-                }}
+                onClick={() => openInNewTab("/privacy")}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 개인정보 수집·이용
               </button>
-              에 동의합니다.
+              <label htmlFor="onboarding-agree-privacy" className="cursor-pointer">
+                에 동의합니다.
+              </label>
             </span>
-          </label>
-          <label className="flex items-start gap-2 text-sm">
+          </div>
+          <div className="flex items-start gap-2 text-sm">
             <input
+              id="onboarding-agree-community-guidelines"
               type="checkbox"
               required
               checked={agreedCommunityGuidelines}
@@ -279,20 +287,21 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              [필수]{" "}
+              <label htmlFor="onboarding-agree-community-guidelines" className="cursor-pointer">
+                [필수]{" "}
+              </label>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openInNewTab("/community-guidelines");
-                }}
+                onClick={() => openInNewTab("/community-guidelines")}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 커뮤니티 운영정책
               </button>
-              에 동의합니다.
+              <label htmlFor="onboarding-agree-community-guidelines" className="cursor-pointer">
+                에 동의합니다.
+              </label>
             </span>
-          </label>
+          </div>
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
