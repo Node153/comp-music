@@ -137,7 +137,7 @@ export default function OnboardingPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           type="text"
-          placeholder="실명 (Companion에게만 보여요)"
+          placeholder="실명"
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
