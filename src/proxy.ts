@@ -13,8 +13,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // /auth/callback도 마찬가지 이유로 public — OAuth 콜백이 도착한 시점엔 아직 세션 쿠키가 없고
 // (콜백 라우트 핸들러 안에서 code를 세션으로 교환해야 비로소 생김), 여기서 막으면 그 교환이
 // 일어나기 전에 /login으로 튕겨버린다.
-// /terms, /privacy는 법적 고지 문서라 회원 여부와 무관하게 항상 열람 가능해야 한다
-// (가입 전 signup 화면에서도 링크로 걸림).
+// /terms, /privacy, /community-guidelines는 법적 고지 문서라 회원 여부와 무관하게 항상
+// 열람 가능해야 한다(가입 전 signup 화면에서도 링크로 걸림).
 const PUBLIC_PATHS = [
   "/",
   "/login",
@@ -25,6 +25,7 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/terms",
   "/privacy",
+  "/community-guidelines",
 ];
 const UNAPPROVED_ALLOWED_PATHS = ["/status", "/verify/type", "/verify/documents"];
 

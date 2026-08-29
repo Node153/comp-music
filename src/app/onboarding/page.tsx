@@ -13,11 +13,13 @@ import { Button } from "@/components/ui/Button";
 import { field, label, errorText, pageTitle, mutedText } from "@/components/ui/styles";
 import { generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
 import { DiceIcon } from "@/components/icons";
+import { isOldEnough } from "@/lib/age";
 
-// signup/page.tsx의 handle_new_user 트리거(0023/0029)가 이메일 가입자에게 남기는 것과 동일한
-// 버전 문자열 — 동의 이력을 한 기준으로 통일하기 위해 하드코딩 값도 그대로 맞춘다.
+// signup/page.tsx의 handle_new_user 트리거(0023/0029/0039)가 이메일 가입자에게 남기는 것과
+// 동일한 버전 문자열 — 동의 이력을 한 기준으로 통일하기 위해 하드코딩 값도 그대로 맞춘다.
 const AGREEMENT_VERSION = "2026-08-10";
 const TERMS_PRIVACY_VERSION = "2026-08-19";
+const COMMUNITY_GUIDELINES_VERSION = "2026-08-20";
 
 const today = new Date();
 const MAX_BIRTH_DATE = today.toISOString().slice(0, 10);
@@ -36,7 +38,11 @@ export default function OnboardingPage() {
   const [agreedContentRights, setAgreedContentRights] = useState(false);
   const [agreedCollabDisclaimer, setAgreedCollabDisclaimer] = useState(false);
   const [agreedLicenseGrant, setAgreedLicenseGrant] = useState(false);
-  const [agreedTermsAndPrivacy, setAgreedTermsAndPrivacy] = useState(false);
+  // 약관 동의 재구성(2026-08-20) — signup/page.tsx와 동일하게 이용약관/개인정보처리방침을
+  // 각각 별개 체크박스로 분리하고 커뮤니티 운영정책 체크박스를 추가했다.
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
+  const [agreedCommunityGuidelines, setAgreedCommunityGuidelines] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -64,6 +70,10 @@ export default function OnboardingPage() {
       setError("생년월일을 입력해주세요.");
       return;
     }
+    if (!isOldEnough(birthDate)) {
+      setError("만 14세 이상만 가입할 수 있어요.");
+      return;
+    }
     if (!nickname.trim()) {
       setError("닉네임을 입력해주세요.");
       return;
@@ -76,7 +86,9 @@ export default function OnboardingPage() {
       !agreedContentRights ||
       !agreedCollabDisclaimer ||
       !agreedLicenseGrant ||
-      !agreedTermsAndPrivacy
+      !agreedTerms ||
+      !agreedPrivacy ||
+      !agreedCommunityGuidelines
     ) {
       setError("아래 동의 항목에 모두 체크해주세요.");
       return;
@@ -116,6 +128,7 @@ export default function OnboardingPage() {
       { user_id: user.id, type: "license_grant", version: AGREEMENT_VERSION },
       { user_id: user.id, type: "terms_of_service", version: TERMS_PRIVACY_VERSION },
       { user_id: user.id, type: "privacy_policy", version: TERMS_PRIVACY_VERSION },
+      { user_id: user.id, type: "community_guidelines", version: COMMUNITY_GUIDELINES_VERSION },
     ]);
     setLoading(false);
 
@@ -185,17 +198,50 @@ export default function OnboardingPage() {
             <input
               type="checkbox"
               required
-              checked={agreedTermsAndPrivacy}
-              onChange={(e) => setAgreedTermsAndPrivacy(e.target.checked)}
+              checked={agreedTerms}
+              onChange={(e) => setAgreedTerms(e.target.checked)}
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
+              [필수]{" "}
               <Link href="/terms" target="_blank" className="text-blue-600 underline hover:text-blue-700">
-                이용약관
-              </Link>{" "}
-              및{" "}
+                서비스 이용약관
+              </Link>
+              에 동의합니다.
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              required
+              checked={agreedPrivacy}
+              onChange={(e) => setAgreedPrivacy(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>
+              [필수]{" "}
               <Link href="/privacy" target="_blank" className="text-blue-600 underline hover:text-blue-700">
-                개인정보처리방침
+                개인정보 수집·이용
+              </Link>
+              에 동의합니다.
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              required
+              checked={agreedCommunityGuidelines}
+              onChange={(e) => setAgreedCommunityGuidelines(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>
+              [필수]{" "}
+              <Link
+                href="/community-guidelines"
+                target="_blank"
+                className="text-blue-600 underline hover:text-blue-700"
+              >
+                커뮤니티 운영정책
               </Link>
               에 동의합니다.
             </span>

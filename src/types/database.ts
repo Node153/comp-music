@@ -38,7 +38,8 @@ export type AgreementType =
   | "collab_disclaimer"
   | "license_grant"
   | "terms_of_service"
-  | "privacy_policy";
+  | "privacy_policy"
+  | "community_guidelines";
 
 export interface Database {
   public: {

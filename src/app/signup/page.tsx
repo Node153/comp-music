@@ -16,6 +16,7 @@ import {
   PASSWORD_POLICY_MESSAGE,
   PASSWORD_MISMATCH_MESSAGE,
 } from "@/lib/passwordPolicy";
+import { isOldEnough } from "@/lib/age";
 
 const today = new Date();
 const MAX_BIRTH_DATE = today.toISOString().slice(0, 10);
@@ -47,8 +48,13 @@ export default function SignupPage() {
   const [agreedContentRights, setAgreedContentRights] = useState(false);
   const [agreedCollabDisclaimer, setAgreedCollabDisclaimer] = useState(false);
   const [agreedLicenseGrant, setAgreedLicenseGrant] = useState(false);
-  // 이용약관(/terms)·개인정보처리방침(/privacy) 동의(0029) — 위 3개와 별개 체크박스.
-  const [agreedTermsAndPrivacy, setAgreedTermsAndPrivacy] = useState(false);
+  // 약관 동의 재구성(2026-08-20) — 이용약관/개인정보처리방침을 각각 별개 필수 체크박스로
+  // 분리하고, 커뮤니티 운영정책(/community-guidelines) 체크박스를 추가했다. 실제 기록은
+  // handle_new_user 트리거(0039)가 가입 성공 시 6개 항목을 한 번에 남기므로, 여기서는
+  // 여전히 폼 제출을 막는 게이트 역할만 한다.
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
+  const [agreedCommunityGuidelines, setAgreedCommunityGuidelines] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -59,6 +65,10 @@ export default function SignupPage() {
 
     if (!birthDate) {
       setError("생년월일을 입력해주세요.");
+      return;
+    }
+    if (!isOldEnough(birthDate)) {
+      setError("만 14세 이상만 가입할 수 있어요.");
       return;
     }
     if (!isValidPassword(password)) {
@@ -81,7 +91,9 @@ export default function SignupPage() {
       !agreedContentRights ||
       !agreedCollabDisclaimer ||
       !agreedLicenseGrant ||
-      !agreedTermsAndPrivacy
+      !agreedTerms ||
+      !agreedPrivacy ||
+      !agreedCommunityGuidelines
     ) {
       setError("아래 동의 항목에 모두 체크해주세요.");
       return;
@@ -218,17 +230,50 @@ export default function SignupPage() {
             <input
               type="checkbox"
               required
-              checked={agreedTermsAndPrivacy}
-              onChange={(e) => setAgreedTermsAndPrivacy(e.target.checked)}
+              checked={agreedTerms}
+              onChange={(e) => setAgreedTerms(e.target.checked)}
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
+              [필수]{" "}
               <Link href="/terms" target="_blank" className="text-blue-600 underline hover:text-blue-700">
-                이용약관
-              </Link>{" "}
-              및{" "}
+                서비스 이용약관
+              </Link>
+              에 동의합니다.
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              required
+              checked={agreedPrivacy}
+              onChange={(e) => setAgreedPrivacy(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>
+              [필수]{" "}
               <Link href="/privacy" target="_blank" className="text-blue-600 underline hover:text-blue-700">
-                개인정보처리방침
+                개인정보 수집·이용
+              </Link>
+              에 동의합니다.
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              required
+              checked={agreedCommunityGuidelines}
+              onChange={(e) => setAgreedCommunityGuidelines(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>
+              [필수]{" "}
+              <Link
+                href="/community-guidelines"
+                target="_blank"
+                className="text-blue-600 underline hover:text-blue-700"
+              >
+                커뮤니티 운영정책
               </Link>
               에 동의합니다.
             </span>
