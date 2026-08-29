@@ -23,7 +23,7 @@ const AGREEMENT_VERSION = "2026-08-10";
 // 문서의 버전만 올려야 동의 이력이 정확하다).
 const TERMS_VERSION = "2026-08-29";
 const PRIVACY_VERSION = "2026-08-29";
-const COMMUNITY_GUIDELINES_VERSION = "2026-08-20";
+const COMMUNITY_GUIDELINES_VERSION = "2026-08-29";
 const AGE_OVER_14_VERSION = "2026-08-29";
 
 // 약관/정책 링크를 새 탭으로 열기(사용자 요청) — signup/page.tsx와 같은 이유(Safari에서
