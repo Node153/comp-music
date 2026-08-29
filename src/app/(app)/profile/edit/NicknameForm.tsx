@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label, errorText } from "@/components/ui/styles";
-import { randomNicknameExample, generateNicknameCandidate } from "@/lib/nicknameExamples";
+import { randomNicknameExample, generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
 import { DiceIcon } from "@/components/icons";
 
 export function NicknameForm() {
@@ -36,6 +36,10 @@ export function NicknameForm() {
     e.preventDefault();
     const trimmed = nickname.trim();
     if (!trimmed || saving) return;
+    if (hasWhitespace(trimmed)) {
+      setMessage({ type: "error", text: "닉네임에는 띄어쓰기를 쓸 수 없어요." });
+      return;
+    }
     setSaving(true);
     setMessage(null);
     const {

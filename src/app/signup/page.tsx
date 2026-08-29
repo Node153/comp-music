@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { field, label, errorText, pageTitle } from "@/components/ui/styles";
-import { generateNicknameCandidate } from "@/lib/nicknameExamples";
+import { generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
 import { MailIcon, DiceIcon } from "@/components/icons";
 import {
   isValidPassword,
@@ -71,6 +71,10 @@ export default function SignupPage() {
     }
     if (!nickname.trim()) {
       setError("닉네임을 입력해주세요.");
+      return;
+    }
+    if (hasWhitespace(nickname)) {
+      setError("닉네임에는 띄어쓰기를 쓸 수 없어요.");
       return;
     }
     if (

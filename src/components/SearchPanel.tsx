@@ -15,6 +15,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { field } from "@/components/ui/styles";
+import { stripNicknameTag } from "@/lib/nicknameExamples";
 
 type SearchResult = { id: string; nickname: string };
 
@@ -76,8 +77,8 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
                 onClick={onNavigate}
                 className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50"
               >
-                <Avatar userId={u.id} name={u.nickname} className="h-10 w-10 text-sm" />
-                <span className="text-sm font-medium text-gray-900">{u.nickname}</span>
+                <Avatar userId={u.id} name={stripNicknameTag(u.nickname)} className="h-10 w-10 text-sm" />
+                <span className="text-sm font-medium text-gray-900">{stripNicknameTag(u.nickname)}</span>
               </Link>
             </li>
           ))

@@ -11,7 +11,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label, errorText, pageTitle, mutedText } from "@/components/ui/styles";
-import { generateNicknameCandidate } from "@/lib/nicknameExamples";
+import { generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
 import { DiceIcon } from "@/components/icons";
 
 // signup/page.tsx의 handle_new_user 트리거(0023/0029)가 이메일 가입자에게 남기는 것과 동일한
@@ -66,6 +66,10 @@ export default function OnboardingPage() {
     }
     if (!nickname.trim()) {
       setError("닉네임을 입력해주세요.");
+      return;
+    }
+    if (hasWhitespace(nickname)) {
+      setError("닉네임에는 띄어쓰기를 쓸 수 없어요.");
       return;
     }
     if (

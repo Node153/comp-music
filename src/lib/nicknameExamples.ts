@@ -32,11 +32,13 @@ const TEMPLATE_A_REACTIONS = [
   "정신나감",
 ];
 
-const TEMPLATE_B_PREFIX = "음악 좋으면 ";
+// 닉네임 띄어쓰기 금지(2026-08-20, 사용자 요청)로 프리픽스 끝 공백과 두 반응 문구의
+// 내부 공백을 제거했다 — TEMPLATE_A/STANDALONE은 원래부터 공백이 없어서 안 건드림.
+const TEMPLATE_B_PREFIX = "음악좋으면";
 const TEMPLATE_B_REACTIONS = [
-  "갑자기 진지함",
+  "갑자기진지함",
   "매미됨",
-  "벽 봄",
+  "벽봄",
   "눈물남",
   "목소리커짐",
   "어깨들썩임",
@@ -80,4 +82,17 @@ export function randomNicknameExample(): string {
 export function generateNicknameCandidate(): string {
   const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
   return `${randomPhrase()}_${suffix}`;
+}
+
+// 닉네임 띄어쓰기 금지(2026-08-20) — 자동생성 문구뿐 아니라 사용자가 직접 입력하는 경우도
+// 막아야 해서 signup/onboarding/NicknameForm 제출 시 공용으로 검사한다.
+export function hasWhitespace(nickname: string): boolean {
+  return /\s/.test(nickname);
+}
+
+// 숫자 접미사(_0000)는 유니크 보장용 내부 값이라 평상시 화면엔 안 보이게 한다(2026-08-20).
+// DB 쪽 표시 레이어(user_display 뷰 등, 0033)는 이미 잘라서 내려주므로 이 함수는 그걸 못 거치는
+// 곳(SearchPanel.tsx처럼 users.nickname을 직접 읽는 화면)에서만 쓰면 된다.
+export function stripNicknameTag(nickname: string): string {
+  return nickname.replace(/_\d{4}$/, "");
 }
