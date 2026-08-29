@@ -255,11 +255,10 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              제가 올리는 모든 음원·영상·이미지는 제가 직접 만들었거나 올릴 수 있는 정당한 권리를
-              가지고 있으며, 다른 사람의 저작권을 침해하지 않습니다.
+              제가 올리는 음원·영상·이미지는 직접 만들었거나, 사용할 권한을 받은 콘텐츠입니다.
+              다른 사람의 저작권을 침해하지 않겠습니다.
               <span className="mt-0.5 block text-xs text-gray-400">
-                샘플·비트·반주 등 타인의 저작물을 사용했다면 정식 라이선스나 사용 허가를 받은
-                것이어야 해요.
+                다른 사람의 샘플·비트·반주 등을 사용했다면 정식 허가가 필요해요.
               </span>
             </span>
           </label>
@@ -272,13 +271,11 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              memo(비공개 협업 공간)에서 다른 사람과 함께 만든 결과물(공동창작)의
-              소유권·지분·크레딧 배분은 참여자들끼리 직접 정할 사항이며, Comp는 이를 대신
-              정하거나 분쟁을 중재하지 않는다는 것을 이해합니다.
+              memo(비공개 협업 공간)에서 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은
+              참여자끼리 직접 정해야 한다는 점을 이해했습니다. Comp는 이를 대신 결정하거나
+              분쟁을 중재하지 않습니다.
               <span className="mt-0.5 block text-xs text-gray-400">
-                여러 명이 함께 곡을 완성하면 법적으로 "공동저작물"이 되고 참여자 전원이
-                공동저작권자가 될 수 있어요. 참여자끼리 미리 역할과 지분을 이야기해두는 걸
-                권장해요.
+                작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
               </span>
             </span>
           </label>
@@ -291,9 +288,8 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              Comp가 제 게시물을 서비스 화면에 노출하고 운영하는 데 필요한 범위 안에서만
-              사용하는 것에 동의합니다. 이 동의가 제 창작물의 소유권을 Comp에 넘기는 것은
-              아닙니다.
+              Comp가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
+              것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
             </span>
           </label>
         </div>
