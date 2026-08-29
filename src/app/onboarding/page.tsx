@@ -103,12 +103,10 @@ export default function OnboardingPage() {
       .eq("id", user.id);
 
     if (updateError) {
+      // nickname은 이제 유니크 제약이 없다(0038) — 실제 유일함은 서버가 자동 배정하는
+      // nickname_tag가 담당하고 클라이언트는 그걸 절대 안 건드리므로 여기서 날 에러가 아니다.
       setLoading(false);
-      setError(
-        updateError.message.includes("duplicate")
-          ? "이미 사용 중인 닉네임이에요. 다시 뽑거나 다른 닉네임을 입력해주세요."
-          : updateError.message,
-      );
+      setError(updateError.message);
       return;
     }
 

@@ -49,16 +49,13 @@ export function NicknameForm() {
       setSaving(false);
       return;
     }
+    // nickname은 이제 유니크 제약이 없다(0038) — 실제 유일함은 가입 시 서버가 배정하는
+    // nickname_tag가 담당하고 여기서는 절대 안 건드리므로, 저장 실패는 그냥 그대로 보여준다.
     const { error } = await supabase.from("users").update({ nickname: trimmed }).eq("id", user.id);
     setSaving(false);
     setMessage(
       error
-        ? {
-            type: "error",
-            text: error.message.includes("duplicate")
-              ? "이미 사용 중인 닉네임이에요."
-              : `저장 실패: ${error.message}`,
-          }
+        ? { type: "error", text: `저장 실패: ${error.message}` }
         : { type: "ok", text: "닉네임이 저장됐어요." },
     );
   }

@@ -50,6 +50,10 @@ export interface Database {
           password_hash: string | null;
           name: string;
           nickname: string;
+          // 전체 회원 기준 절대 유일(0038) — 가입 시 트리거가 자동 배정, 아무도 못 바꿈.
+          // nickname(문구)은 이제 중복 허용이라 화면에 보이는 값이 겹칠 수 있고, 이 태그로만
+          // 실제로 구분된다. 클라이언트는 이 값을 절대 표시/입력받지 않는다(가입 화면에도 비노출).
+          nickname_tag: string;
           status: UserStatus;
           role: UserRole;
           notifications_seen_at: string;

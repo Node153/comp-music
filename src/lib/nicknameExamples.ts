@@ -1,14 +1,13 @@
 // 배달의민족 가입 화면 참고 — 재밌는 닉네임 후보를 자동으로 만들어서 입력칸에 채워주고,
 // 마음에 안 들면 다시 뽑을 수 있게 한다("고르는 건 유저의 몫").
 // 손으로 문구를 다 써두는 대신, 기존 9개 예시에 이미 있던 두 템플릿("좋은음악앞에서___",
-// "음악 좋으면 ___")의 반응 문구 뱅크를 늘려서 조합으로 다양성을 확보한다.
+// "음악좋으면___")의 반응 문구 뱅크를 늘려서 조합으로 다양성을 확보한다.
 //
-// 숫자 접미사(2026-08-20, 사용자 요청): DEMO에서 회원들이 적극적으로 활동하도록 익명성을
-// 높이는 방향으로, 닉네임의 "문구" 부분은 여러 사람이 겹쳐 보여도 되게(오히려 익명 커뮤니티
-// 느낌에 도움) 하고 뒤에 짧은 랜덤 숫자를 붙여 실제 문자열은 유니크하게 유지한다 — 검색/식별은
-// 문제없이 되면서 "나만 이 닉네임"이라는 부담 없이 가볍게 쓰게 하려는 의도.
-// (한때 번호가 "닉네임처럼 안 보인다"는 이유로 뺀 적 있었는데, 이번엔 반대 방향 요청이라
-// 되돌림 — 0018 마이그레이션의 기존 유저 닉네임 백필(예시 문구 + id 앞 4자리)과 같은 원리.)
+// 익명성 강화(2026-08-20, 사용자 요청): 여러 사람이 같은 문구를 써도 되게(오히려 익명
+// 커뮤니티 느낌에 도움) nickname의 유니크 제약을 없앴다. 대신 "회원별 절대 유일" 요구는
+// 별도 컬럼 nickname_tag(4자리, 0038)로 옮겼는데, 이건 가입 시점에 서버(handle_new_user
+// 트리거)가 직접 배정하고 클라이언트는 절대 관여하지 않는다 — 그래서 이 파일엔 태그 생성
+// 로직이 없다(가입 화면에 노출될 수가 없게 만드는 핵심 포인트).
 //
 // 주의: 0018_nickname_and_display_name.sql의 백필 SQL은 그 시점 문구 9개를 SQL 안에
 // 그대로 박아둔 것이라 여기 목록을 바꿔도 이미 적용된 그 마이그레이션엔 영향 없다.
@@ -72,27 +71,19 @@ function randomPhrase(): string {
   return randomFrom(STANDALONE);
 }
 
-// 입력창 placeholder(예시 문구)용 — 숫자 없이 깔끔하게 하나만 보여준다(실제 값으로 안 쓰이므로
-// 유니크할 필요 없음).
+// 입력창 placeholder(예시 문구)용.
 export function randomNicknameExample(): string {
   return randomPhrase();
 }
 
-// 가입 폼 자동 채움용 — 실제 값으로 쓰일 거라 유니크 보장이 필요해서 숫자 접미사를 붙인다.
+// 가입 폼 자동 채움용 — nickname_tag(0038)가 유니크를 보장하므로 여기선 그냥 문구 하나만
+// 뽑으면 된다(중복 문구 허용, 서버가 알아서 유일한 태그를 붙여줌).
 export function generateNicknameCandidate(): string {
-  const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-  return `${randomPhrase()}_${suffix}`;
+  return randomPhrase();
 }
 
 // 닉네임 띄어쓰기 금지(2026-08-20) — 자동생성 문구뿐 아니라 사용자가 직접 입력하는 경우도
 // 막아야 해서 signup/onboarding/NicknameForm 제출 시 공용으로 검사한다.
 export function hasWhitespace(nickname: string): boolean {
   return /\s/.test(nickname);
-}
-
-// 숫자 접미사(_0000)는 유니크 보장용 내부 값이라 평상시 화면엔 안 보이게 한다(2026-08-20).
-// DB 쪽 표시 레이어(user_display 뷰 등, 0033)는 이미 잘라서 내려주므로 이 함수는 그걸 못 거치는
-// 곳(SearchPanel.tsx처럼 users.nickname을 직접 읽는 화면)에서만 쓰면 된다.
-export function stripNicknameTag(nickname: string): string {
-  return nickname.replace(/_\d{4}$/, "");
 }

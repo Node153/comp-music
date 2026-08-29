@@ -96,12 +96,13 @@ export default function SignupPage() {
     setLoading(false);
 
     if (signUpError) {
+      // 닉네임(nickname) 자체는 이제 유니크 제약이 없다(0038) — 실제로 겹치는 건 서버가
+      // 자동 배정하는 nickname_tag뿐이고 그건 클라이언트가 절대 못 건드리므로 여기서 날
+      // 에러가 아니다. "이미 가입된 이메일" 정도만 특별 취급하면 충분하다.
       setError(
         signUpError.message.includes("already registered")
           ? "이미 가입된 이메일입니다."
-          : signUpError.message.includes("duplicate")
-            ? "이미 사용 중인 닉네임이에요. 다시 뽑거나 다른 닉네임을 입력해주세요."
-            : signUpError.message,
+          : signUpError.message,
       );
       return;
     }

@@ -30,7 +30,7 @@ export default async function AdminMembersPage({
 
   let query = supabase
     .from("users")
-    .select("id, name, nickname, email, status, role, birth_date, created_at")
+    .select("id, name, nickname, nickname_tag, email, status, role, birth_date, created_at")
     .order("created_at", { ascending: false });
 
   if (q) {
@@ -127,7 +127,9 @@ export default async function AdminMembersPage({
               <tr key={m.id}>
                 <td className="px-4 py-3">
                   <div className="font-medium text-gray-900">{m.name}</div>
-                  <div className={mutedText}>{m.nickname}</div>
+                  <div className={mutedText}>
+                    {m.nickname} <span className="text-gray-400">#{m.nickname_tag}</span>
+                  </div>
                   {duplicates.length > 0 && (
                     <div className="mt-1 flex flex-col gap-0.5">
                       {duplicates.map((d) => {
