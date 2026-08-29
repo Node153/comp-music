@@ -228,7 +228,12 @@ export default function OnboardingPage() {
             />
             <span>
               [필수]{" "}
-              <Link href="/terms" target="_blank" className="text-blue-600 underline hover:text-blue-700">
+              <Link
+                href="/terms"
+                target="_blank"
+                onClick={(e) => e.stopPropagation()}
+                className="text-blue-600 underline hover:text-blue-700"
+              >
                 서비스 이용약관
               </Link>
               에 동의합니다.
@@ -244,7 +249,12 @@ export default function OnboardingPage() {
             />
             <span>
               [필수]{" "}
-              <Link href="/privacy" target="_blank" className="text-blue-600 underline hover:text-blue-700">
+              <Link
+                href="/privacy"
+                target="_blank"
+                onClick={(e) => e.stopPropagation()}
+                className="text-blue-600 underline hover:text-blue-700"
+              >
                 개인정보 수집·이용
               </Link>
               에 동의합니다.
@@ -263,6 +273,7 @@ export default function OnboardingPage() {
               <Link
                 href="/community-guidelines"
                 target="_blank"
+                onClick={(e) => e.stopPropagation()}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 커뮤니티 운영정책
