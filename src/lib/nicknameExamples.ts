@@ -92,11 +92,13 @@ export function generateNicknameCandidate(taken: Set<string> = new Set()): strin
 }
 
 // signup/onboarding/NicknameForm 공용 — ALL_NICKNAME_PHRASES 중 이미 DB에 있는 것만 조회.
-// createClient()의 반환 타입을 그대로 받아써서 실제 쿼리 빌더 타입과 정확히 맞춘다
-// (구조적 타이핑으로 직접 흉내내면 PostgrestFilterBuilder가 진짜 Promise가 아니라서 깨짐).
+// users 테이블을 직접 select하면 RLS(users_select_self_or_approved_peers)에 막혀서
+// 비로그인(signup)·미승인(onboarding) 상태에선 항상 빈 결과만 온다(에러 없이 조용히
+// 실패해서 배포 후에도 못 알아챌 뻔한 버그 — 0032로 발견·수정). 대신 이 용도로만 좁게 연
+// security definer 함수(public_taken_nicknames, 0032)를 RPC로 호출한다.
 export async function fetchTakenNicknames(
   supabase: ReturnType<typeof createClient>,
 ): Promise<Set<string>> {
-  const { data } = await supabase.from("users").select("nickname").in("nickname", ALL_NICKNAME_PHRASES);
-  return new Set((data ?? []).map((row) => row.nickname));
+  const { data } = await supabase.rpc("public_taken_nicknames", { candidates: ALL_NICKNAME_PHRASES });
+  return new Set(data ?? []);
 }
