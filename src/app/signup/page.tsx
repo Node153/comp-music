@@ -3,7 +3,6 @@
 // S2 회원가입 (AUTH-01)
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
@@ -18,6 +17,15 @@ import {
   PASSWORD_MISMATCH_MESSAGE,
 } from "@/lib/passwordPolicy";
 import { isOldEnough } from "@/lib/age";
+
+// 약관/정책 링크를 새 탭으로 열기(사용자 요청) — <Link target="_blank">를 체크박스와 같은
+// <label> 안에 두면 Safari가 새 탭을 열긴 열되 href로 이동하지 않고 현재 페이지를 그대로
+// 복제해서 띄우는 버그가 있다(label의 클릭 위임 로직과 앵커 태그가 충돌하는 것으로 보임,
+// stopPropagation만으로는 해결 안 됨). <a>를 아예 쓰지 않고 버튼 클릭 시 window.open을
+// 직접 호출하면 이 문제를 피할 수 있다.
+function openInNewTab(path: string) {
+  window.open(path, "_blank", "noopener,noreferrer");
+}
 
 const today = new Date();
 const MAX_BIRTH_DATE = today.toISOString().slice(0, 10);
@@ -243,14 +251,16 @@ export default function SignupPage() {
             />
             <span>
               [필수]{" "}
-              <Link
-                href="/terms"
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInNewTab("/terms");
+                }}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 서비스 이용약관
-              </Link>
+              </button>
               에 동의합니다.
             </span>
           </label>
@@ -264,14 +274,16 @@ export default function SignupPage() {
             />
             <span>
               [필수]{" "}
-              <Link
-                href="/privacy"
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInNewTab("/privacy");
+                }}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 개인정보 수집·이용
-              </Link>
+              </button>
               에 동의합니다.
             </span>
           </label>
@@ -285,14 +297,16 @@ export default function SignupPage() {
             />
             <span>
               [필수]{" "}
-              <Link
-                href="/community-guidelines"
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInNewTab("/community-guidelines");
+                }}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 커뮤니티 운영정책
-              </Link>
+              </button>
               에 동의합니다.
             </span>
           </label>

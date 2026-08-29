@@ -7,7 +7,6 @@
 // 기록되게 이 화면에서 처리한다(트리거가 대신 기록하지 않음 — 0027 마이그레이션 주석 참고).
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { BirthDateScrollPicker } from "@/components/BirthDateScrollPicker";
@@ -22,6 +21,13 @@ const AGREEMENT_VERSION = "2026-08-10";
 const TERMS_PRIVACY_VERSION = "2026-08-19";
 const COMMUNITY_GUIDELINES_VERSION = "2026-08-20";
 const AGE_OVER_14_VERSION = "2026-08-29";
+
+// 약관/정책 링크를 새 탭으로 열기(사용자 요청) — signup/page.tsx와 같은 이유(Safari에서
+// <Link target="_blank">가 체크박스 <label> 안에 있으면 새 탭에 현재 페이지가 복제되는
+// 버그가 있어 <a> 대신 버튼 클릭 시 window.open을 직접 호출).
+function openInNewTab(path: string) {
+  window.open(path, "_blank", "noopener,noreferrer");
+}
 
 const today = new Date();
 const MAX_BIRTH_DATE = today.toISOString().slice(0, 10);
@@ -228,14 +234,16 @@ export default function OnboardingPage() {
             />
             <span>
               [필수]{" "}
-              <Link
-                href="/terms"
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInNewTab("/terms");
+                }}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 서비스 이용약관
-              </Link>
+              </button>
               에 동의합니다.
             </span>
           </label>
@@ -249,14 +257,16 @@ export default function OnboardingPage() {
             />
             <span>
               [필수]{" "}
-              <Link
-                href="/privacy"
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInNewTab("/privacy");
+                }}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 개인정보 수집·이용
-              </Link>
+              </button>
               에 동의합니다.
             </span>
           </label>
@@ -270,14 +280,16 @@ export default function OnboardingPage() {
             />
             <span>
               [필수]{" "}
-              <Link
-                href="/community-guidelines"
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openInNewTab("/community-guidelines");
+                }}
                 className="text-blue-600 underline hover:text-blue-700"
               >
                 커뮤니티 운영정책
-              </Link>
+              </button>
               에 동의합니다.
             </span>
           </label>
