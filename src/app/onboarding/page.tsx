@@ -18,7 +18,11 @@ import { isOldEnough } from "@/lib/age";
 // signup/page.tsx의 handle_new_user 트리거(0023/0029/0039)가 이메일 가입자에게 남기는 것과
 // 동일한 버전 문자열 — 동의 이력을 한 기준으로 통일하기 위해 하드코딩 값도 그대로 맞춘다.
 const AGREEMENT_VERSION = "2026-08-10";
-const TERMS_PRIVACY_VERSION = "2026-08-19";
+// 2026-08-29: 이용약관 내용을 크게 보완(운영자 정보/이용허락 범위/권리침해 신고 절차 등
+// 신설)하면서 개인정보처리방침은 안 건드렸으므로, 둘을 하나의 상수로 묶어두지 않고
+// 분리했다 — 실제로 바뀐 문서의 버전만 올려야 동의 이력이 정확하다.
+const TERMS_VERSION = "2026-08-29";
+const PRIVACY_VERSION = "2026-08-19";
 const COMMUNITY_GUIDELINES_VERSION = "2026-08-20";
 const AGE_OVER_14_VERSION = "2026-08-29";
 
@@ -158,8 +162,8 @@ export default function OnboardingPage() {
       { user_id: user.id, type: "content_rights", version: AGREEMENT_VERSION },
       { user_id: user.id, type: "collab_disclaimer", version: AGREEMENT_VERSION },
       { user_id: user.id, type: "license_grant", version: AGREEMENT_VERSION },
-      { user_id: user.id, type: "terms_of_service", version: TERMS_PRIVACY_VERSION },
-      { user_id: user.id, type: "privacy_policy", version: TERMS_PRIVACY_VERSION },
+      { user_id: user.id, type: "terms_of_service", version: TERMS_VERSION },
+      { user_id: user.id, type: "privacy_policy", version: PRIVACY_VERSION },
       { user_id: user.id, type: "community_guidelines", version: COMMUNITY_GUIDELINES_VERSION },
       { user_id: user.id, type: "age_over_14", version: AGE_OVER_14_VERSION },
     ]);
