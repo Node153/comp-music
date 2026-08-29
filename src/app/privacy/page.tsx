@@ -36,10 +36,11 @@ export default function PrivacyPolicyPage() {
       <Section title="1. 수집하는 개인정보 항목">
         <p className="font-medium text-gray-900">필수 항목</p>
         <ul className="list-disc pl-5">
-          <li>이메일 가입 시: 이메일, 실명, 닉네임, 비밀번호</li>
+          <li>이메일 가입 시: 이메일, 실명, 생년월일, 닉네임, 비밀번호</li>
           <li>
             소셜로그인(Google/Kakao/Spotify) 가입 시: 각 서비스가 제공하는 이메일·이름·닉네임
-            (이용자가 로그인 시 동의한 항목에 한함)
+            (이용자가 로그인 시 동의한 항목에 한함), 그리고 생년월일은 각 서비스가 제공하지
+            않아 가입 화면에서 이용자가 직접 입력
           </li>
           <li>
             인증심사 시: 인증유형(전공생/활동자), 학교명, 인증서류(재학증명서·학생증·졸업증명서
@@ -60,6 +61,10 @@ export default function PrivacyPolicyPage() {
       <Section title="2. 개인정보의 수집 및 이용 목적">
         <ul className="list-disc pl-5">
           <li>회원 식별 및 로그인 처리</li>
+          <li>
+            중복 가입 방지(동일인의 다중 계정 생성 여부 확인) — 특히 생년월일은 이 목적으로만
+            사용하며, 실명과 함께 대조해 관리자가 중복 가입 의심 계정을 판별하는 데 씁니다
+          </li>
           <li>전공생/활동자 인증 심사(부정 가입 방지, 폐쇄형 서비스 품질 유지)</li>
           <li>게시물 업로드·노출·상호작용 등 핵심 서비스 제공</li>
           <li>Companion(협업) 매칭 및 DM 기능 제공</li>
