@@ -159,14 +159,17 @@ export default function SignupPage() {
         <span className="h-px flex-1 bg-gray-200" />
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="text"
-          placeholder="실명"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={field}
-        />
+        <div className="flex flex-col gap-1.5">
+          <span className={label}>실명</span>
+          <input
+            type="text"
+            placeholder="실명을 입력해주세요"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={field}
+          />
+        </div>
         <div className="flex flex-col gap-1.5">
           <span className={label}>생년월일</span>
           <input
@@ -180,10 +183,11 @@ export default function SignupPage() {
           />
         </div>
         <div className="flex flex-col gap-1">
+          <span className={label}>닉네임</span>
           <div className="flex gap-1.5">
             <input
               type="text"
-              placeholder="닉네임"
+              placeholder="닉네임을 입력해주세요"
               required
               maxLength={30}
               value={nickname}
