@@ -120,10 +120,15 @@ export async function proxy(request: NextRequest) {
   }
 
   // 승인되지 않은 사용자는 심사 관련 화면(S4/S5) 외 전체 비노출 (0-1)
+  // ⚠️ /feed는 PUBLIC_PATHS에 있지만 그건 "가입도 안 한 방문자에게 보여주는 미리보기"
+  // 목적이고(DEMO만 공개, memo는 잠금 — posts_select_public_anyone RLS가 담당), "가입은
+  // 했지만 아직 승인 안 된 로그인 사용자"에게 커뮤니티 열람을 허용하겠다는 뜻이 아니다.
+  // 이 둘을 구분 안 하면 대기 중인 회원이 로그인한 채로 /feed에 들어가 콘텐츠를 미리
+  // 볼 수 있게 된다(실제로 발견된 문제, 사용자 요청으로 여기서 명시적으로 막는다).
   if (
     status !== "approved" &&
     !UNAPPROVED_ALLOWED_PATHS.includes(pathname) &&
-    !isPublicPath
+    (pathname === "/feed" || !isPublicPath)
   ) {
     return NextResponse.redirect(new URL("/status", request.url));
   }
