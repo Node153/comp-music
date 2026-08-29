@@ -11,7 +11,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label, errorText, pageTitle, mutedText } from "@/components/ui/styles";
-import { generateNicknameCandidate } from "@/lib/nicknameExamples";
+import { generateNicknameCandidate, fetchTakenNicknames } from "@/lib/nicknameExamples";
 import { DiceIcon } from "@/components/icons";
 
 // signup/page.tsx의 handle_new_user 트리거(0023/0029)가 이메일 가입자에게 남기는 것과 동일한
@@ -33,6 +33,8 @@ export default function OnboardingPage() {
   // — signup/page.tsx와 같은 이유(동명이인 판별 보조).
   const [birthDate, setBirthDate] = useState("");
   const [nickname, setNickname] = useState("");
+  // signup/page.tsx와 동일 — 이미 다른 회원이 쓰는 문구는 추천에서 제외.
+  const [takenNicknames, setTakenNicknames] = useState<Set<string>>(new Set());
   const [agreedContentRights, setAgreedContentRights] = useState(false);
   const [agreedCollabDisclaimer, setAgreedCollabDisclaimer] = useState(false);
   const [agreedLicenseGrant, setAgreedLicenseGrant] = useState(false);
@@ -49,7 +51,10 @@ export default function OnboardingPage() {
         (user?.user_metadata?.full_name as string | undefined);
       if (metaName) setName(metaName);
     });
-    setNickname(generateNicknameCandidate());
+    fetchTakenNicknames(supabase).then((taken) => {
+      setTakenNicknames(taken);
+      setNickname(generateNicknameCandidate(taken));
+    });
   }, [supabase]);
 
   async function handleSubmit(e: FormEvent) {
@@ -166,7 +171,7 @@ export default function OnboardingPage() {
             />
             <button
               type="button"
-              onClick={() => setNickname(generateNicknameCandidate())}
+              onClick={() => setNickname(generateNicknameCandidate(takenNicknames))}
               title="다른 닉네임 뽑기"
               className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50"
             >

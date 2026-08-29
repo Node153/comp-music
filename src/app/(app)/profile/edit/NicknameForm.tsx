@@ -7,7 +7,11 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label, errorText } from "@/components/ui/styles";
-import { randomNicknameExample, generateNicknameCandidate } from "@/lib/nicknameExamples";
+import {
+  randomNicknameExample,
+  generateNicknameCandidate,
+  fetchTakenNicknames,
+} from "@/lib/nicknameExamples";
 import { DiceIcon } from "@/components/icons";
 
 export function NicknameForm() {
@@ -15,6 +19,8 @@ export function NicknameForm() {
   const [nickname, setNickname] = useState("");
   // placeholder 예시는 mount마다 랜덤 — SSR과 달라질 수 있어 input에 suppressHydrationWarning.
   const [nicknameExample] = useState(randomNicknameExample);
+  // signup/onboarding과 동일 — 이미 다른 회원이 쓰는 문구는 다시뽑기 추천에서 제외.
+  const [takenNicknames, setTakenNicknames] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
@@ -30,6 +36,7 @@ export function NicknameForm() {
       if (row) setNickname(row.nickname);
       setLoaded(true);
     });
+    fetchTakenNicknames(supabase).then(setTakenNicknames);
   }, [supabase]);
 
   async function save(e: React.FormEvent) {
@@ -80,7 +87,7 @@ export function NicknameForm() {
         />
         <button
           type="button"
-          onClick={() => setNickname(generateNicknameCandidate())}
+          onClick={() => setNickname(generateNicknameCandidate(takenNicknames))}
           title="다른 닉네임 뽑기"
           disabled={!loaded}
           className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
