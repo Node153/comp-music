@@ -40,7 +40,8 @@ export type AgreementType =
   | "terms_of_service"
   | "privacy_policy"
   | "community_guidelines"
-  | "age_over_14";
+  | "age_over_14"
+  | "beta_notice";
 
 export interface Database {
   public: {

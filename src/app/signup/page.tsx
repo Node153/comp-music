@@ -70,6 +70,9 @@ export default function SignupPage() {
   // 로직(handleSubmit의 isOldEnough)이 이미 있지만, 생년월일을 조작해서 입력할 수도 있으므로
   // 명시적 동의도 별도로 받는다(데이터 검증 + 자기신고 이중 장치).
   const [agreedOver14, setAgreedOver14] = useState(false);
+  // 베타 서비스 이용 안내 동의(2026-08-29, 사용자 요청) — 정식 출시 전 베타 기간 중 기능/
+  // 데이터가 유지 안 될 수 있다는 점을 명시적으로 고지하고 동의받는다(/beta-notice).
+  const [agreedBetaNotice, setAgreedBetaNotice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -109,7 +112,8 @@ export default function SignupPage() {
       !agreedTerms ||
       !agreedPrivacy ||
       !agreedCommunityGuidelines ||
-      !agreedOver14
+      !agreedOver14 ||
+      !agreedBetaNotice
     ) {
       setError("아래 동의 항목에 모두 체크해주세요.");
       return;
@@ -356,6 +360,31 @@ export default function SignupPage() {
             />
             <span>[필수] 만 14세 이상입니다.</span>
           </label>
+          <div className="flex items-start gap-2 text-sm">
+            <input
+              id="agree-beta-notice"
+              type="checkbox"
+              required
+              checked={agreedBetaNotice}
+              onChange={(e) => setAgreedBetaNotice(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
+            />
+            <span>
+              <label htmlFor="agree-beta-notice" className="cursor-pointer">
+                [필수]{" "}
+              </label>
+              <button
+                type="button"
+                onClick={() => openInNewTab("/beta-notice")}
+                className="text-blue-600 underline hover:text-blue-700"
+              >
+                베타 서비스 이용 안내
+              </button>
+              <label htmlFor="agree-beta-notice" className="cursor-pointer">
+                에 동의합니다.
+              </label>
+            </span>
+          </div>
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"

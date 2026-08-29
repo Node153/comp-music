@@ -13,8 +13,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // /auth/callback도 마찬가지 이유로 public — OAuth 콜백이 도착한 시점엔 아직 세션 쿠키가 없고
 // (콜백 라우트 핸들러 안에서 code를 세션으로 교환해야 비로소 생김), 여기서 막으면 그 교환이
 // 일어나기 전에 /login으로 튕겨버린다.
-// /terms, /privacy, /community-guidelines는 법적 고지 문서라 회원 여부와 무관하게 항상
-// 열람 가능해야 한다(가입 전 signup 화면에서도 링크로 걸림).
+// /terms, /privacy, /community-guidelines, /beta-notice는 법적 고지 문서라 회원 여부와
+// 무관하게 항상 열람 가능해야 한다(가입 전 signup 화면에서도 링크로 걸림).
 const PUBLIC_PATHS = [
   "/",
   "/login",
@@ -26,6 +26,7 @@ const PUBLIC_PATHS = [
   "/terms",
   "/privacy",
   "/community-guidelines",
+  "/beta-notice",
 ];
 const UNAPPROVED_ALLOWED_PATHS = ["/status", "/verify/type", "/verify/documents"];
 
@@ -80,17 +81,18 @@ export async function proxy(request: NextRequest) {
   // /onboarding으로 돌려보내는 무한 리다이렉트 루프가 생긴다(실제로 겪은 버그 — 로컬 Google
   // 로그인 테스트 중 Safari "너무 많은 재이동" 에러로 발견). early return으로 완전히 분리해야
   // 이런 상호작용 자체가 안 생긴다.
-  // ⚠️ /terms·/privacy·/community-guidelines는 예외로 허용한다 — 온보딩 화면의 동의
-  // 체크박스가 이 문서들을 새 탭으로 여는데, 새 탭도 같은 로그인 세션(쿠키)을 공유하므로
-  // 여기서 막으면 그 새 탭조차 곧장 /onboarding으로 튕겨버린다. 실제로 겪은 버그 — Safari에서
-  // 새 탭은 열리는데 약관 대신 온보딩 화면이 또 뜨는 것처럼 보였음(원인은 label/버튼 구조가
-  // 아니라 이 서버 리다이렉트였다).
+  // ⚠️ /terms·/privacy·/community-guidelines·/beta-notice는 예외로 허용한다 — 온보딩
+  // 화면의 동의 체크박스가 이 문서들을 새 탭으로 여는데, 새 탭도 같은 로그인 세션(쿠키)을
+  // 공유하므로 여기서 막으면 그 새 탭조차 곧장 /onboarding으로 튕겨버린다. 실제로 겪은
+  // 버그 — Safari에서 새 탭은 열리는데 약관 대신 온보딩 화면이 또 뜨는 것처럼 보였음
+  // (원인은 label/버튼 구조가 아니라 이 서버 리다이렉트였다).
   if (profile?.needs_onboarding) {
     if (
       pathname !== "/onboarding" &&
       pathname !== "/terms" &&
       pathname !== "/privacy" &&
-      pathname !== "/community-guidelines"
+      pathname !== "/community-guidelines" &&
+      pathname !== "/beta-notice"
     ) {
       return NextResponse.redirect(new URL("/onboarding", request.url));
     }
