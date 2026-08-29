@@ -33,6 +33,8 @@ function openInNewTab(path: string) {
   window.open(path, "_blank", "noopener,noreferrer");
 }
 
+const CONTACT_EMAIL = "jtaein0723@gmail.com";
+
 const today = new Date();
 const MAX_BIRTH_DATE = today.toISOString().slice(0, 10);
 const MIN_BIRTH_DATE = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate())
@@ -137,6 +139,27 @@ export default function OnboardingPage() {
     if (!user) {
       setLoading(false);
       setError("세션이 만료됐어요. 다시 로그인해주세요.");
+      return;
+    }
+
+    // 중복가입 사전 차단(2026-08-29, 사용자 요청) — signup/page.tsx와 같은 이유(소셜로그인마다
+    // 이메일이 달라서 같은 사람이 로그인 방법을 잊고 다른 방법으로 또 가입할 수 있는 문제,
+    // 실제로 Google/Spotify로 각각 가입한 계정이 이름+생년월일 일치로 확인된 사례 있음).
+    // 완전 자동 차단 — 동명이인 오탐 가능성은 감수하기로 사용자가 명시적으로 결정함.
+    const { data: isDuplicate, error: duplicateCheckError } = await supabase.rpc(
+      "check_duplicate_identity",
+      { p_name: name.trim(), p_birth_date: birthDate, p_exclude_id: user.id },
+    );
+    if (duplicateCheckError) {
+      setLoading(false);
+      setError(duplicateCheckError.message);
+      return;
+    }
+    if (isDuplicate) {
+      setLoading(false);
+      setError(
+        `이미 동일한 이름과 생년월일로 가입된 계정이 있습니다. 본인의 계정이 맞다면 이전에 가입한 방법으로 로그인해주세요. 다른 사람인데 이 안내를 받으셨다면 ${CONTACT_EMAIL}로 문의해주세요.`,
+      );
       return;
     }
 

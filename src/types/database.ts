@@ -460,6 +460,14 @@ export interface Database {
       // public_taken_nicknames(0032)는 닉네임 겹침 방지 기능 자체를 되돌리면서(2026-08-20,
       // 익명성 강화 목적으로 숫자 접미사 재도입) 호출부가 없어짐 — DB 함수는 그대로 남아있지만
       // (재사용 가능성 있어 별도 마이그레이션으로 안 지움) 여기 타입 선언은 정리.
+      // check_duplicate_identity(0044) — 소셜로그인 중복가입 사전 차단용. 이름+생년월일이
+      // 일치하는 다른 계정이 있는지만 boolean으로 알려준다(다른 사람 정보는 노출 안 함).
+      // users_select_self_or_approved_peers RLS 때문에 클라이언트에서 직접 users를 조회해서는
+      // 이 판별이 안 된다 — security definer 함수로 우회.
+      check_duplicate_identity: {
+        Args: { p_name: string; p_birth_date: string; p_exclude_id?: string | null };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
