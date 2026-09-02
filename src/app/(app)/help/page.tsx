@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { FeedbackChat, type FeedbackChatMessage } from "@/components/FeedbackChat";
-import { pageTitle, sectionTitle, pageCard, mutedText } from "@/components/ui/styles";
+import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
 
 const ADMIN_LINKS = [
   { href: "/admin/members", label: "회원 관리" },
@@ -56,7 +56,7 @@ export default async function HelpPage() {
   }));
 
   return (
-    <main className={`${pageCard} flex flex-col gap-8`}>
+    <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 bg-white p-6 pb-24 md:my-6 md:rounded-lg md:border md:border-gray-200 md:pb-6">
       <div>
         <h1 className={pageTitle}>Help</h1>
         <p className={`${mutedText} mt-1`}>공지사항을 확인하고, 하고 싶은 말을 남겨주세요.</p>
@@ -79,41 +79,46 @@ export default async function HelpPage() {
         </section>
       )}
 
-      <section className="flex flex-col gap-3">
-        <h2 className={sectionTitle}>📣 공지사항</h2>
-        <div className="flex flex-col gap-3">
-          {(announcements ?? []).map((a) => (
-            <article key={a.id} className="rounded-xl border border-gray-200 p-4">
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="font-semibold text-gray-900">{a.title}</h3>
-                <span className="shrink-0 text-xs text-gray-400">
-                  {new Date(a.created_at).toLocaleDateString("ko-KR")}
-                </span>
-              </div>
-              <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-                {a.content}
-              </p>
-            </article>
-          ))}
-          {(announcements ?? []).length === 0 && (
-            <p className="py-6 text-center text-sm text-gray-400">아직 공지사항이 없습니다</p>
-          )}
-        </div>
-      </section>
+      {/* 왼쪽: 공지사항 · 오른쪽: 피드백 채팅. 데스크톱은 두 칸, 모바일은 위아래로 쌓임. */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <section className="flex min-w-0 flex-col gap-3">
+          <h2 className={sectionTitle}>📣 공지사항</h2>
+          <div className="flex flex-col gap-3 overflow-y-auto rounded-xl border border-gray-200 p-4 md:h-[600px]">
+            {(announcements ?? []).map((a) => (
+              <article key={a.id} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="font-semibold text-gray-900">{a.title}</h3>
+                  <span className="shrink-0 text-xs text-gray-400">
+                    {new Date(a.created_at).toLocaleDateString("ko-KR")}
+                  </span>
+                </div>
+                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                  {a.content}
+                </p>
+              </article>
+            ))}
+            {(announcements ?? []).length === 0 && (
+              <p className="py-6 text-center text-sm text-gray-400">아직 공지사항이 없습니다</p>
+            )}
+          </div>
+        </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className={sectionTitle}>💬 피드백 채팅</h2>
-        <p className={mutedText}>
-          전체 회원이 함께 보는 공간이에요. 불편한 점, 있었으면 하는 기능 무엇이든 편하게 남겨주세요. (닉네임으로 표시됩니다)
-        </p>
-        {user ? (
-          <FeedbackChat currentUserId={user.id} isAdmin={isAdmin} initialMessages={feedbackMessages} />
-        ) : (
-          <p className="rounded-xl border border-gray-200 py-10 text-center text-sm text-gray-400 dark:border-gray-800 dark:text-gray-500">
-            로그인 후 이용할 수 있어요.
+        <section className="flex min-w-0 flex-col gap-3">
+          <h2 className={sectionTitle}>💬 피드백 채팅</h2>
+          <p className={mutedText}>
+            전체 회원이 함께 보는 공간이에요. 무엇이든 편하게 남겨주세요. (닉네임으로 표시됩니다)
           </p>
-        )}
-      </section>
+          <div className="h-[70vh] md:h-[600px]">
+            {user ? (
+              <FeedbackChat currentUserId={user.id} isAdmin={isAdmin} initialMessages={feedbackMessages} />
+            ) : (
+              <p className="flex h-full items-center justify-center rounded-xl border border-gray-200 text-center text-sm text-gray-400 dark:border-gray-800 dark:text-gray-500">
+                로그인 후 이용할 수 있어요.
+              </p>
+            )}
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

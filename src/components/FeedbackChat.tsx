@@ -102,6 +102,8 @@ export function FeedbackChat({
     return () => {
       supabase.removeChannel(channel);
     };
+    // resolveNick은 마운트 시점 함수 참조로 충분(내부 캐시는 ref) — 재구독 유발 안 함.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   useEffect(() => {
@@ -146,8 +148,8 @@ export function FeedbackChat({
   }
 
   return (
-    <div className="flex flex-col rounded-xl border border-gray-200 dark:border-gray-800">
-      <div className="flex max-h-[420px] min-h-[220px] flex-1 flex-col gap-3 overflow-y-auto p-4">
+    <div className="flex h-full min-h-[320px] flex-col rounded-xl border border-gray-200 dark:border-gray-800">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
         {messages.length === 0 && (
           <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
             아직 대화가 없어요. 하고 싶은 말을 편하게 남겨보세요.
@@ -159,10 +161,8 @@ export function FeedbackChat({
           return (
             <div key={m.id} className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
               <span className="flex items-center gap-1.5 px-1 text-[11px] text-gray-400 dark:text-gray-500">
-                <span className="font-medium text-gray-500 dark:text-gray-400">
-                  {m.nickname}
-                  {m.nicknameTag && <span className="ml-0.5 font-normal">#{m.nicknameTag}</span>}
-                </span>
+                {/* 태그번호(#0038)는 피드백 채팅에서 노출하지 않음 (사용자 요청) — 닉네임만. */}
+                <span className="font-medium text-gray-500 dark:text-gray-400">{m.nickname}</span>
                 <span>·</span>
                 <span>{timeAgo(m.createdAt)}</span>
                 {canDelete && (
