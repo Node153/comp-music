@@ -34,6 +34,12 @@ export default async function ProfilePage({
     .single();
   if (!user) notFound();
 
+  // 본인 프로필에서는 실명 아래에 닉네임+태그(0038)를 같이 보여준다 — 남들에게 어떻게
+  // 보이는지 / 검색·멘션용 핸들이 뭔지 본인이 알 수 있게.
+  const { data: me } = isOwnProfile
+    ? await supabase.from("users").select("nickname, nickname_tag").eq("id", userId).single()
+    : { data: null };
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("school, school_public, instruments, region, bio")
@@ -98,6 +104,12 @@ export default async function ProfilePage({
             <h1 className="text-xl font-bold text-gray-900">{user.display_name}</h1>
             {isOwnProfile && <LogoutButton />}
           </div>
+          {isOwnProfile && me && (
+            <p className="text-sm text-gray-500">
+              {me.nickname}
+              <span className="text-gray-400">#{me.nickname_tag}</span>
+            </p>
+          )}
           <div className="flex gap-4 text-sm text-gray-600">
             <Link href={`/profile/${userId}/companions`} className="hover:text-gray-900">
               {isOwnProfile ? "나의 Companion" : "Companion"}{" "}
