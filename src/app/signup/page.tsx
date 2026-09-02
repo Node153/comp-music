@@ -238,7 +238,7 @@ export default function SignupPage() {
             </button>
           </div>
           <p className="px-1 text-xs text-gray-400">
-            더 자유롭고 안전한 활동을 위해, 나만의 재미있는 닉네임을 사용해 주세요.
+            신원이 드러나지 않도록, 개성 있고 재미있는 닉네임을 사용해 주세요.
           </p>
         </div>
         <input
