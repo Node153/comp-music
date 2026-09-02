@@ -3,11 +3,12 @@
 // S2 회원가입 (AUTH-01)
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { BirthDateScrollPicker } from "@/components/BirthDateScrollPicker";
-import { field, label, errorText, pageTitle } from "@/components/ui/styles";
+import { field, label, errorText } from "@/components/ui/styles";
 import { generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
 import { MailIcon, DiceIcon } from "@/components/icons";
 import {
@@ -35,6 +36,38 @@ const MIN_BIRTH_DATE = new Date(today.getFullYear() - 100, today.getMonth(), tod
   .toISOString()
   .slice(0, 10);
 
+// 작은 대문자 구역 라벨(계정 / 프로필) — 폼을 의미 단위로 끊어 읽히게 한다.
+const eyebrow = "text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400";
+const fieldLabel = `${label} px-0.5`;
+const checkbox = "mt-0.5 h-[18px] w-[18px] shrink-0 rounded accent-black";
+const policyLink =
+  "font-medium text-blue-600 underline-offset-2 hover:underline focus-visible:underline";
+
+function EyeToggle({ shown, onToggle }: { shown: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      tabIndex={-1}
+      onClick={onToggle}
+      aria-label={shown ? "비밀번호 숨기기" : "비밀번호 표시"}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-700"
+    >
+      {shown ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      ) : (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+          <path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+          <line x1="2" y1="2" x2="22" y2="22" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -53,6 +86,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // 저작권/공동창작 동의(docs/copyright_agreement_draft.md) — 셋 다 필수 체크.
   // 실제 기록은 handle_new_user 트리거(0023_agreements)가 가입 성공 시 고정 버전으로 남긴다 —
   // 여기서는 폼 제출을 막는 게이트 역할만 하고 별도로 서버에 값을 보내지 않는다.
@@ -76,6 +111,29 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // "전체 동의" 체크박스 — 아래 8개 동의 항목을 한 번에 켜고 끈다. 파생 상태라 개별 항목을
+  // 하나라도 끄면 자동으로 해제된다(별도 state 없음).
+  const allAgreed =
+    agreedTerms &&
+    agreedPrivacy &&
+    agreedCommunityGuidelines &&
+    agreedOver14 &&
+    agreedBetaNotice &&
+    agreedContentRights &&
+    agreedCollabDisclaimer &&
+    agreedLicenseGrant;
+
+  function setAllAgreed(v: boolean) {
+    setAgreedTerms(v);
+    setAgreedPrivacy(v);
+    setAgreedCommunityGuidelines(v);
+    setAgreedOver14(v);
+    setAgreedBetaNotice(v);
+    setAgreedContentRights(v);
+    setAgreedCollabDisclaimer(v);
+    setAgreedLicenseGrant(v);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -172,272 +230,325 @@ export default function SignupPage() {
 
   if (pendingConfirm) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-3 p-6 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-          <MailIcon className="h-6 w-6 text-gray-500" />
+      <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center gap-4 px-6 py-12 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-900 text-white">
+          <MailIcon className="h-6 w-6" />
         </div>
-        <h1 className={pageTitle}>이메일을 확인해주세요</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">이메일을 확인해주세요</h1>
         <p className="text-sm leading-relaxed text-gray-500">
           <span className="font-medium text-gray-900">{email}</span> 로 인증 메일을 보냈습니다.
           <br />
-          인증 후 다시 로그인해주세요.
+          메일 속 링크를 눌러 인증한 뒤 로그인해주세요.
         </p>
+        <Link
+          href="/login"
+          className="mt-2 text-sm font-medium text-gray-900 underline-offset-2 hover:underline"
+        >
+          로그인하러 가기
+        </Link>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
-      <h1 className={pageTitle}>회원가입</h1>
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-8 px-6 py-12">
+      <header className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gray-400">
+          Comp
+        </span>
+        <h1 className="text-[26px] font-bold leading-tight tracking-tight text-gray-900">
+          회원가입
+        </h1>
+        <p className="text-sm text-gray-500">몇 가지만 입력하면 바로 시작할 수 있어요.</p>
+      </header>
+
       <SocialLoginButtons />
+
       <div className="flex items-center gap-3 text-xs text-gray-400">
         <span className="h-px flex-1 bg-gray-200" />
         또는 이메일로 가입
         <span className="h-px flex-1 bg-gray-200" />
       </div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <span className={label}>실명</span>
-          <input
-            type="text"
-            placeholder="실명을 입력해주세요"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={field}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <span className={label}>생년월일</span>
-          <BirthDateScrollPicker
-            value={birthDate}
-            onChange={setBirthDate}
-            minDate={MIN_BIRTH_DATE}
-            maxDate={MAX_BIRTH_DATE}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className={label}>닉네임</span>
-          <div className="flex gap-1.5">
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {/* ── 계정 ───────────────────────────── */}
+        <section className="flex flex-col gap-3">
+          <p className={eyebrow}>계정</p>
+          <div className="flex flex-col gap-1.5">
+            <span className={fieldLabel}>이메일</span>
             <input
-              type="text"
-              placeholder="닉네임을 입력해주세요"
+              type="email"
+              placeholder="you@example.com"
               required
-              maxLength={30}
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className={field}
             />
-            <button
-              type="button"
-              onClick={() => setNickname(generateNicknameCandidate())}
-              title="다른 닉네임 뽑기"
-              className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50"
-            >
-              <DiceIcon className="h-4 w-4" />
-            </button>
           </div>
-          <p className="px-1 text-xs text-gray-400">
-            신원이 드러나지 않도록, 개성 있고 재미있는 닉네임을 사용해 주세요.
-          </p>
-        </div>
-        <input
-          type="email"
-          placeholder="이메일"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className={field}
-        />
-        <input
-          type="password"
-          placeholder={`비밀번호 (특수문자 포함 ${PASSWORD_MIN_LENGTH}자 이상)`}
-          required
-          minLength={PASSWORD_MIN_LENGTH}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className={field}
-        />
-        <input
-          type="password"
-          placeholder="비밀번호 확인"
-          required
-          minLength={PASSWORD_MIN_LENGTH}
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className={field}
-        />
+          <div className="flex flex-col gap-1.5">
+            <span className={fieldLabel}>비밀번호</span>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder={`특수문자 포함 ${PASSWORD_MIN_LENGTH}자 이상`}
+                required
+                minLength={PASSWORD_MIN_LENGTH}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={`${field} pr-11`}
+              />
+              <EyeToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className={fieldLabel}>비밀번호 확인</span>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="비밀번호를 한 번 더 입력"
+                required
+                minLength={PASSWORD_MIN_LENGTH}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`${field} pr-11`}
+              />
+              <EyeToggle
+                shown={showConfirmPassword}
+                onToggle={() => setShowConfirmPassword((v) => !v)}
+              />
+            </div>
+          </div>
+        </section>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3.5">
+        <div className="h-px bg-gray-100" />
+
+        {/* ── 프로필 ─────────────────────────── */}
+        <section className="flex flex-col gap-3">
+          <p className={eyebrow}>프로필</p>
+          <div className="flex flex-col gap-1.5">
+            <span className={fieldLabel}>실명</span>
+            <input
+              type="text"
+              placeholder="실명을 입력해주세요"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={field}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className={fieldLabel}>생년월일</span>
+            <BirthDateScrollPicker
+              value={birthDate}
+              onChange={setBirthDate}
+              minDate={MIN_BIRTH_DATE}
+              maxDate={MAX_BIRTH_DATE}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className={fieldLabel}>닉네임</span>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                placeholder="닉네임을 입력해주세요"
+                required
+                maxLength={30}
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                className={field}
+              />
+              <button
+                type="button"
+                onClick={() => setNickname(generateNicknameCandidate())}
+                title="다른 닉네임 뽑기"
+                aria-label="다른 닉네임 뽑기"
+                className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-500 transition hover:bg-gray-50 hover:text-gray-900"
+              >
+                <DiceIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="px-0.5 text-xs leading-relaxed text-gray-400">
+              신원이 드러나지 않도록, 개성 있고 재미있는 닉네임을 사용해 주세요.
+            </p>
+          </div>
+        </section>
+
+        <div className="h-px bg-gray-100" />
+
+        {/* ── 약관 동의 ──────────────────────── */}
+        <div className="flex flex-col gap-3.5 rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+          <label className="flex items-center gap-2.5 text-sm font-semibold text-gray-900">
+            <input
+              type="checkbox"
+              checked={allAgreed}
+              onChange={(e) => setAllAgreed(e.target.checked)}
+              className={checkbox}
+            />
+            <span>전체 동의</span>
+          </label>
+          <div className="h-px bg-gray-200" />
           {/* 체크박스(<label>)와 새 탭 버튼이 완전히 분리된 구조(사용자 요청, Safari 새탭
               버그 재수정) — <button>을 <label> "안"에 두면 (window.open으로 바꿨어도) 여전히
               실기기 Safari에서 새 탭 이동이 안 됐다. label과 그 안의 다른 상호작용 요소가
               같이 있는 것 자체가 문제였던 것으로 보여, 아예 버튼을 label 바깥의 형제 요소로
-              뺐다 — 앞뒤 텍스트만 htmlFor로 같은 체크박스를 가리키는 별개의 <label> 두 개로
-              감싸 클릭 영역을 유지한다. */}
-          <div className="flex items-start gap-2 text-sm">
-            <input
-              id="agree-terms"
-              type="checkbox"
-              required
-              checked={agreedTerms}
-              onChange={(e) => setAgreedTerms(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-            />
-            <span>
-              <label htmlFor="agree-terms" className="cursor-pointer">
-                [필수]{" "}
-              </label>
-              <button
-                type="button"
-                onClick={() => openInNewTab("/terms")}
-                className="text-blue-600 underline hover:text-blue-700"
-              >
-                서비스 이용약관
-              </button>
-              <label htmlFor="agree-terms" className="cursor-pointer">
-                에 동의합니다.
-              </label>
-            </span>
-          </div>
-          <div className="flex items-start gap-2 text-sm">
-            <input
-              id="agree-privacy"
-              type="checkbox"
-              required
-              checked={agreedPrivacy}
-              onChange={(e) => setAgreedPrivacy(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-            />
-            <span>
-              <label htmlFor="agree-privacy" className="cursor-pointer">
-                [필수]{" "}
-              </label>
-              <button
-                type="button"
-                onClick={() => openInNewTab("/privacy")}
-                className="text-blue-600 underline hover:text-blue-700"
-              >
-                개인정보 수집·이용
-              </button>
-              <label htmlFor="agree-privacy" className="cursor-pointer">
-                에 동의합니다.
-              </label>
-            </span>
-          </div>
-          <div className="flex items-start gap-2 text-sm">
-            <input
-              id="agree-community-guidelines"
-              type="checkbox"
-              required
-              checked={agreedCommunityGuidelines}
-              onChange={(e) => setAgreedCommunityGuidelines(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-            />
-            <span>
-              <label htmlFor="agree-community-guidelines" className="cursor-pointer">
-                [필수]{" "}
-              </label>
-              <button
-                type="button"
-                onClick={() => openInNewTab("/community-guidelines")}
-                className="text-blue-600 underline hover:text-blue-700"
-              >
-                커뮤니티 운영정책
-              </button>
-              <label htmlFor="agree-community-guidelines" className="cursor-pointer">
-                에 동의합니다.
-              </label>
-            </span>
-          </div>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              required
-              checked={agreedOver14}
-              onChange={(e) => setAgreedOver14(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-            />
-            <span>[필수] 만 14세 이상입니다.</span>
-          </label>
-          <div className="flex items-start gap-2 text-sm">
-            <input
-              id="agree-beta-notice"
-              type="checkbox"
-              required
-              checked={agreedBetaNotice}
-              onChange={(e) => setAgreedBetaNotice(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-            />
-            <span>
-              <label htmlFor="agree-beta-notice" className="cursor-pointer">
-                [필수]{" "}
-              </label>
-              <button
-                type="button"
-                onClick={() => openInNewTab("/beta-notice")}
-                className="text-blue-600 underline hover:text-blue-700"
-              >
-                베타 서비스 이용 안내
-              </button>
-              <label htmlFor="agree-beta-notice" className="cursor-pointer">
-                에 동의합니다.
-              </label>
-            </span>
-          </div>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              required
-              checked={agreedContentRights}
-              onChange={(e) => setAgreedContentRights(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-            />
-            <span>
-              제가 올리는 음원·영상·이미지는 직접 만들었거나, 사용할 권한을 받은 콘텐츠입니다.
-              다른 사람의 저작권을 침해하지 않겠습니다.
-              <span className="mt-0.5 block text-xs text-gray-400">
-                다른 사람의 샘플·비트·반주 등을 사용했다면 정식 허가가 필요해요.
+              뺐다 — 뒤 텍스트만 htmlFor로 같은 체크박스를 가리키는 <label>로 감싸 클릭 영역을 유지한다. */}
+          <div className="flex flex-col gap-3 text-sm text-gray-600">
+            <div className="flex items-start gap-2.5">
+              <input
+                id="agree-terms"
+                type="checkbox"
+                required
+                checked={agreedTerms}
+                onChange={(e) => setAgreedTerms(e.target.checked)}
+                className={checkbox}
+              />
+              <span>
+                <button type="button" onClick={() => openInNewTab("/terms")} className={policyLink}>
+                  서비스 이용약관
+                </button>
+                <label htmlFor="agree-terms" className="cursor-pointer">
+                  에 동의합니다.
+                </label>
               </span>
-            </span>
-          </label>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              required
-              checked={agreedCollabDisclaimer}
-              onChange={(e) => setAgreedCollabDisclaimer(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-            />
-            <span>
-              memo(비공개 협업 공간)에서 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은
-              참여자끼리 직접 정해야 한다는 점을 이해했습니다. Comp는 이를 대신 결정하거나
-              분쟁을 중재하지 않습니다.
-              <span className="mt-0.5 block text-xs text-gray-400">
-                작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
+            </div>
+            <div className="flex items-start gap-2.5">
+              <input
+                id="agree-privacy"
+                type="checkbox"
+                required
+                checked={agreedPrivacy}
+                onChange={(e) => setAgreedPrivacy(e.target.checked)}
+                className={checkbox}
+              />
+              <span>
+                <button type="button" onClick={() => openInNewTab("/privacy")} className={policyLink}>
+                  개인정보 수집·이용
+                </button>
+                <label htmlFor="agree-privacy" className="cursor-pointer">
+                  에 동의합니다.
+                </label>
               </span>
-            </span>
-          </label>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              required
-              checked={agreedLicenseGrant}
-              onChange={(e) => setAgreedLicenseGrant(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-black"
-            />
-            <span>
-              Comp가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
-              것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
-            </span>
-          </label>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <input
+                id="agree-community-guidelines"
+                type="checkbox"
+                required
+                checked={agreedCommunityGuidelines}
+                onChange={(e) => setAgreedCommunityGuidelines(e.target.checked)}
+                className={checkbox}
+              />
+              <span>
+                <button
+                  type="button"
+                  onClick={() => openInNewTab("/community-guidelines")}
+                  className={policyLink}
+                >
+                  커뮤니티 운영정책
+                </button>
+                <label htmlFor="agree-community-guidelines" className="cursor-pointer">
+                  에 동의합니다.
+                </label>
+              </span>
+            </div>
+            <label className="flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                required
+                checked={agreedOver14}
+                onChange={(e) => setAgreedOver14(e.target.checked)}
+                className={checkbox}
+              />
+              <span>만 14세 이상입니다.</span>
+            </label>
+            <div className="flex items-start gap-2.5">
+              <input
+                id="agree-beta-notice"
+                type="checkbox"
+                required
+                checked={agreedBetaNotice}
+                onChange={(e) => setAgreedBetaNotice(e.target.checked)}
+                className={checkbox}
+              />
+              <span>
+                <button
+                  type="button"
+                  onClick={() => openInNewTab("/beta-notice")}
+                  className={policyLink}
+                >
+                  베타 서비스 이용 안내
+                </button>
+                <label htmlFor="agree-beta-notice" className="cursor-pointer">
+                  에 동의합니다.
+                </label>
+              </span>
+            </div>
+            <label className="flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                required
+                checked={agreedContentRights}
+                onChange={(e) => setAgreedContentRights(e.target.checked)}
+                className={checkbox}
+              />
+              <span>
+                제가 올리는 음원·영상·이미지는 직접 만들었거나, 사용할 권한을 받은 콘텐츠입니다.
+                다른 사람의 저작권을 침해하지 않겠습니다.
+                <span className="mt-0.5 block text-xs text-gray-400">
+                  다른 사람의 샘플·비트·반주 등을 사용했다면 정식 허가가 필요해요.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                required
+                checked={agreedCollabDisclaimer}
+                onChange={(e) => setAgreedCollabDisclaimer(e.target.checked)}
+                className={checkbox}
+              />
+              <span>
+                memo(비공개 협업 공간)에서 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은
+                참여자끼리 직접 정해야 한다는 점을 이해했습니다. Comp는 이를 대신 결정하거나
+                분쟁을 중재하지 않습니다.
+                <span className="mt-0.5 block text-xs text-gray-400">
+                  작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                required
+                checked={agreedLicenseGrant}
+                onChange={(e) => setAgreedLicenseGrant(e.target.checked)}
+                className={checkbox}
+              />
+              <span>
+                Comp가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
+                것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
+              </span>
+            </label>
+          </div>
         </div>
 
         {error && <p className={errorText}>{error}</p>}
-        <Button type="submit" disabled={loading} className="mt-1 w-full">
+
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 text-[15px] font-semibold shadow-sm transition active:scale-[0.99]"
+        >
           {loading ? "가입 중..." : "가입하기"}
         </Button>
       </form>
+
+      <p className="text-center text-sm text-gray-500">
+        이미 계정이 있으신가요?{" "}
+        <Link href="/login" className="font-medium text-gray-900 underline-offset-2 hover:underline">
+          로그인
+        </Link>
+      </p>
     </main>
   );
 }
