@@ -19,16 +19,22 @@ export default async function ManagePostsPage() {
 
   const { data: posts } = await supabase
     .from("posts")
-    .select("id, video_url, image_url, audio_url, media_type, status, caption")
+    .select("id, video_url, image_url, audio_url, media_type, status, caption, expires_at")
     .eq("user_id", user.id)
     .in("status", ["published", "expired"])
     .order("created_at", { ascending: false });
 
+  // 만료 판정은 expires_at(시각)으로 직접 한다. status="expired"는 expire-posts 크론이
+  // 뒤늦게(하루 1회) 채우는 값이라, 크론 지연과 무관하게 정확한 배지를 보이려면 시각 비교가 필요.
+  const nowMs = Date.now();
   const postsWithVideo = await Promise.all(
     (posts ?? []).map(async (post) => {
       const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
       const videoSrc = mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
-      return { ...post, videoSrc, mediaPath };
+      const isExpired =
+        post.status === "expired" ||
+        (post.expires_at != null && new Date(post.expires_at).getTime() <= nowMs);
+      return { ...post, videoSrc, mediaPath, isExpired };
     }),
   );
 
@@ -50,7 +56,7 @@ export default async function ManagePostsPage() {
             ) : post.videoSrc ? (
               <video src={post.videoSrc} className="h-full w-full object-cover" muted preload="metadata" />
             ) : null}
-            {post.status === "expired" && (
+            {post.isExpired && (
               <span className="absolute left-1 top-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white">
                 만료됨
               </span>
