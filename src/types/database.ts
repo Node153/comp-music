@@ -3,7 +3,8 @@
 // 스키마가 바뀌면 이 파일도 함께 갱신해야 한다. (추후 `supabase gen types typescript`로 자동생성 전환 권장)
 
 // Phase 0: 회원가입 상태 3단계만 사용 (spec 1.4) — supplement_requested는 Phase 1에서 추가됨
-export type UserStatus = "pending" | "approved" | "rejected";
+// withdrawn(0046) — 회원 탈퇴. 삭제가 아니라 비활성화+개인정보 파기라 행은 남고 상태만 바뀐다.
+export type UserStatus = "pending" | "approved" | "rejected" | "withdrawn";
 export type UserRole = "user" | "admin";
 export type UserType = "student" | "activist";
 export type VerificationStatus = "pending" | "approved" | "rejected";
@@ -81,6 +82,8 @@ export interface Database {
           // 이메일 다이제스트 발송 커서(0035) — 크론이 "이 시각 이후로 새로 생긴 것"만 골라
           // 보내고 나면 여기를 now()로 갱신한다.
           last_notification_emailed_at: string;
+          // 회원 탈퇴 시각(0046) — 탈퇴 전에는 null.
+          withdrawn_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -103,6 +106,7 @@ export interface Database {
           email_notify_message?: boolean;
           email_notify_peak?: boolean;
           last_notification_emailed_at?: string;
+          withdrawn_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -486,6 +490,12 @@ export interface Database {
       check_duplicate_identity: {
         Args: { p_name: string; p_birth_date: string; p_exclude_id?: string | null };
         Returns: boolean;
+      };
+      // withdraw_own_account(0046) — 회원 탈퇴. 매개변수 없이 항상 auth.uid() 본인에게만
+      // 작용한다(security definer로 RLS 우회, 대상은 호출자로 고정돼 있어 안전).
+      withdraw_own_account: {
+        Args: Record<string, never>;
+        Returns: void;
       };
     };
     Enums: Record<string, never>;

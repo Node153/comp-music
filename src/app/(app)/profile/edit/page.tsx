@@ -2,6 +2,7 @@ import { pageTitle, pageCard } from "@/components/ui/styles";
 import { ProfilePhotoForm } from "./ProfilePhotoForm";
 import { NicknameForm } from "./NicknameForm";
 import { ProfileDetailsForm } from "./ProfileDetailsForm";
+import { WithdrawAccountSection } from "./WithdrawAccountSection";
 
 // S10 프로필 수정 (PROFILE-01, 본인만 접근)
 export default function ProfileEditPage() {
@@ -11,6 +12,7 @@ export default function ProfileEditPage() {
       <ProfilePhotoForm />
       <NicknameForm />
       <ProfileDetailsForm />
+      <WithdrawAccountSection />
     </main>
   );
 }

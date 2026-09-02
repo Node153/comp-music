@@ -60,6 +60,15 @@ export default async function StatusPage() {
           <p className={mutedText}>평균 심사 기한은 48시간입니다.</p>
         </>
       )}
+      {status === "withdrawn" && (
+        <>
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
+            👋
+          </div>
+          <h1 className={pageTitle}>탈퇴 처리되었어요</h1>
+          <p className={mutedText}>그동안 이용해주셔서 감사했어요.</p>
+        </>
+      )}
       {status === "rejected" && (
         <>
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl">
