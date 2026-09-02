@@ -2,13 +2,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { pageTitle, mutedText } from "@/components/ui/styles";
 
-// 관리자 - 사용자 피드백 목록(0021_announcements_and_feedback). role=admin만 접근(proxy.ts에서 가드).
-// 관리 목적 내부 화면이라 user_display(닉네임) 대신 users에서 실명을 바로 조회한다.
+// 관리자 - 피드백 단체 채팅 로그(0046_feedback_group_chat). role=admin만 접근(proxy.ts에서 가드).
+// 앱 /help에서는 닉네임으로만 보이지만, 관리 화면은 관례대로 실명을 바로 조회해 최신순으로 훑는다.
+// (모더레이션용 삭제는 채팅 UI에서 관리자가 바로 할 수 있음 — 여기선 열람만.)
 export default async function AdminFeedbackPage() {
   const supabase = await createClient();
 
   const { data: feedbackRows } = await supabase
-    .from("feedback")
+    .from("feedback_messages")
     .select("id, user_id, content, created_at")
     .order("created_at", { ascending: false });
 

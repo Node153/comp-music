@@ -429,6 +429,23 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["feedback"]["Insert"]>;
         Relationships: [];
       };
+      // 0046_feedback_group_chat — 승인 회원 전원이 함께 보는 실시간 단체 채팅. 표시는 항상 닉네임.
+      feedback_messages: {
+        Row: {
+          id: string;
+          user_id: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["feedback_messages"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       // 0018 — 뷰어 기준 표시 이름: 본인/Companion이면 실명(users.name), 아니면 닉네임.

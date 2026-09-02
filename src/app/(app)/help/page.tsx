@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { FeedbackForm } from "@/components/FeedbackForm";
+import { FeedbackChat, type FeedbackChatMessage } from "@/components/FeedbackChat";
 import { pageTitle, sectionTitle, pageCard, mutedText } from "@/components/ui/styles";
 
 const ADMIN_LINKS = [
@@ -29,6 +29,31 @@ export default async function HelpPage() {
     .from("announcements")
     .select("id, title, content, created_at")
     .order("created_at", { ascending: false });
+
+  // 피드백 단체 채팅(0046) — 최근 200개만. 닉네임은 users에서 별도 조회(관리자/admin 페이지와
+  // 동일 패턴, PostgREST embed 대신 2쿼리). 표시는 무조건 닉네임.
+  const { data: rawFeedback } = user
+    ? await supabase
+        .from("feedback_messages")
+        .select("id, user_id, content, created_at")
+        .order("created_at", { ascending: true })
+        .limit(200)
+    : { data: null };
+
+  const feedbackSenderIds = [...new Set((rawFeedback ?? []).map((m) => m.user_id))];
+  const { data: feedbackNicks } =
+    feedbackSenderIds.length > 0
+      ? await supabase.from("users").select("id, nickname, nickname_tag").in("id", feedbackSenderIds)
+      : { data: [] };
+  const nickById = new Map((feedbackNicks ?? []).map((u) => [u.id, u]));
+  const feedbackMessages: FeedbackChatMessage[] = (rawFeedback ?? []).map((m) => ({
+    id: m.id,
+    userId: m.user_id,
+    nickname: nickById.get(m.user_id)?.nickname ?? "탈퇴한 사용자",
+    nicknameTag: nickById.get(m.user_id)?.nickname_tag ?? "",
+    content: m.content,
+    createdAt: m.created_at,
+  }));
 
   return (
     <main className={`${pageCard} flex flex-col gap-8`}>
@@ -77,8 +102,17 @@ export default async function HelpPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className={sectionTitle}>✍️ 피드백 보내기</h2>
-        {user && <FeedbackForm userId={user.id} />}
+        <h2 className={sectionTitle}>💬 피드백 채팅</h2>
+        <p className={mutedText}>
+          전체 회원이 함께 보는 공간이에요. 불편한 점, 있었으면 하는 기능 무엇이든 편하게 남겨주세요. (닉네임으로 표시됩니다)
+        </p>
+        {user ? (
+          <FeedbackChat currentUserId={user.id} isAdmin={isAdmin} initialMessages={feedbackMessages} />
+        ) : (
+          <p className="rounded-xl border border-gray-200 py-10 text-center text-sm text-gray-400 dark:border-gray-800 dark:text-gray-500">
+            로그인 후 이용할 수 있어요.
+          </p>
+        )}
       </section>
     </main>
   );
