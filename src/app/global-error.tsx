@@ -5,6 +5,7 @@
 // 모든 클라이언트 렌더 에러가 여기로 온다.
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import { reportClientError } from "@/lib/reportClientError";
 
 export default function GlobalError({
   error,
@@ -13,6 +14,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     Sentry.captureException(error);
+    reportClientError("global", error.message || "global error", error.stack);
   }, [error]);
 
   return (
