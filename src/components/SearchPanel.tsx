@@ -7,6 +7,13 @@
 // nickname으로만 검색하고 nickname만 보여준다. InviteUserPicker(기존 Companion 안에서만
 // 검색)와는 목적이 다른 화면이라 새로 만든다.
 //
+// nickname(문구)은 중복 허용이라 검색 결과에 같은 닉네임이 여러 명 나올 수 있다. 그래서
+// 이 화면은 항상 nickname_tag(전체 유일 4자리, 0038)를 함께 보여주고, "닉네임#태그" 형식
+// 입력을 지원한다 — 태그만 정확히 넣으면(전체 유일이라) 딱 한 명으로 좁혀진다.
+//   입력 예)  명곡탐지견#7914  → 닉네임 부분일치 + 태그 정확일치
+//            #7914            → 태그만으로 바로 지목
+//            명곡탐지견        → 기존처럼 닉네임 부분일치 (결과에 태그가 같이 보임)
+//
 // SearchOverlay(오버레이)와 /search 페이지(직접 링크로 들어왔을 때 대비용)가 이 입력+결과
 // UI를 그대로 공유한다 — 검색은 "잠깐 들렀다 가는" 가벼운 동작이라 페이지 이동보다 오버레이가
 // 더 매끄럽다고 판단해 오버레이를 기본으로 삼았다(/goal 논의 참고).
@@ -16,10 +23,25 @@ import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { field } from "@/components/ui/styles";
 
-type SearchResult = { id: string; nickname: string };
+type SearchResult = { id: string; nickname: string; nickname_tag: string };
 
 const SEARCH_DEBOUNCE_MS = 300;
 const RESULT_LIMIT = 20;
+const TAG_LENGTH = 4;
+
+// "명곡탐지견#7914" / "#7914" / "명곡탐지견" → 닉네임 부분과 태그 부분으로 분리.
+// 태그는 숫자만, 최대 4자리로 정규화한다(입력 오타/공백 방어).
+function parseQuery(raw: string): { namePart: string; tagPart: string } {
+  const trimmed = raw.trim();
+  const hashIdx = trimmed.indexOf("#");
+  if (hashIdx === -1) return { namePart: trimmed, tagPart: "" };
+  const namePart = trimmed.slice(0, hashIdx).trim();
+  const tagPart = trimmed
+    .slice(hashIdx + 1)
+    .replace(/\D/g, "")
+    .slice(0, TAG_LENGTH);
+  return { namePart, tagPart };
+}
 
 export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
   const supabase = createClient();
@@ -32,19 +54,20 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
   }, [supabase]);
 
   useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
+    const { namePart, tagPart } = parseQuery(query);
+    if (!namePart && !tagPart) {
       setResults(null);
       return;
     }
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const { data } = await supabase
+      let request = supabase
         .from("users")
-        .select("id, nickname")
-        .eq("status", "approved")
-        .ilike("nickname", `%${trimmed}%`)
-        .limit(RESULT_LIMIT);
+        .select("id, nickname, nickname_tag")
+        .eq("status", "approved");
+      if (tagPart) request = request.eq("nickname_tag", tagPart);
+      if (namePart) request = request.ilike("nickname", `%${namePart}%`);
+      const { data } = await request.limit(RESULT_LIMIT);
       if (!cancelled) setResults((data ?? []).filter((u) => u.id !== currentUserId));
     }, SEARCH_DEBOUNCE_MS);
     return () => {
@@ -57,12 +80,15 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
     <>
       <input
         type="text"
-        placeholder="닉네임으로 검색"
+        placeholder="닉네임#태그로 검색 (예: 명곡탐지견#7914)"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         autoFocus
         className={field}
       />
+      <p className="mt-1.5 px-1 text-xs text-gray-400">
+        닉네임은 겹칠 수 있어요. 프로필의 <span className="font-medium">#태그</span>까지 입력하면 정확히 한 명을 찾을 수 있어요.
+      </p>
       <ul className="mt-3 flex max-h-[60vh] flex-col overflow-y-auto">
         {results === null ? null : results.length === 0 ? (
           <p className="py-10 text-center text-sm text-gray-400">일치하는 사용자가 없어요</p>
@@ -75,7 +101,10 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
                 className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50"
               >
                 <Avatar userId={u.id} name={u.nickname} className="h-10 w-10 text-sm" />
-                <span className="text-sm font-medium text-gray-900">{u.nickname}</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {u.nickname}
+                  <span className="ml-1 font-normal text-gray-400">#{u.nickname_tag}</span>
+                </span>
               </Link>
             </li>
           ))

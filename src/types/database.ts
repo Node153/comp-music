@@ -55,7 +55,8 @@ export interface Database {
           nickname: string;
           // 전체 회원 기준 절대 유일(0038) — 가입 시 트리거가 자동 배정, 아무도 못 바꿈.
           // nickname(문구)은 이제 중복 허용이라 화면에 보이는 값이 겹칠 수 있고, 이 태그로만
-          // 실제로 구분된다. 클라이언트는 이 값을 절대 표시/입력받지 않는다(가입 화면에도 비노출).
+          // 실제로 구분된다. 가입 화면에서는 여전히 입력받지 않지만(자동 배정), 검색/프로필
+          // 등 동명이인을 구분해야 하는 곳에서는 "닉네임#태그" 형태로 표시한다(SearchPanel 참고).
           nickname_tag: string;
           status: UserStatus;
           role: UserRole;
