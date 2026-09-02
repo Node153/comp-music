@@ -138,13 +138,6 @@ export function ComplexAccessGate({
           <span className="truncate">{participantSummary}</span>
         </div>
       )}
-      {!canViewMedia && (
-        <div className="flex items-center gap-1.5 px-3 pb-2 text-xs text-violet-500 dark:text-violet-300">
-          <LockIcon className="h-3.5 w-3.5" />
-          <span>특정 인원에게만 공개된 게시물</span>
-        </div>
-      )}
-
       {useInlineChatLayout ? null : (
         <div className="relative flex items-center justify-center bg-[#1c1c1e]">
           {canViewMedia ? (

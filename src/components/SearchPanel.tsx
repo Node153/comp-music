@@ -64,9 +64,7 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
         className={field}
       />
       <ul className="mt-3 flex max-h-[60vh] flex-col overflow-y-auto">
-        {results === null ? (
-          <p className="py-10 text-center text-sm text-gray-400">닉네임을 입력해보세요</p>
-        ) : results.length === 0 ? (
+        {results === null ? null : results.length === 0 ? (
           <p className="py-10 text-center text-sm text-gray-400">일치하는 사용자가 없어요</p>
         ) : (
           results.map((u) => (
