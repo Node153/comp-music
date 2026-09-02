@@ -433,7 +433,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["feedback"]["Insert"]>;
         Relationships: [];
       };
-      // 0046_feedback_group_chat — 승인 회원 전원이 함께 보는 실시간 단체 채팅. 표시는 항상 닉네임.
+      // 0047_feedback_group_chat — 승인 회원 전원이 함께 보는 실시간 단체 채팅. 표시는 항상 닉네임.
       feedback_messages: {
         Row: {
           id: string;

@@ -1,7 +1,7 @@
 "use client";
 
 // /help의 "피드백" — 예전엔 1:1 제출 폼(feedback 테이블)이었는데, 승인 회원 전원이 함께
-// 보는 실시간 단체 채팅으로 바뀌었다(0046_feedback_group_chat). DM(ConversationView)과 같은
+// 보는 실시간 단체 채팅으로 바뀌었다(0047_feedback_group_chat). DM(ConversationView)과 같은
 // Supabase Realtime(postgres_changes) 패턴 — 텍스트 전용이라 INSERT/DELETE 신호만으로
 // 로컬 상태를 갱신하고 서버 왕복은 없다(단, realtime payload엔 닉네임이 없어서 처음 보는
 // user_id는 닉네임을 한 번 조회해 캐시한다).

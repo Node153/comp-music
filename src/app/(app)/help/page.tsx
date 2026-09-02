@@ -30,7 +30,7 @@ export default async function HelpPage() {
     .select("id, title, content, created_at")
     .order("created_at", { ascending: false });
 
-  // 피드백 단체 채팅(0046) — 최근 200개만. 닉네임은 users에서 별도 조회(관리자/admin 페이지와
+  // 피드백 단체 채팅(0047) — 최근 200개만. 닉네임은 users에서 별도 조회(관리자/admin 페이지와
   // 동일 패턴, PostgREST embed 대신 2쿼리). 표시는 무조건 닉네임.
   const { data: rawFeedback } = user
     ? await supabase
