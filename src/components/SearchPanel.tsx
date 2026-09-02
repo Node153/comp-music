@@ -84,26 +84,26 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         autoFocus
-        className={field}
+        className={`${field} dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white`}
       />
-      <p className="mt-1.5 px-1 text-xs text-gray-400">
+      <p className="mt-1.5 px-1 text-xs text-gray-400 dark:text-gray-500">
         닉네임은 겹칠 수 있어요. 프로필의 <span className="font-medium">#태그</span>까지 입력하면 정확히 한 명을 찾을 수 있어요.
       </p>
       <ul className="mt-3 flex max-h-[60vh] flex-col overflow-y-auto">
         {results === null ? null : results.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-400">일치하는 사용자가 없어요</p>
+          <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">일치하는 사용자가 없어요</p>
         ) : (
           results.map((u) => (
             <li key={u.id}>
               <Link
                 href={`/profile/${u.id}`}
                 onClick={onNavigate}
-                className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50"
+                className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 <Avatar userId={u.id} name={u.nickname} className="h-10 w-10 text-sm" />
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {u.nickname}
-                  <span className="ml-1 font-normal text-gray-400">#{u.nickname_tag}</span>
+                  <span className="ml-1 font-normal text-gray-400 dark:text-gray-500">#{u.nickname_tag}</span>
                 </span>
               </Link>
             </li>
