@@ -39,7 +39,7 @@ export function FeedHero({ messages }: { messages?: HeroMessage[] }) {
   const m = list[Math.min(idx, list.length - 1)];
 
   return (
-    <section className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+    <section className="flex min-h-svh flex-col items-center justify-center gap-6 px-6 py-16 text-center">
       <div className={`transition-opacity duration-700 ease-in-out ${shown ? "opacity-100" : "opacity-0"}`}>
         <p className="text-lg font-semibold leading-snug text-gray-900 dark:text-gray-100 md:text-2xl">
           {m.q}
