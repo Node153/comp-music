@@ -9,6 +9,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { BellIcon } from "@/components/icons";
 import { useNotificationCount } from "@/components/NotificationCountContext";
+import { beginThemeTransition } from "@/lib/theme";
 
 const FEED_TABS = [
   { value: "completion", label: "DEMO", icon: "☀" },
@@ -34,6 +35,7 @@ export function MobileTopBar() {
             <Link
               key={tab.value}
               href={`/feed?feed=${tab.value}`}
+              onClick={beginThemeTransition}
               className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition ${
                 isActive
                   ? tab.value === "complex"

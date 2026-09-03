@@ -12,6 +12,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { useNotificationCount } from "@/components/NotificationCountContext";
+import { beginThemeTransition } from "@/lib/theme";
 import { PlusIcon, ChatIcon, BellIcon, HelpIcon, SearchIcon } from "@/components/icons";
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
@@ -53,6 +54,7 @@ export function TopNav({
             <Link
               key={tab.value}
               href={`/feed?feed=${tab.value}`}
+              onClick={beginThemeTransition}
               title={
                 tab.value === "completion"
                   ? "전체공개 게시물 · 노출 시간 영구"

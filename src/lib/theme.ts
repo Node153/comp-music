@@ -28,6 +28,22 @@ function playThemeSound(dark: boolean) {
   audio.play().catch(() => {});
 }
 
+// 전역 색 트랜지션(globals.css의 .theme-transition)을 TRANSITION_MS 동안 켠다.
+// ThemeSync의 applyTheme은 네비게이션 "후" 이펙트에서 불리는데, 그 전에 이미 탭
+// className이 새 색으로 커밋돼버려서(예: memo→DEMO에서 탭 글자색이 4s 트랜지션을
+// 못 타고 150ms 유틸리티로 뚝 바뀜) 방향에 따라 그라데이션이 되고 안 되고가 갈렸다.
+// 그래서 탭 <Link>의 onClick에서도 이걸 먼저 호출해, 네비게이션 리렌더가 색을 바꾸는
+// 시점에 이미 .theme-transition이 걸려 있게 한다. 중복 호출은 타이머만 다시 잡을 뿐 무해.
+export function beginThemeTransition() {
+  const root = document.documentElement;
+  root.classList.add("theme-transition");
+  if (clearTimer) clearTimeout(clearTimer);
+  clearTimer = setTimeout(() => {
+    root.classList.remove("theme-transition");
+    clearTimer = null;
+  }, TRANSITION_MS);
+}
+
 export function applyTheme(dark: boolean, { animate = true }: { animate?: boolean } = {}) {
   const root = document.documentElement;
 
@@ -35,12 +51,7 @@ export function applyTheme(dark: boolean, { animate = true }: { animate?: boolea
   if (root.classList.contains("dark") === dark) return;
 
   if (animate) {
-    root.classList.add("theme-transition");
-    if (clearTimer) clearTimeout(clearTimer);
-    clearTimer = setTimeout(() => {
-      root.classList.remove("theme-transition");
-      clearTimer = null;
-    }, TRANSITION_MS);
+    beginThemeTransition();
     playThemeSound(dark);
   }
 

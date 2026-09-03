@@ -7,6 +7,7 @@
 // "가입하면 이것도 볼 수 있다"는 유인이 된다.
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { beginThemeTransition } from "@/lib/theme";
 
 const FEED_TABS = [
   { value: "completion", label: "DEMO", icon: "☀" },
@@ -36,6 +37,7 @@ export function GuestTopNav() {
             <Link
               key={tab.value}
               href={`/feed?feed=${tab.value}`}
+              onClick={beginThemeTransition}
               title={
                 tab.value === "completion"
                   ? "전체공개 게시물 · 노출 시간 영구"
