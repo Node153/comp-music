@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, getMyUserRow } from "@/lib/auth";
 import { getR2SignedUrl, resolveMediaUrl } from "@/lib/r2/storage";
 import { MessageButton } from "@/components/MessageButton";
 import { EngagementMeter } from "@/components/EngagementMeter";
@@ -269,9 +270,9 @@ export default async function FeedPage({
 
   const supabase = await createClient();
 
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  // getCurrentUser()는 (app)/feed 레이아웃과 같은 요청 스코프 캐시 — 여기서 또 불러도
+  // 실제 auth 왕복은 추가로 안 생긴다(예전엔 미들웨어 포함 요청당 4번 검증했다).
+  const currentUser = await getCurrentUser();
 
   // 로그인 전 미리보기(Instagram 참고) — DEMO는 비로그인 방문자에게도 열지만, memo는
   // Companion 전용 공간이라 존재 형태조차 안 보여주고 완전히 잠근다(0024_public_feed_preview).
@@ -298,11 +299,8 @@ export default async function FeedPage({
     );
   }
 
-  let currentUserName = "나";
-  if (currentUser) {
-    const { data: me } = await supabase.from("users").select("name").eq("id", currentUser.id).single();
-    if (me?.name) currentUserName = me.name;
-  }
+  const me = currentUser ? await getMyUserRow() : null;
+  const currentUserName = me?.name || "나";
 
   const postsSelect =
     "id, user_id, video_url, image_url, audio_url, media_type, thumbnail_url, caption, content_type, instrument_tags, visibility, collab_available, collab_role_needed, published_at, expires_at";
@@ -311,25 +309,28 @@ export default async function FeedPage({
     .select(postsSelect)
     .eq("status", "published")
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
-  const { data: rawPosts } = await (isComplex ? postsQuery.neq("visibility", "public") : postsQuery.eq("visibility", "public"))
-    .order("published_at", { ascending: false })
-    .limit(FEED_LIMIT);
 
-  // 내 Companion(맞팔, 0017) 전체 — 아래 "Companion 공개" 필터와 invite_only 노크 가능
-  // 여부(방장과 Companion인가) 판정에 함께 쓴다.
-  let myCompanionIds = new Set<string>();
-  if (currentUser && isComplex) {
-    const { data: companionRows } = await supabase
-      .from("companions")
-      .select("requester_id, addressee_id")
-      .eq("status", "accepted")
-      .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`);
-    myCompanionIds = new Set(
-      (companionRows ?? []).map((r) =>
-        r.requester_id === currentUser.id ? r.addressee_id : r.requester_id,
-      ),
-    );
-  }
+  // rawPosts와 내 Companion 목록은 서로 독립이라 병렬로 — 예전엔 순차 await였다.
+  // 내 Companion(맞팔, 0017): 아래 "Companion 공개" 필터와 invite_only 노크 가능 여부
+  // (방장과 Companion인가) 판정에 함께 쓴다.
+  const [{ data: rawPosts }, { data: companionRows }] = await Promise.all([
+    (isComplex ? postsQuery.neq("visibility", "public") : postsQuery.eq("visibility", "public"))
+      .order("published_at", { ascending: false })
+      .limit(FEED_LIMIT),
+    currentUser && isComplex
+      ? supabase
+          .from("companions")
+          .select("requester_id, addressee_id")
+          .eq("status", "accepted")
+          .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
+      : Promise.resolve({ data: [] as { requester_id: string; addressee_id: string }[] }),
+  ]);
+
+  const myCompanionIds = new Set(
+    (companionRows ?? []).map((r) =>
+      r.requester_id === currentUser?.id ? r.addressee_id : r.requester_id,
+    ),
+  );
 
   // memo 원래 취지("팔로우한 사람의 게시물만 보임")대로, "Companion 공개"(followers)와
   // "특정인 초대"(invite_only) 둘 다 방장과 Companion인 사람(또는 본인)에게만 노출 — 아닌
@@ -348,33 +349,36 @@ export default async function FeedPage({
   // 이름 표시는 전부 user_display 뷰(0018) — 뷰어가 Companion이면 실명, 아니면 닉네임이 내려온다.
   // 비로그인 방문자는 누구의 Companion도 될 수 없고 user_display 자체가 "승인된 뷰어" 전제라
   // 행을 안 내려주므로, 훨씬 좁은 public_post_authors(0024, 닉네임만) 뷰를 대신 쓴다.
-  const { data: users } =
+  // 게시물 목록이 정해지면 그에 딸린 조회들(작성자·프로필·좋아요·댓글)과 PEAK 기준치용
+  // 회원 수는 서로 독립이라 한 번에 병렬로 — 예전엔 5개를 순차 await 했다.
+  // 이름 표시는 user_display 뷰(0018) — 뷰어가 Companion이면 실명, 아니면 닉네임. 비로그인
+  // 방문자는 user_display가 행을 안 내려주므로 public_post_authors(0024, 닉네임만)를 쓴다.
+  const [
+    { data: users },
+    { data: profiles },
+    { data: likeRows },
+    { data: commentRows },
+    { count: approvedMemberCount },
+  ] = await Promise.all([
     userIds.length > 0
       ? currentUser
-        ? await supabase.from("user_display").select("id, display_name").in("id", userIds)
-        : await supabase.from("public_post_authors").select("id, display_name").in("id", userIds)
-      : { data: [] };
-  const { data: profiles } =
+        ? supabase.from("user_display").select("id, display_name").in("id", userIds)
+        : supabase.from("public_post_authors").select("id, display_name").in("id", userIds)
+      : { data: [] as { id: string; display_name: string }[] },
     userIds.length > 0
-      ? await supabase.from("profiles").select("user_id, school, school_public, instruments").in("user_id", userIds)
-      : { data: [] };
+      ? supabase.from("profiles").select("user_id, school, school_public, instruments").in("user_id", userIds)
+      : { data: [] as { user_id: string; school: string | null; school_public: boolean; instruments: string[] | null }[] },
+    postIds.length > 0
+      ? supabase.from("likes").select("post_id, user_id, created_at").in("post_id", postIds)
+      : { data: [] as { post_id: string; user_id: string; created_at: string }[] },
+    postIds.length > 0
+      ? supabase.from("comments").select("post_id").in("post_id", postIds)
+      : { data: [] as { post_id: string }[] },
+    supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved"),
+  ]);
+
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
-
-  const { data: likeRows } =
-    postIds.length > 0
-      ? await supabase.from("likes").select("post_id, user_id, created_at").in("post_id", postIds)
-      : { data: [] };
-  const { data: commentRows } =
-    postIds.length > 0
-      ? await supabase.from("comments").select("post_id").in("post_id", postIds)
-      : { data: [] };
-
-  // PEAK 기준치 — 승인 회원 수의 1/3(회원이 늘어날수록 기준도 같이 올라간다).
-  const { count: approvedMemberCount } = await supabase
-    .from("users")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "approved");
   const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
   const weekStartISO = currentWeekStartISO();
 
@@ -489,24 +493,27 @@ export default async function FeedPage({
       : { data: [] };
   const chatSenderNameMap = new Map((chatSenders ?? []).map((u) => [u.id, u.display_name]));
 
+  // 첨부 파일 signed URL은 서로 독립이라 한꺼번에 서명한다 — 예전엔 메시지마다 순차 await.
   const chatMessagesByPost = new Map<string, ChatMessage[]>();
-  for (const row of chatRows ?? []) {
-    const fileUrl = row.file_key ? await getR2SignedUrl(row.file_key, SIGNED_URL_EXPIRY_SECONDS) : null;
-    const message: ChatMessage = {
+  const builtMessages = await Promise.all(
+    (chatRows ?? []).map(async (row): Promise<ChatMessage & { post_id: string }> => ({
+      post_id: row.post_id,
       id: row.id,
       senderId: row.sender_id,
       senderName: chatSenderNameMap.get(row.sender_id) ?? "알 수 없음",
       type: row.type,
       content: row.content,
-      fileUrl,
+      fileUrl: row.file_key ? await getR2SignedUrl(row.file_key, SIGNED_URL_EXPIRY_SECONDS) : null,
       fileName: row.file_key ? (row.file_key.split("/").pop() ?? null) : null,
       fileKey: row.file_key,
       isWork: row.is_work,
       createdAt: row.created_at,
-    };
-    const list = chatMessagesByPost.get(row.post_id) ?? [];
+    })),
+  );
+  for (const { post_id, ...message } of builtMessages) {
+    const list = chatMessagesByPost.get(post_id) ?? [];
     list.push(message);
-    chatMessagesByPost.set(row.post_id, list);
+    chatMessagesByPost.set(post_id, list);
   }
 
   const postsWithVideo = await Promise.all(

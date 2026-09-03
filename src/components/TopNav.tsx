@@ -11,6 +11,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
+import { useNotificationCount } from "@/components/NotificationCountContext";
 import { PlusIcon, ChatIcon, BellIcon, HelpIcon, SearchIcon } from "@/components/icons";
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
@@ -24,16 +25,15 @@ const FEED_TABS = [
 export function TopNav({
   currentUserId,
   userName,
-  unseenNotifications = 0,
 }: {
   currentUserId: string;
   userName: string;
-  unseenNotifications?: number;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeFeedTab = searchParams.get("feed") ?? "completion";
   const search = useSearchOverlay();
+  const unseenNotifications = useNotificationCount();
 
   return (
     <header className="sticky top-0 z-40 hidden h-14 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-[#1c1c1e] md:flex">

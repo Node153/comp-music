@@ -8,16 +8,18 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { BellIcon } from "@/components/icons";
+import { useNotificationCount } from "@/components/NotificationCountContext";
 
 const FEED_TABS = [
   { value: "completion", label: "DEMO", icon: "☀" },
   { value: "complex", label: "memo", icon: "☾" },
 ];
 
-export function MobileTopBar({ unseenNotifications = 0 }: { unseenNotifications?: number }) {
+export function MobileTopBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeFeedTab = searchParams.get("feed") ?? "completion";
+  const unseenNotifications = useNotificationCount();
 
   return (
     <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b border-gray-200 bg-white px-3 dark:border-gray-800 dark:bg-[#1c1c1e] md:hidden">

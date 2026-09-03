@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
+import { useNotificationCount } from "@/components/NotificationCountContext";
 import { HomeIcon, SearchIcon, MailIcon, PlusIcon, UserIcon } from "@/components/icons";
 
 const TABS = (currentUserId: string) => [
@@ -16,15 +17,10 @@ const TABS = (currentUserId: string) => [
   { href: `/profile/${currentUserId}`, label: "프로필", Icon: UserIcon },
 ];
 
-export function BottomNav({
-  currentUserId,
-  unseenNotifications = 0,
-}: {
-  currentUserId: string;
-  unseenNotifications?: number;
-}) {
+export function BottomNav({ currentUserId }: { currentUserId: string }) {
   const pathname = usePathname();
   const search = useSearchOverlay();
+  const unseenNotifications = useNotificationCount();
   const tabs = TABS(currentUserId);
 
   return (
