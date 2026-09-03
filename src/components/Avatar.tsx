@@ -12,10 +12,14 @@ export function Avatar({
   userId,
   name,
   className = "h-9 w-9 text-sm",
+  version,
 }: {
   userId: string;
   name: string;
   className?: string;
+  // 사진을 방금 바꾼 화면(ProfilePhotoForm)에서 값을 올려주면 <img> URL이 바뀌어
+  // 캐시를 확실히 우회한다. 안 주면 예전과 동일.
+  version?: number;
 }) {
   const [failed, setFailed] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -43,7 +47,7 @@ export function Avatar({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       ref={imgRef}
-      src={`/api/avatar/${userId}`}
+      src={version ? `/api/avatar/${userId}?v=${version}` : `/api/avatar/${userId}`}
       alt={name}
       onError={() => setFailed(true)}
       className={`shrink-0 rounded-full object-cover ${className}`}

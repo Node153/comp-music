@@ -51,11 +51,15 @@ export function ProfilePhotoForm() {
     setError(null);
     try {
       const key = await uploadFileToR2(file);
-      const { error: updateError } = await supabase
+      const { data: updated, error: updateError } = await supabase
         .from("profiles")
         .update({ profile_image_url: key })
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .select("user_id");
       if (updateError) throw updateError;
+      if (!updated || updated.length === 0) {
+        throw new Error("프로필 정보가 아직 없어요. 프로필을 먼저 한 번 저장한 뒤 사진을 올려주세요.");
+      }
       setPhotoVersion((v) => v + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "업로드에 실패했어요.");
@@ -86,7 +90,13 @@ export function ProfilePhotoForm() {
     <div className="flex flex-col gap-1.5">
       <span className={label}>프로필 사진</span>
       <div className="flex items-center gap-3">
-        <Avatar key={photoVersion} userId={userId} name={name || "?"} className="h-16 w-16 text-xl" />
+        <Avatar
+          key={photoVersion}
+          userId={userId}
+          name={name || "?"}
+          version={photoVersion}
+          className="h-16 w-16 text-xl"
+        />
         <div className="flex gap-2">
           <button
             type="button"
