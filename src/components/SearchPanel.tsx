@@ -44,14 +44,26 @@ function parseQuery(raw: string): { namePart: string; tagPart: string } {
   return { namePart, tagPart };
 }
 
+type Me = { id: string; nickname: string; nickname_tag: string; role: string };
+
 export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
   const supabase = createClient();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
+  const currentUserId = me?.id ?? null;
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) return;
+      const { data: row } = await supabase
+        .from("users")
+        .select("nickname, nickname_tag, role")
+        .eq("id", uid)
+        .single();
+      if (row) setMe({ id: uid, ...row });
+    });
   }, [supabase]);
 
   useEffect(() => {
@@ -115,6 +127,27 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
           ))
         )}
       </ul>
+
+      {me && (
+        <div className="mt-2 border-t border-gray-100 pt-2 dark:border-gray-800">
+          <p className="px-2 pb-1 text-xs text-gray-400 dark:text-gray-500">내 계정</p>
+          <Link
+            href={`/profile/${me.id}`}
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <Avatar userId={me.id} name={me.nickname} className="h-10 w-10 text-sm" />
+            <span className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
+              {me.nickname}
+              {me.role === "admin" ? (
+                <ComperBadge />
+              ) : (
+                <span className="font-normal text-gray-400 dark:text-gray-500">#{me.nickname_tag}</span>
+              )}
+            </span>
+          </Link>
+        </div>
+      )}
     </>
   );
 }
