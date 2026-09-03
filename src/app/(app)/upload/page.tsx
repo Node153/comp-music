@@ -13,6 +13,7 @@ import { GiphyPicker } from "@/components/GiphyPicker";
 import { LockIcon } from "@/components/icons";
 import { field, label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
+import { applyTheme } from "@/lib/theme";
 import type { ExpireHours } from "@/types/database";
 
 const MIN_TAGS = 3;
@@ -271,8 +272,10 @@ export default function UploadPage() {
   // Complex 선택 시 피드의 Complex 탭(ThemeSync.tsx)과 동일하게 다크 테마로 전환.
   // ThemeSync는 URL(/feed?feed=complex)만 감시해서 이 페이지의 로컬 상태는 모르기 때문에
   // 별도로 처리 — 다른 화면으로 이동하면 ThemeSync가 그 라우트 기준으로 다시 correct하게 되돌려놓는다.
+  const themeMounted = useRef(false);
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", uploadType === "complex");
+    applyTheme(uploadType === "complex", { animate: themeMounted.current });
+    themeMounted.current = true;
   }, [uploadType]);
 
   // InviteUserPicker가 검색 결과에서 본인을 제외하는 데만 씀(초대 자체는 post_access RLS가

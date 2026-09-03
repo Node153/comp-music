@@ -33,7 +33,32 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 4s ease, color 4s ease;
+}
+
+/* DEMO ↔ memo 탭을 오갈 때만(lib/theme.ts가 전환 순간에 .theme-transition을 잠깐 얹음)
+   화면 전체의 배경·글자·테두리 색이 뚝 끊기지 않고 4s에 걸쳐 번지게 한다.
+   평소엔 이 규칙이 없어 hover 등 일반 색 변화는 원래 속도 그대로. */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow !important;
+  transition-duration: 4s !important;
+  transition-timing-function: ease !important;
+  transition-delay: 0s !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition: none !important;
+  }
 }
 
 /* 우측 사이드바 "실시간 PEAK" 항목이 방금 올라온 것처럼 살짝 슬라이드인 — 실제 실시간 갱신은 아니지만
