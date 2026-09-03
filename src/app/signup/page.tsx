@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { BirthDateScrollPicker } from "@/components/BirthDateScrollPicker";
 import { field, label, errorText } from "@/components/ui/styles";
-import { generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
+import { hasWhitespace } from "@/lib/nicknameExamples";
+import { useNicknamePhrases } from "@/lib/useNicknamePhrases";
 import { MailIcon, DiceIcon } from "@/components/icons";
 import {
   isValidPassword,
@@ -80,8 +81,11 @@ export default function SignupPage() {
   // 서버(SSR)와 클라이언트가 다른 랜덤값을 만들면 하이드레이션이 꼬이므로, 초기값은 빈
   // 문자열로 두고 마운트 후 useEffect에서만 채운다(NicknameForm의 비동기 로드와 같은 패턴).
   const [nickname, setNickname] = useState("");
+  const { pick: pickNickname } = useNicknamePhrases();
   useEffect(() => {
-    setNickname(generateNicknameCandidate());
+    setNickname(pickNickname());
+    // pickNickname은 매 렌더 새 함수지만 의미상 마운트 시 1회 — deps 비움.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -359,7 +363,7 @@ export default function SignupPage() {
               />
               <button
                 type="button"
-                onClick={() => setNickname(generateNicknameCandidate())}
+                onClick={() => setNickname(pickNickname())}
                 title="다른 닉네임 뽑기"
                 aria-label="다른 닉네임 뽑기"
                 className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-500 transition hover:bg-gray-50 hover:text-gray-900"

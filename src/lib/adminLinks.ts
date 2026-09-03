@@ -8,4 +8,5 @@ export const ADMIN_LINKS: { href: string; label: string }[] = [
   { href: "/admin/login-screen", label: "로그인 화면 설정" },
   { href: "/admin/feed-hero", label: "피드 힐링 멘트 관리" },
   { href: "/admin/submit-phrases", label: "게시하기 문구 관리" },
+  { href: "/admin/nickname-phrases", label: "닉네임 추천 문구 관리" },
 ];

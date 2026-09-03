@@ -11,7 +11,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { BirthDateScrollPicker } from "@/components/BirthDateScrollPicker";
 import { field, label, errorText, pageTitle, mutedText } from "@/components/ui/styles";
-import { generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
+import { hasWhitespace } from "@/lib/nicknameExamples";
+import { useNicknamePhrases } from "@/lib/useNicknamePhrases";
 import { DiceIcon, BackArrowIcon } from "@/components/icons";
 import { isOldEnough } from "@/lib/age";
 
@@ -50,6 +51,7 @@ export default function OnboardingPage() {
   // — signup/page.tsx와 같은 이유(동명이인 판별 보조).
   const [birthDate, setBirthDate] = useState("");
   const [nickname, setNickname] = useState("");
+  const { pick: pickNickname } = useNicknamePhrases();
   // 화면에 "이 계정으로 로그인했다"는 걸 보여주기 위한 용도(사용자 요청) — 소셜로그인은
   // 이메일 입력칸 자체가 없어서 회원이 자기가 어느 이메일로 가입됐는지 확인할 방법이
   // 없었다(특히 Spotify 이메일 인증 이슈를 겪은 뒤 나온 요청). 폼 제출과는 무관, 읽기 전용 표시.
@@ -86,7 +88,8 @@ export default function OnboardingPage() {
         if (metaName) setName(metaName);
       }
     });
-    setNickname(generateNicknameCandidate());
+    setNickname(pickNickname());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   // 뒤로가기(사용자 요청) — 이 화면은 소셜로그인 직후 자동으로 오게 되는데, 브라우저 뒤로가기는
@@ -260,7 +263,7 @@ export default function OnboardingPage() {
             />
             <button
               type="button"
-              onClick={() => setNickname(generateNicknameCandidate())}
+              onClick={() => setNickname(pickNickname())}
               title="다른 닉네임 뽑기"
               className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50"
             >

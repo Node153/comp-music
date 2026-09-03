@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { pageTitle, mutedText } from "@/components/ui/styles";
-import { SubmitPhrasesManager } from "./SubmitPhrasesManager";
+import { PhraseListManager } from "@/components/admin/PhraseListManager";
 
 // 관리자 - 업로드(게시하기) 버튼 문구 관리. role=admin만 접근(proxy.ts에서 가드).
 // 업로드 화면을 열 때마다 '노출' 문구 중 하나가 랜덤으로 버튼에 뜬다.
@@ -21,7 +21,7 @@ export default async function AdminSubmitPhrasesPage() {
         </p>
       </div>
 
-      <SubmitPhrasesManager initial={rows ?? []} />
+      <PhraseListManager table="submit_phrases" initial={rows ?? []} placeholder="게시하기 버튼 문구" />
     </main>
   );
 }

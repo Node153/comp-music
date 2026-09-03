@@ -7,14 +7,16 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label, errorText } from "@/components/ui/styles";
-import { randomNicknameExample, generateNicknameCandidate, hasWhitespace } from "@/lib/nicknameExamples";
+import { hasWhitespace } from "@/lib/nicknameExamples";
+import { useNicknamePhrases } from "@/lib/useNicknamePhrases";
 import { DiceIcon } from "@/components/icons";
 
 export function NicknameForm() {
   const supabase = createClient();
   const [nickname, setNickname] = useState("");
-  // placeholder 예시는 mount마다 랜덤 — SSR과 달라질 수 있어 input에 suppressHydrationWarning.
-  const [nicknameExample] = useState(randomNicknameExample);
+  // placeholder 예시 + 주사위 버튼 문구 — nickname_phrases 테이블에서(관리자 편집).
+  // SSR과 달라질 수 있어 input에 suppressHydrationWarning.
+  const { example: nicknameExample, pick: pickNickname } = useNicknamePhrases();
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
@@ -80,7 +82,7 @@ export function NicknameForm() {
         />
         <button
           type="button"
-          onClick={() => setNickname(generateNicknameCandidate())}
+          onClick={() => setNickname(pickNickname())}
           title="다른 닉네임 뽑기"
           disabled={!loaded}
           className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"

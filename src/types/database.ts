@@ -461,6 +461,27 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["submit_phrases"]["Insert"]>;
         Relationships: [];
       };
+      // 가입/온보딩/프로필수정 화면의 닉네임 추천 문구. 읽기 전체 공개, 쓰기는 관리자만(/admin/nickname-phrases).
+      nickname_phrases: {
+        Row: {
+          id: string;
+          phrase: string;
+          sort_order: number;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          phrase: string;
+          sort_order?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["nickname_phrases"]["Insert"]>;
+        Relationships: [];
+      };
       // 0021_announcements_and_feedback — Help 메뉴에서 보내는 피드백. 본인+관리자만 열람.
       feedback: {
         Row: {

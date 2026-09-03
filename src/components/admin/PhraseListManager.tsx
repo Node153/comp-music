@@ -1,12 +1,13 @@
 "use client";
 
-// 업로드(게시하기) 버튼 문구 편집기 — submit_phrases 테이블 CRUD.
-// RLS(submit_phrases_*_admin)에서 관리자만 쓸 수 있고, 이 화면 자체는 middleware(proxy.ts)의
-// /admin 경로 role=admin 가드로만 보호한다. (FeedHeroManager와 같은 구조, 필드 하나만 다름)
+// "문구 하나 + 순서 + 노출" 행을 CRUD하는 공용 편집기 — submit_phrases / nickname_phrases 등에서 재사용.
+// RLS(<table>_*_admin)에서 관리자만 쓸 수 있고, 화면 자체는 middleware(proxy.ts)의 /admin 가드로만 보호.
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { field, label, errorText, mutedText } from "@/components/ui/styles";
+
+type PhraseTable = "submit_phrases" | "nickname_phrases";
 
 type Row = {
   id: string;
@@ -15,7 +16,15 @@ type Row = {
   active: boolean;
 };
 
-export function SubmitPhrasesManager({ initial }: { initial: Row[] }) {
+export function PhraseListManager({
+  table,
+  initial,
+  placeholder = "문구",
+}: {
+  table: PhraseTable;
+  initial: Row[];
+  placeholder?: string;
+}) {
   const supabase = createClient();
   const [rows, setRows] = useState<Row[]>(initial);
   const [drafts, setDrafts] = useState<Record<string, Row>>({});
@@ -46,7 +55,7 @@ export function SubmitPhrasesManager({ initial }: { initial: Row[] }) {
     setBusyId(row.id);
     setError(null);
     const { error: e } = await supabase
-      .from("submit_phrases")
+      .from(table)
       .update({ phrase: d.phrase.trim(), sort_order: d.sort_order, active: d.active })
       .eq("id", row.id);
     setBusyId(null);
@@ -68,7 +77,7 @@ export function SubmitPhrasesManager({ initial }: { initial: Row[] }) {
     if (!confirm(`"${row.phrase}" 문구를 삭제할까요?`)) return;
     setBusyId(row.id);
     setError(null);
-    const { error: e } = await supabase.from("submit_phrases").delete().eq("id", row.id);
+    const { error: e } = await supabase.from(table).delete().eq("id", row.id);
     setBusyId(null);
     if (e) {
       setError(`삭제 실패: ${e.message}`);
@@ -84,7 +93,7 @@ export function SubmitPhrasesManager({ initial }: { initial: Row[] }) {
     setError(null);
     const nextOrder = rows.reduce((max, r) => Math.max(max, r.sort_order), 0) + 1;
     const { data, error: err } = await supabase
-      .from("submit_phrases")
+      .from(table)
       .insert({ phrase: newPhrase.trim(), sort_order: nextOrder })
       .select("id, phrase, sort_order, active")
       .single();
@@ -116,7 +125,7 @@ export function SubmitPhrasesManager({ initial }: { initial: Row[] }) {
               <textarea
                 value={d.phrase}
                 onChange={(e) => edit(row, { phrase: e.target.value })}
-                placeholder="게시하기 버튼 문구"
+                placeholder={placeholder}
                 rows={2}
                 className={field}
               />
@@ -170,7 +179,7 @@ export function SubmitPhrasesManager({ initial }: { initial: Row[] }) {
         <textarea
           value={newPhrase}
           onChange={(e) => setNewPhrase(e.target.value)}
-          placeholder="게시하기 버튼 문구"
+          placeholder={placeholder}
           rows={2}
           className={field}
         />
