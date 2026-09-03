@@ -31,7 +31,7 @@ export async function computeUnseenNotificationCount(
         supabase.from("likes").select("id").in("post_id", myPostIds).neq("user_id", userId).gt("created_at", seenAt),
         supabase.from("comments").select("id").in("post_id", myPostIds).neq("user_id", userId).gt("created_at", seenAt),
         supabase.from("likes").select("post_id, created_at").in("post_id", myPostIds).gte("created_at", currentWeekStartISO()),
-        supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved"),
+        supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
       ]);
 
     newEngagementCount = (newLikes?.length ?? 0) + (newComments?.length ?? 0);

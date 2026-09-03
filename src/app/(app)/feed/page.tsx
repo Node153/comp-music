@@ -375,7 +375,7 @@ export default async function FeedPage({
     postIds.length > 0
       ? supabase.from("comments").select("post_id").in("post_id", postIds)
       : { data: [] as { post_id: string }[] },
-    supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved"),
+    supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
   ]);
 
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));

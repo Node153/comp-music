@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
   const { count: approvedMemberCount } = await supabase
     .from("users")
     .select("id", { count: "exact", head: true })
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .neq("role", "admin");
   const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
   const weekStartISO = currentWeekStartISO();
 

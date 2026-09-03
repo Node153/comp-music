@@ -201,7 +201,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
       const weekStartISO = currentWeekStartISO();
 
       const [{ count: approvedMemberCount }, { data: rawPosts }] = await Promise.all([
-        supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved"),
+        supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
         supabase
           .from("posts")
           .select("id, user_id, caption, published_at")

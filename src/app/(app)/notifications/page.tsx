@@ -106,7 +106,7 @@ export default async function NotificationsPage({
             .limit(50),
           // PEAK 판정용 — EngagementMeter와 동일하게 이번 주(캘린더) 좋아요 수만 쓴다(본인 반응 포함).
           supabase.from("likes").select("post_id, created_at").in("post_id", myPostIds).gte("created_at", currentWeekStartISO()),
-          supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved"),
+          supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
           // 노크 = 내 초대전용(invite_only) 게시물에 status='pending'으로 들어온 post_access 행.
           myInviteOnlyPostIds.length > 0
             ? supabase
