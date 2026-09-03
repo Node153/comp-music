@@ -19,10 +19,13 @@
 // 더 매끄럽다고 판단해 오버레이를 기본으로 삼았다(/goal 논의 참고).
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { findOrCreateConversation } from "@/lib/conversations";
 import { Avatar } from "@/components/Avatar";
 import { field } from "@/components/ui/styles";
 import { ComperBadge } from "@/components/ComperBadge";
+import { MailIcon } from "@/components/icons";
 
 type SearchResult = { id: string; nickname: string; nickname_tag: string; role: string };
 
@@ -44,27 +47,42 @@ function parseQuery(raw: string): { namePart: string; tagPart: string } {
   return { namePart, tagPart };
 }
 
-type Me = { id: string; nickname: string; nickname_tag: string; role: string };
+type Person = { id: string; nickname: string };
 
 export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
   const supabase = createClient();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
-  const [me, setMe] = useState<Me | null>(null);
-  const currentUserId = me?.id ?? null;
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // 회원이 운영자(comper)에게 바로 메시지를 보낼 수 있게 검색창 하단에 고정 노출한다.
+  const [admins, setAdmins] = useState<Person[]>([]);
+  const [dmLoading, setDmLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
-      const uid = data.user?.id;
-      if (!uid) return;
-      const { data: row } = await supabase
+      const uid = data.user?.id ?? null;
+      setCurrentUserId(uid);
+      const { data: adminRows } = await supabase
         .from("users")
-        .select("nickname, nickname_tag, role")
-        .eq("id", uid)
-        .single();
-      if (row) setMe({ id: uid, ...row });
+        .select("id, nickname")
+        .eq("role", "admin")
+        .eq("status", "approved");
+      setAdmins((adminRows ?? []).filter((a) => a.id !== uid));
     });
   }, [supabase]);
+
+  async function messageAdmin(adminId: string) {
+    if (!currentUserId || dmLoading) return;
+    setDmLoading(true);
+    try {
+      const conversationId = await findOrCreateConversation(supabase, currentUserId, adminId);
+      onNavigate?.();
+      router.push(`/messages/${conversationId}`);
+    } finally {
+      setDmLoading(false);
+    }
+  }
 
   useEffect(() => {
     const { namePart, tagPart } = parseQuery(query);
@@ -128,24 +146,25 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
         )}
       </ul>
 
-      {me && (
+      {admins.length > 0 && (
         <div className="mt-2 border-t border-gray-100 pt-2 dark:border-gray-800">
-          <p className="px-2 pb-1 text-xs text-gray-400 dark:text-gray-500">내 계정</p>
-          <Link
-            href={`/profile/${me.id}`}
-            onClick={onNavigate}
-            className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            <Avatar userId={me.id} name={me.nickname} className="h-10 w-10 text-sm" />
-            <span className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
-              {me.nickname}
-              {me.role === "admin" ? (
+          <p className="px-2 pb-1 text-xs text-gray-400 dark:text-gray-500">운영자에게 문의</p>
+          {admins.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => messageAdmin(a.id)}
+              disabled={dmLoading}
+              className="flex w-full items-center gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-gray-50 disabled:opacity-50 dark:hover:bg-gray-800"
+            >
+              <Avatar userId={a.id} name={a.nickname} className="h-10 w-10 text-sm" />
+              <span className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
+                {a.nickname}
                 <ComperBadge />
-              ) : (
-                <span className="font-normal text-gray-400 dark:text-gray-500">#{me.nickname_tag}</span>
-              )}
-            </span>
-          </Link>
+              </span>
+              <MailIcon className="ml-auto h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
+            </button>
+          ))}
         </div>
       )}
     </>
