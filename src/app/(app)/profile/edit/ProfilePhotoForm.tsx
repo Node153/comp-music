@@ -3,10 +3,8 @@
 // 프로필 사진 업로드 — profiles.profile_image_url(0001부터 있던 컬럼, 지금까지 아무 화면도
 // 안 씀)에 R2 key를 저장한다. 실제 표시는 /api/avatar/[userId] + <Avatar>가 앱 전체에서
 // 공통으로 처리하므로, 여기서는 업로드/제거만 하면 된다.
-// upsert가 아니라 update만 쓴다 — profiles.user_type이 not null이라 upsert가 새 행을 만들 땐
-// 그 값을 같이 줘야 하는데 여긴 모른다. verify/documents에서 이미 행을 만들어두므로(예외:
-// 서류 없이 SQL로 바로 승인된 파일럿 테스터는 행이 없을 수 있음 — 이 경우 update가 조용히
-// 아무 일도 안 하고 넘어간다) 정상 사용자는 문제없다.
+// upsert로 저장한다 — profiles.user_type을 nullable로 바꾼 뒤부터는(서류 없이 SQL로 승인된
+// 파일럿 테스터처럼 profiles 행이 없는 유저도 있어서) 새 행을 그냥 만들 수 있다.
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
@@ -51,15 +49,11 @@ export function ProfilePhotoForm() {
     setError(null);
     try {
       const key = await uploadFileToR2(file);
-      const { data: updated, error: updateError } = await supabase
+      // upsert — profiles 행이 아직 없는 유저(온보딩 미완/ SQL 승인)도 바로 만들어 저장.
+      const { error: updateError } = await supabase
         .from("profiles")
-        .update({ profile_image_url: key })
-        .eq("user_id", userId)
-        .select("user_id");
+        .upsert({ user_id: userId, profile_image_url: key }, { onConflict: "user_id" });
       if (updateError) throw updateError;
-      if (!updated || updated.length === 0) {
-        throw new Error("프로필 정보가 아직 없어요. 프로필을 먼저 한 번 저장한 뒤 사진을 올려주세요.");
-      }
       setPhotoVersion((v) => v + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "업로드에 실패했어요.");
@@ -74,8 +68,7 @@ export function ProfilePhotoForm() {
     setError(null);
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ profile_image_url: null })
-      .eq("user_id", userId);
+      .upsert({ user_id: userId, profile_image_url: null }, { onConflict: "user_id" });
     setUploading(false);
     if (updateError) {
       setError(updateError.message);

@@ -152,7 +152,8 @@ export interface Database {
       profiles: {
         Row: {
           user_id: string;
-          user_type: UserType;
+          // 온보딩을 안 거친 유저(SQL 승인 등)는 profiles 행만 있고 user_type은 미설정(null).
+          user_type: UserType | null;
           user_type_public: boolean;
           school: string | null;
           school_public: boolean;
@@ -168,7 +169,7 @@ export interface Database {
         };
         Insert: {
           user_id: string;
-          user_type: UserType;
+          user_type?: UserType | null;
           user_type_public?: boolean;
           school?: string | null;
           school_public?: boolean;
