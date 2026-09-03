@@ -42,7 +42,7 @@ export default async function AdminVerificationDetailPage({
   );
 
   return (
-    <main className="mx-auto max-w-lg p-6">
+    <main>
       <h1 className={pageTitle}>심사 상세</h1>
 
       <div className={`mt-4 flex flex-col gap-2 ${card}`}>

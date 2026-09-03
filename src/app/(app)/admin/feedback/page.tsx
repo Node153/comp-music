@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { pageTitle, mutedText } from "@/components/ui/styles";
 
@@ -21,13 +20,8 @@ export default async function AdminFeedbackPage() {
   const userMap = new Map((users ?? []).map((u) => [u.id, u]));
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-5 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className={pageTitle}>피드백</h1>
-        <Link href="/admin/announcements" className="text-sm font-medium text-blue-600 hover:underline">
-          공지사항 관리 →
-        </Link>
-      </div>
+    <main className="flex flex-col gap-5">
+      <h1 className={pageTitle}>피드백</h1>
 
       <div className="flex flex-col gap-2">
         {(feedbackRows ?? []).map((f) => {

@@ -13,7 +13,7 @@ export default async function AdminFeedHeroPage() {
     .order("sort_order", { ascending: true });
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-5 p-6">
+    <main className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <h1 className={pageTitle}>피드 힐링 멘트 관리</h1>
         <p className={mutedText}>

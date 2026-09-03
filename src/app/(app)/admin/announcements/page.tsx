@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { pageTitle, mutedText } from "@/components/ui/styles";
 import { AnnouncementForm } from "./AnnouncementForm";
@@ -17,13 +16,8 @@ export default async function AdminAnnouncementsPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-5 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className={pageTitle}>공지사항 관리</h1>
-        <Link href="/admin/feedback" className="text-sm font-medium text-blue-600 hover:underline">
-          피드백 보기 →
-        </Link>
-      </div>
+    <main className="flex flex-col gap-5">
+      <h1 className={pageTitle}>공지사항 관리</h1>
 
       {user && <AnnouncementForm authorId={user.id} />}
 

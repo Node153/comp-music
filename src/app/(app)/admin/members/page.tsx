@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getR2UsageBytes } from "@/lib/r2/storage";
 import { pageTitle, mutedText, badge, field } from "@/components/ui/styles";
@@ -79,18 +78,8 @@ export default async function AdminMembersPage({
   );
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-5 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className={pageTitle}>회원 관리</h1>
-        <div className="flex items-center gap-3">
-          <Link href="/admin/login-screen" className="text-sm font-medium text-blue-600 hover:underline">
-            로그인 화면 →
-          </Link>
-          <Link href="/admin/verifications" className="text-sm font-medium text-blue-600 hover:underline">
-            심사 대기열 →
-          </Link>
-        </div>
-      </div>
+    <main className="flex flex-col gap-5">
+      <h1 className={pageTitle}>회원 관리</h1>
 
       <form className="flex gap-2">
         <input

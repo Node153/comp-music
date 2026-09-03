@@ -13,7 +13,7 @@ export default async function AdminSubmitPhrasesPage() {
     .order("sort_order", { ascending: true });
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-5 p-6">
+    <main className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <h1 className={pageTitle}>게시하기 문구 관리</h1>
         <p className={mutedText}>

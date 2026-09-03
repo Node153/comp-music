@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { resolveMediaUrl } from "@/lib/r2/storage";
 import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
@@ -32,13 +31,8 @@ export default async function AdminLoginScreenPage() {
   ]);
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className={pageTitle}>로그인 화면 설정</h1>
-        <Link href="/admin/members" className="text-sm font-medium text-blue-600 hover:underline">
-          회원 관리 →
-        </Link>
-      </div>
+    <main className="flex flex-col gap-6">
+      <h1 className={pageTitle}>로그인 화면 설정</h1>
 
       {user && (
         <>
