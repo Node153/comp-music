@@ -132,7 +132,6 @@ export function TopNav({
             </span>
           )}
         </Link>
-        <ProfileMenu userId={currentUserId} userName={userName} isAdmin={isAdmin} />
         <Link
           href="/help"
           title="Help"
@@ -145,6 +144,7 @@ export function TopNav({
         >
           <HelpIcon />
         </Link>
+        <ProfileMenu userId={currentUserId} userName={userName} isAdmin={isAdmin} />
       </div>
     </header>
   );
