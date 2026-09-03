@@ -559,6 +559,18 @@ export default async function FeedPage({
     ? allPostsUnfiltered.filter((p) => (p.instrument_tags ?? []).includes(tagParam))
     : allPostsUnfiltered;
 
+  // DEMO 피드 상단 힐링 멘트(관리자가 /admin/feed-hero에서 편집) — 히어로가 실제로 뜰
+  // 조건일 때만 조회한다.
+  const showHero = !isComplex && !tagParam && allPosts.length > 0;
+  const { data: heroRows } = showHero
+    ? await supabase
+        .from("feed_hero_messages")
+        .select("question, answer")
+        .eq("active", true)
+        .order("sort_order", { ascending: true })
+    : { data: [] as { question: string; answer: string }[] };
+  const heroMessages = (heroRows ?? []).map((r) => ({ q: r.question, a: r.answer }));
+
   return (
     <main className="mx-auto max-w-[900px] px-0 pb-24 pt-0 md:px-4 md:pb-8 md:pt-4">
       {!currentUser && (
@@ -605,7 +617,7 @@ export default async function FeedPage({
 
       {/* DEMO 피드는 열자마자 게시물이 아니라 힐링 멘트가 먼저 보이도록 한 판 비운다.
           태그 필터 중일 때는(결과를 보러 온 상태) 생략. */}
-      {!isComplex && !tagParam && allPosts.length > 0 && <FeedHero />}
+      {showHero && <FeedHero messages={heroMessages} />}
 
       <div className="flex flex-col gap-6">
         {allPosts.map((post) => {

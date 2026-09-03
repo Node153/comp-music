@@ -416,6 +416,29 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["announcements"]["Insert"]>;
         Relationships: [];
       };
+      // DEMO 피드 상단 힐링 멘트. 읽기는 전체 공개, 쓰기는 관리자만(/admin/feed-hero).
+      feed_hero_messages: {
+        Row: {
+          id: string;
+          question: string;
+          answer: string;
+          sort_order: number;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          question: string;
+          answer: string;
+          sort_order?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["feed_hero_messages"]["Insert"]>;
+        Relationships: [];
+      };
       // 0021_announcements_and_feedback — Help 메뉴에서 보내는 피드백. 본인+관리자만 열람.
       feedback: {
         Row: {

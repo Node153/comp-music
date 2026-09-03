@@ -9,6 +9,7 @@ const ADMIN_LINKS = [
   { href: "/admin/announcements", label: "공지사항 관리" },
   { href: "/admin/feedback", label: "피드백 보기" },
   { href: "/admin/login-screen", label: "로그인 화면 설정" },
+  { href: "/admin/feed-hero", label: "피드 힐링 멘트 관리" },
 ];
 
 // Help(구 Away) — 공지사항+피드백 창구(0021_announcements_and_feedback).
