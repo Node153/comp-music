@@ -12,6 +12,7 @@ import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat"
 import { ComplexAccessGate } from "@/components/ComplexAccessGate";
 import { PostFocusToggle } from "@/components/PostFocusToggle";
 import { MemoGuideCards } from "@/components/MemoGuideCards";
+import { FeedHero } from "@/components/FeedHero";
 import { PostOptionsMenu } from "@/components/PostOptionsMenu";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
@@ -601,6 +602,10 @@ export default async function FeedPage({
           </p>
         </div>
       )}
+
+      {/* DEMO 피드는 열자마자 게시물이 아니라 힐링 멘트가 먼저 보이도록 한 판 비운다.
+          태그 필터 중일 때는(결과를 보러 온 상태) 생략. */}
+      {!isComplex && !tagParam && allPosts.length > 0 && <FeedHero />}
 
       <div className="flex flex-col gap-6">
         {allPosts.map((post) => {
