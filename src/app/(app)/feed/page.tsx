@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, getMyUserRow } from "@/lib/auth";
+import { getAdminIds } from "@/lib/admins";
 import { getR2SignedUrl, resolveMediaUrl } from "@/lib/r2/storage";
 import { MessageButton } from "@/components/MessageButton";
 import { EngagementMeter } from "@/components/EngagementMeter";
@@ -381,6 +382,7 @@ export default async function FeedPage({
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
   const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
+  const adminIds = await getAdminIds();
   const weekStartISO = currentWeekStartISO();
 
   const likeCountMap = new Map<string, number>();
@@ -671,6 +673,7 @@ export default async function FeedPage({
               <PostFocusToggle
                 authorId={post.user_id}
                 authorName={author?.name ?? "알 수 없음"}
+                isComper={adminIds.has(post.user_id)}
                 metaLine={headerMetaLine}
                 expiresAt={post.expires_at}
                 isComplex={isComplex}

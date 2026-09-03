@@ -10,12 +10,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
+import { ComperBadge } from "@/components/ComperBadge";
 
 export type FeedbackChatMessage = {
   id: string;
   userId: string;
   nickname: string;
   nicknameTag: string;
+  isComper: boolean;
   content: string;
   createdAt: string;
 };
@@ -38,8 +40,13 @@ export function FeedbackChat({
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // user_id → 닉네임 캐시. 초기 목록으로 seed, realtime에서 처음 보는 사람만 조회.
-  const nickCache = useRef<Map<string, { nickname: string; nicknameTag: string }>>(
-    new Map(initialMessages.map((m) => [m.userId, { nickname: m.nickname, nicknameTag: m.nicknameTag }])),
+  const nickCache = useRef<Map<string, { nickname: string; nicknameTag: string; isComper: boolean }>>(
+    new Map(
+      initialMessages.map((m) => [
+        m.userId,
+        { nickname: m.nickname, nicknameTag: m.nicknameTag, isComper: m.isComper },
+      ]),
+    ),
   );
 
   async function resolveNick(userId: string) {
@@ -47,12 +54,13 @@ export function FeedbackChat({
     if (cached) return cached;
     const { data } = await supabase
       .from("users")
-      .select("nickname, nickname_tag")
+      .select("nickname, nickname_tag, role")
       .eq("id", userId)
       .single();
     const resolved = {
       nickname: data?.nickname ?? "탈퇴한 사용자",
       nicknameTag: data?.nickname_tag ?? "",
+      isComper: data?.role === "admin",
     };
     nickCache.current.set(userId, resolved);
     return resolved;
@@ -82,6 +90,7 @@ export function FeedbackChat({
                     userId: row.user_id,
                     nickname: nick.nickname,
                     nicknameTag: nick.nicknameTag,
+                    isComper: nick.isComper,
                     content: row.content,
                     createdAt: row.created_at,
                   },
@@ -133,6 +142,7 @@ export function FeedbackChat({
               userId: data.user_id,
               nickname: me.nickname,
               nicknameTag: me.nicknameTag,
+              isComper: me.isComper,
               content: data.content,
               createdAt: data.created_at,
             },
@@ -163,6 +173,7 @@ export function FeedbackChat({
               <span className="flex items-center gap-1.5 px-1 text-[11px] text-gray-400 dark:text-gray-500">
                 {/* 태그번호(#0038)는 피드백 채팅에서 노출하지 않음 (사용자 요청) — 닉네임만. */}
                 <span className="font-medium text-gray-500 dark:text-gray-400">{m.nickname}</span>
+                {m.isComper && <ComperBadge />}
                 <span>·</span>
                 <span>{timeAgo(m.createdAt)}</span>
                 {canDelete && (

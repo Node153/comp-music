@@ -22,8 +22,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { field } from "@/components/ui/styles";
+import { ComperBadge } from "@/components/ComperBadge";
 
-type SearchResult = { id: string; nickname: string; nickname_tag: string };
+type SearchResult = { id: string; nickname: string; nickname_tag: string; role: string };
 
 const SEARCH_DEBOUNCE_MS = 300;
 const RESULT_LIMIT = 20;
@@ -63,7 +64,7 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
     const timer = setTimeout(async () => {
       let request = supabase
         .from("users")
-        .select("id, nickname, nickname_tag")
+        .select("id, nickname, nickname_tag, role")
         .eq("status", "approved");
       if (tagPart) request = request.eq("nickname_tag", tagPart);
       if (namePart) request = request.ilike("nickname", `%${namePart}%`);
@@ -101,9 +102,13 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
                 className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 <Avatar userId={u.id} name={u.nickname} className="h-10 w-10 text-sm" />
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <span className="flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
                   {u.nickname}
-                  <span className="ml-1 font-normal text-gray-400 dark:text-gray-500">#{u.nickname_tag}</span>
+                  {u.role === "admin" ? (
+                    <ComperBadge />
+                  ) : (
+                    <span className="font-normal text-gray-400 dark:text-gray-500">#{u.nickname_tag}</span>
+                  )}
                 </span>
               </Link>
             </li>

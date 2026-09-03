@@ -44,7 +44,7 @@ export default async function HelpPage() {
   const feedbackSenderIds = [...new Set((rawFeedback ?? []).map((m) => m.user_id))];
   const { data: feedbackNicks } =
     feedbackSenderIds.length > 0
-      ? await supabase.from("users").select("id, nickname, nickname_tag").in("id", feedbackSenderIds)
+      ? await supabase.from("users").select("id, nickname, nickname_tag, role").in("id", feedbackSenderIds)
       : { data: [] };
   const nickById = new Map((feedbackNicks ?? []).map((u) => [u.id, u]));
   const feedbackMessages: FeedbackChatMessage[] = (rawFeedback ?? []).map((m) => ({
@@ -52,6 +52,7 @@ export default async function HelpPage() {
     userId: m.user_id,
     nickname: nickById.get(m.user_id)?.nickname ?? "탈퇴한 사용자",
     nicknameTag: nickById.get(m.user_id)?.nickname_tag ?? "",
+    isComper: nickById.get(m.user_id)?.role === "admin",
     content: m.content,
     createdAt: m.created_at,
   }));

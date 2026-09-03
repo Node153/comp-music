@@ -162,7 +162,7 @@ export default async function AdminMembersPage({
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
-                  <span className={badge}>{m.role === "admin" ? "관리자" : "일반"}</span>
+                  <span className={badge}>{m.role === "admin" ? "comper" : "Companion"}</span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-gray-600">
                   {new Date(m.created_at).toLocaleDateString("ko-KR")}

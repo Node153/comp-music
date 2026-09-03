@@ -7,6 +7,8 @@ import { MessageButton } from "@/components/MessageButton";
 import { LogoutButton } from "@/components/LogoutButton";
 import { badge, pageCard } from "@/components/ui/styles";
 import { Avatar } from "@/components/Avatar";
+import { ComperBadge } from "@/components/ComperBadge";
+import { getAdminIds } from "@/lib/admins";
 import { CompanionButton, type CompanionRelation } from "./CompanionButton";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
@@ -33,6 +35,9 @@ export default async function ProfilePage({
     .eq("id", userId)
     .single();
   if (!user) notFound();
+
+  // 운영자(comper) 프로필이면 이름 옆에 뱃지, 태그번호는 숨김.
+  const isComper = (await getAdminIds()).has(userId);
 
   // 본인 프로필에서는 실명 아래에 닉네임+태그(0038)를 같이 보여준다 — 남들에게 어떻게
   // 보이는지 / 검색·멘션용 핸들이 뭔지 본인이 알 수 있게.
@@ -101,13 +106,16 @@ export default async function ProfilePage({
         <Avatar userId={userId} name={user.display_name} className="h-16 w-16 text-2xl" />
         <div className="flex flex-1 flex-col gap-1 pt-1">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">{user.display_name}</h1>
+            <h1 className="flex items-center gap-1.5 text-xl font-bold text-gray-900">
+              {user.display_name}
+              {isComper && <ComperBadge />}
+            </h1>
             {isOwnProfile && <LogoutButton />}
           </div>
           {isOwnProfile && me && (
             <p className="text-sm text-gray-500">
               {me.nickname}
-              <span className="text-gray-400">#{me.nickname_tag}</span>
+              {!isComper && <span className="text-gray-400">#{me.nickname_tag}</span>}
             </p>
           )}
           <div className="flex gap-4 text-sm text-gray-600">

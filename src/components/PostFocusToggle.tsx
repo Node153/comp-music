@@ -9,11 +9,13 @@
 import { useState } from "react";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { Avatar } from "@/components/Avatar";
+import { ComperBadge } from "@/components/ComperBadge";
 import { XIcon, ExpandIcon } from "@/components/icons";
 
 export function PostFocusToggle({
   authorId,
   authorName,
+  isComper = false,
   metaLine,
   expiresAt,
   isComplex,
@@ -22,6 +24,7 @@ export function PostFocusToggle({
 }: {
   authorId: string;
   authorName: string;
+  isComper?: boolean;
   metaLine: string;
   expiresAt: string | null;
   isComplex: boolean;
@@ -42,7 +45,10 @@ export function PostFocusToggle({
       <div className="flex items-center gap-2 p-3">
         <Avatar userId={authorId} name={authorName} className="h-8 w-8 text-xs" />
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">{authorName}</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800 dark:text-gray-200">
+            <span className="truncate">{authorName}</span>
+            {isComper && <ComperBadge />}
+          </span>
           <span className="truncate text-xs text-gray-400 dark:text-gray-500">{metaLine}</span>
         </div>
         {expiresAt && <TimeLimitBadge expiresAt={expiresAt} />}
