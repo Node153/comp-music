@@ -23,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await getCurrentUser();
   const me = user ? await getMyUserRow() : null;
   const userName = me?.name ?? "";
+  const isAdmin = me?.role === "admin";
 
   return (
     <NowPlayingProvider>
@@ -34,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NotificationCountProvider>
             <SearchOverlayProvider>
               <PresenceHeartbeat userId={user.id} />
-              <TopNav currentUserId={user.id} userName={userName} />
+              <TopNav currentUserId={user.id} userName={userName} isAdmin={isAdmin} />
               <MobileTopBar />
               {children}
               <BottomNav currentUserId={user.id} />

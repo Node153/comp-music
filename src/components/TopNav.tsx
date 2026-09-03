@@ -26,9 +26,11 @@ const FEED_TABS = [
 export function TopNav({
   currentUserId,
   userName,
+  isAdmin = false,
 }: {
   currentUserId: string;
   userName: string;
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -130,7 +132,7 @@ export function TopNav({
             </span>
           )}
         </Link>
-        <ProfileMenu userId={currentUserId} userName={userName} />
+        <ProfileMenu userId={currentUserId} userName={userName} isAdmin={isAdmin} />
         <Link
           href="/help"
           title="Help"
