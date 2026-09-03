@@ -20,6 +20,8 @@ const MIN_TAGS = 3;
 
 // 게시하기 버튼에 랜덤으로 노출되는 사투리 문구 — SSR과 클라이언트의 Math.random 결과가
 // 달라질 수밖에 없어서, 버튼 텍스트 span에 suppressHydrationWarning을 걸고 클라이언트 값을 쓴다.
+// 아래 목록은 fallback — 실제로는 마운트 후 submit_phrases 테이블(관리자가 /admin/submit-phrases
+// 에서 편집)에서 '노출' 문구를 받아와 그중 하나를 랜덤으로 쓴다.
 const SUBMIT_PHRASES = [
   "그냥 해부러. 뭣 땜시 그라고 고민헌디?",
   "뭣 허고 있냐? 그냥 해부러라.",
@@ -265,9 +267,25 @@ export default function UploadPage() {
   // 사운드바로 이미 충분해서 aside 자체가 안 뜸).
   const [previewOpen, setPreviewOpen] = useState(true);
 
-  const [submitPhrase] = useState(
+  const [submitPhrase, setSubmitPhrase] = useState(
     () => SUBMIT_PHRASES[Math.floor(Math.random() * SUBMIT_PHRASES.length)],
   );
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("submit_phrases")
+      .select("phrase")
+      .eq("active", true)
+      .then(({ data }) => {
+        const list = (data ?? []).map((r) => r.phrase);
+        if (!cancelled && list.length > 0) {
+          setSubmitPhrase(list[Math.floor(Math.random() * list.length)]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   // Complex 선택 시 피드의 Complex 탭(ThemeSync.tsx)과 동일하게 다크 테마로 전환.
   // ThemeSync는 URL(/feed?feed=complex)만 감시해서 이 페이지의 로컬 상태는 모르기 때문에

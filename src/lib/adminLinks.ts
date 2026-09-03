@@ -7,4 +7,5 @@ export const ADMIN_LINKS: { href: string; label: string }[] = [
   { href: "/admin/feedback", label: "피드백 보기" },
   { href: "/admin/login-screen", label: "로그인 화면 설정" },
   { href: "/admin/feed-hero", label: "피드 힐링 멘트 관리" },
+  { href: "/admin/submit-phrases", label: "게시하기 문구 관리" },
 ];
