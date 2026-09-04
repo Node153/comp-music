@@ -15,6 +15,7 @@ import { PostFocusToggle } from "@/components/PostFocusToggle";
 import { MemoGuideCards } from "@/components/MemoGuideCards";
 import { FeedHero } from "@/components/FeedHero";
 import { PostOptionsMenu } from "@/components/PostOptionsMenu";
+import { PostViewedBy } from "@/components/PostViewedBy";
 import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import { GuestEngagementRow } from "./GuestEngagementRow";
@@ -661,17 +662,21 @@ export default async function FeedPage({
           const author = userMap.get(post.user_id);
           const profile = profileMap.get(post.user_id);
           const isOwnPost = currentUser?.id === post.user_id;
-          const buttonBasis = isOwnPost ? "basis-1/2" : "basis-1/3";
+          // memo 공동창작 미체크 게시물은 DEMO처럼 좋아요/댓글 + (본인 글이면 조회자 목록,
+          // 아니면 메시지) 3개 슬롯을 쓴다(사용자 요청) — DEMO 본인 글만 2개(좋아요/댓글).
+          const buttonBasis = isOwnPost && !isComplex ? "basis-1/2" : "basis-1/3";
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
           const weeklyLikeCount = weeklyLikeCountMap.get(post.id) ?? 0;
           const visibleSchool = profile?.school_public ? profile.school : null;
           const schoolPositions = [visibleSchool, ...(profile?.instruments ?? [])].filter(Boolean).join(" · ");
           const headerMetaLine = `${schoolPositions}${schoolPositions ? " · " : ""}${timeAgo(post.published_at ?? new Date().toISOString())}`;
-          // memo(complex) 탭 게시물은 미디어 박스를 따로 안 쓰고 ComplexPostChat의 mediaSlot으로
-          // 넘겨서 재창작물 스택 + 실시간 채팅과 나란히 보여준다. "Companion 공개"(followers)
-          // 게시물은 피드 쿼리 단계에서 이미 Companion만 걸러진 상태라(위 posts 필터) 항상 열람 가능.
-          const useInlineChatLayout = isComplex;
+          // memo(complex) 공동창작 게시물만 미디어 박스를 따로 안 쓰고 ComplexPostChat의
+          // mediaSlot으로 넘겨서 재창작물 스택 + 실시간 채팅과 나란히 보여준다. 공동창작
+          // 미체크는 DEMO와 동일하게 독립 미디어 박스 + 좋아요/댓글로 간다(사용자 요청).
+          // "Companion 공개"(followers) 게시물은 피드 쿼리 단계에서 이미 Companion만
+          // 걸러진 상태라(위 posts 필터) 항상 열람 가능.
+          const useInlineChatLayout = isComplex && post.collab_available;
           const inlineMediaEl =
             useInlineChatLayout && post.videoSrc ? (
               post.media_type === "audio" ? (
@@ -711,7 +716,9 @@ export default async function FeedPage({
                 isComper={adminIds.has(post.user_id)}
                 metaLine={headerMetaLine}
                 expiresAt={post.expires_at}
-                isComplex={isComplex}
+                // 집중 모드(확대) 버튼은 채팅이 있는 공동창작 게시물에만 의미가 있다 —
+                // 공동창작 미체크는 DEMO처럼 평범한 카드라 확대할 것도 없다.
+                isComplex={isComplex && post.collab_available}
                 optionsMenu={
                   isOwnPost && !isComplex && !post.isMock ? (
                     <PostOptionsMenu
@@ -736,6 +743,7 @@ export default async function FeedPage({
               {isComplex && post.visibility === "invite_only" ? (
                 <ComplexAccessGate
                   postId={post.id}
+                  authorId={post.user_id}
                   authorName={author?.name ?? "알 수 없음"}
                   isOwnPost={isOwnPost}
                   currentUserId={currentUser?.id ?? ""}
@@ -773,6 +781,7 @@ export default async function FeedPage({
                   collabAvailable={post.collab_available}
                   collabRoleNeeded={post.collab_role_needed}
                   initialChatMessages={chatMessagesByPost.get(post.id) ?? []}
+                  likedByMe={likedByMeSet.has(post.id)}
                 />
               ) : (
                 <>
@@ -871,7 +880,7 @@ export default async function FeedPage({
                     )}
                   </div>
 
-                  {isComplex ? (
+                  {isComplex && post.collab_available ? (
                     <ComplexPostChat
                       postId={post.id}
                       currentUserId={currentUser?.id ?? ""}
@@ -901,7 +910,7 @@ export default async function FeedPage({
                       className={buttonBasis}
                     />
                     <CommentPanel postId={post.id} userId={currentUser.id} buttonClassName={buttonBasis} />
-                    {!isOwnPost && (
+                    {!isOwnPost ? (
                       <MessageButton
                         currentUserId={currentUser.id}
                         otherUserId={post.user_id}
@@ -911,6 +920,17 @@ export default async function FeedPage({
                         <MailIcon className="h-5 w-5" />
                         메시지
                       </MessageButton>
+                    ) : (
+                      // memo 공동창작 미체크 본인 글은 메시지 자리에 조회자 목록(인스타
+                      // 스토리 참고, 사용자 요청) — DEMO 본인 글은 이 슬롯 자체가 없다.
+                      isComplex && (
+                        <PostViewedBy
+                          postId={post.id}
+                          currentUserId={currentUser.id}
+                          isOwnPost
+                          className={buttonBasis}
+                        />
+                      )
                     )}
                   </div>
                 )

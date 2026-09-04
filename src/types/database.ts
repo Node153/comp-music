@@ -277,6 +277,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["likes"]["Insert"]>;
         Relationships: [];
       };
+      // 게시물 조회자 기록(0051) — memo 공동창작 미체크 게시물의 "본 사람" 목록용.
+      // 목록은 작성자 본인만 볼 수 있다(RLS post_views_select_owner).
+      post_views: {
+        Row: {
+          post_id: string;
+          user_id: string;
+          viewed_at: string;
+        };
+        Insert: {
+          post_id: string;
+          user_id: string;
+          viewed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_views"]["Insert"]>;
+        Relationships: [];
+      };
       comments: {
         Row: {
           id: string;

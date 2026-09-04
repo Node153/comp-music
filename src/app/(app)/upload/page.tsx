@@ -405,6 +405,9 @@ export default function UploadPage() {
     setGifPickerOpen(false);
   }
 
+  // 공동창작 체크 여부로 memo 업로드가 두 갈래로 갈린다(정책 변경, 사용자 요청):
+  // 체크(collab) — 기존처럼 음원(mp3/wav)만, 채팅 협업방으로 게시. 미체크 — DEMO와 동일하게
+  // 영상/음원 다 허용 + 커버 이미지 필수 + 좋아요/댓글/조회자 목록으로 게시.
   function handleComplexFileChange(file: File | null) {
     setComplexFileError(null);
     if (file && file.size > MAX_FILE_SIZE_BYTES) {
@@ -414,14 +417,30 @@ export default function UploadPage() {
       return;
     }
     const kind = file ? detectMediaKind(file) : null;
-    if (file && kind !== "audio") {
+    if (file && !kind) {
       setComplexFile(null);
       setComplexKind(null);
-      setComplexFileError("memo는 음원(mp3/wav) 파일만 올릴 수 있어요.");
+      setComplexFileError("영상 또는 음원 파일만 올릴 수 있어요.");
+      return;
+    }
+    if (file && collabAvailable && kind !== "audio") {
+      setComplexFile(null);
+      setComplexKind(null);
+      setComplexFileError("공동창작 게시물은 음원(mp3/wav) 파일만 올릴 수 있어요.");
       return;
     }
     setComplexFile(file);
     setComplexKind(kind);
+  }
+
+  // 공동창작을 나중에 켜서 이미 골라둔 영상이 더 이상 허용 안 되는 경우 정리.
+  function handleCollabAvailableChange(checked: boolean) {
+    setCollabAvailable(checked);
+    if (checked && complexKind === "video") {
+      setComplexFile(null);
+      setComplexKind(null);
+      setComplexFileError("공동창작 게시물은 음원(mp3/wav) 파일만 올릴 수 있어요.");
+    }
   }
 
   function toggleTag(tag: string) {
@@ -461,7 +480,12 @@ export default function UploadPage() {
 
     if (uploadType === "complex") {
       if (!complexFile || !complexKind) {
-        setError("음원(mp3/wav) 또는 영상 파일을 업로드해주세요.");
+        setError(collabAvailable ? "음원(mp3/wav) 파일을 업로드해주세요." : "영상 또는 음원 파일을 업로드해주세요.");
+        return;
+      }
+      // 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 커버 이미지도 똑같이 필수.
+      if (!collabAvailable && !coverFile && !coverGifUrl) {
+        setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
         return;
       }
       if (complexVisibility === "specific" && inviteUsers.length === 0) {
@@ -490,6 +514,19 @@ export default function UploadPage() {
         return;
       }
 
+      // 공동창작 미체크일 때만 커버 이미지 업로드(DEMO와 동일 로직) — collab는 여전히
+      // 채팅 중심이라 커버가 없다.
+      let complexThumbnailPath: string | null = null;
+      if (!collabAvailable) {
+        try {
+          complexThumbnailPath = coverGifUrl ?? (await uploadFileToR2(coverFile!));
+        } catch (err) {
+          setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
+          setLoading(false);
+          return;
+        }
+      }
+
       const publishedAt = new Date();
       const expiresAt = new Date(publishedAt.getTime() + expireHours * 60 * 60 * 1000);
 
@@ -497,10 +534,11 @@ export default function UploadPage() {
         .from("posts")
         .insert({
           user_id: user.id,
-          media_type: "audio",
-          video_url: null,
+          media_type: complexKind,
+          video_url: complexKind === "video" ? complexMediaPath : null,
           image_url: null,
-          audio_url: complexMediaPath,
+          audio_url: complexKind === "audio" ? complexMediaPath : null,
+          thumbnail_url: complexThumbnailPath,
           caption: caption || null,
           visibility: complexVisibility === "specific" ? "invite_only" : "followers",
           collab_available: collabAvailable,
@@ -650,6 +688,27 @@ export default function UploadPage() {
             </p>
           </div>
 
+          {/* 공동창작 여부가 memo 업로드 형태 자체를 가른다(정책 변경, 사용자 요청) — 파일
+              종류·커버 이미지 필요 여부가 여기 값에 따라 바뀌므로 업로드 칸보다 먼저 보여준다. */}
+          {uploadType === "complex" && (
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-3.5 py-3 text-sm dark:border-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={collabAvailable}
+                  onChange={(e) => handleCollabAvailableChange(e.target.checked)}
+                  className="h-4 w-4 accent-black dark:accent-white"
+                />
+                공동창작
+              </label>
+              <p className="px-1 text-xs text-gray-400 dark:text-gray-500">
+                {collabAvailable
+                  ? "Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요 — 음원(mp3/wav)만 올릴 수 있어요."
+                  : "체크 해제 시 DEMO처럼 영상·음원 업로드 + 커버 이미지 + 좋아요·댓글·조회자 목록으로 게시돼요."}
+              </p>
+            </div>
+          )}
+
           {uploadType === "demo" ? (
             <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
               <span className={darkLabel}>업로드</span>
@@ -747,14 +806,21 @@ export default function UploadPage() {
               {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
               <span className={darkLabel}>업로드</span>
               <UploadDropbox
                 file={complexFile}
                 onSelect={handleComplexFileChange}
-                accept={AUDIO_ONLY_ACCEPT}
-                formatsLabel={MEMO_UPLOADABLE_FORMATS}
+                accept={collabAvailable ? AUDIO_ONLY_ACCEPT : VIDEO_OR_AUDIO_ACCEPT}
+                formatsLabel={collabAvailable ? MEMO_UPLOADABLE_FORMATS : UPLOADABLE_FORMATS}
               />
+              {complexFile && !complexKind && (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  {collabAvailable
+                    ? "음원 형식이 아니에요. mp3·wav 파일을 선택해주세요."
+                    : "영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요."}
+                </p>
+              )}
               {complexFileError && <p className={darkErrorText}>{complexFileError}</p>}
               {complexFile && complexKind === "audio" && complexObjectUrl && (
                 <SoundbarPreview
@@ -762,6 +828,74 @@ export default function UploadPage() {
                   file={complexFile}
                   src={complexObjectUrl}
                 />
+              )}
+              {/* 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 커버 이미지도 필수로 받는다. */}
+              {!collabAvailable && (
+                <>
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
+                    <span className={darkLabel}>커버 이미지 (필수)</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
+                  </div>
+                  {coverGifUrl ? (
+                    <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={coverGifUrl}
+                        alt="선택한 GIF"
+                        className="h-16 w-16 rounded-lg object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setCoverGifUrl(null)}
+                        className="text-sm"
+                      >
+                        GIF 제거
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={handleCoverChange}
+                          className={darkFileInput}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setGifPickerOpen(true)}
+                          className="shrink-0 text-sm"
+                        >
+                          GIF로 만들기
+                        </Button>
+                      </div>
+                      {coverObjectUrl && (
+                        <div className="flex items-center gap-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={coverObjectUrl}
+                            alt="선택한 커버 이미지"
+                            className="h-24 w-24 rounded-lg object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                              setCoverFile(null);
+                              setCoverFileError(null);
+                            }}
+                            className="text-sm"
+                          >
+                            이미지 제거
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
+                </>
               )}
             </div>
           )}
@@ -922,19 +1056,6 @@ export default function UploadPage() {
                   ))}
                 </div>
               </div>
-
-              <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-3.5 py-3 text-sm dark:border-gray-700 dark:text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={collabAvailable}
-                  onChange={(e) => setCollabAvailable(e.target.checked)}
-                  className="h-4 w-4 accent-black dark:accent-white"
-                />
-                공동창작
-              </label>
-              <p className="-mt-1 px-1 text-xs text-gray-400 dark:text-gray-500">
-                Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요.
-              </p>
             </>
           )}
 

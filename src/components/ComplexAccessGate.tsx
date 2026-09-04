@@ -21,13 +21,18 @@ import { createClient } from "@/lib/supabase/client";
 import { PostVideo } from "@/components/PostVideo";
 import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
+import { PostViewedBy } from "@/components/PostViewedBy";
+import { MessageButton } from "@/components/MessageButton";
+import { LikeButton } from "@/app/(app)/feed/LikeButton";
+import { CommentPanel } from "@/app/(app)/feed/CommentPanel";
 import type { MediaType } from "@/types/database";
-import { LockIcon, UsersIcon } from "@/components/icons";
+import { LockIcon, UsersIcon, MailIcon } from "@/components/icons";
 
 type PendingRequest = { userId: string; name: string };
 
 export function ComplexAccessGate({
   postId,
+  authorId,
   authorName,
   isOwnPost,
   currentUserId,
@@ -45,8 +50,11 @@ export function ComplexAccessGate({
   collabAvailable,
   collabRoleNeeded,
   initialChatMessages,
+  likedByMe,
 }: {
   postId: string;
+  // 공동창작 미체크(=DEMO처럼 좋아요/댓글/메시지) 분기에서 MessageButton의 상대방으로 필요.
+  authorId: string;
   authorName: string;
   isOwnPost: boolean;
   currentUserId: string;
@@ -66,12 +74,15 @@ export function ComplexAccessGate({
   collabAvailable: boolean;
   collabRoleNeeded: string | null;
   initialChatMessages: ChatMessage[];
+  // 공동창작 미체크 분기의 LikeButton 초기 상태.
+  likedByMe: boolean;
 }) {
   const supabase = createClient();
-  // 열람 가능한 게시물은 미디어 박스를 안 쓰고 ComplexPostChat의 mediaSlot으로 넘겨서
-  // 재창작물 스택 + 실시간 채팅과 나란히 보여준다(feed/page.tsx의 followers 공개 게시물과 동일한 패턴).
-  const useInlineChatLayout = canViewMedia && !!videoSrc;
-  const inlineMediaEl = useInlineChatLayout
+  // 공동창작 게시물만 미디어 박스를 안 쓰고 ComplexPostChat의 mediaSlot으로 넘겨서 재창작물
+  // 스택 + 실시간 채팅과 나란히 보여준다(feed/page.tsx의 followers 공개 게시물과 동일한 패턴).
+  // 공동창작 미체크(사용자 요청, DEMO와 동일 형태)는 독립 미디어 박스 + 좋아요/댓글로 간다.
+  const useInlineChatLayout = canViewMedia && !!videoSrc && collabAvailable;
+  const inlineMediaEl = canViewMedia && !!videoSrc
     ? mediaType === "audio" ? (
         <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} posterSrc={posterSrc} />
       ) : mediaType === "image" ? (
@@ -140,7 +151,9 @@ export function ComplexAccessGate({
       )}
       {useInlineChatLayout ? null : (
         <div className="relative flex items-center justify-center bg-[#1c1c1e]">
-          {canViewMedia ? (
+          {canViewMedia && !collabAvailable && inlineMediaEl ? (
+            inlineMediaEl
+          ) : canViewMedia ? (
             <p className="py-24 text-sm text-gray-400">미디어를 불러올 수 없습니다</p>
           ) : (
             <div className="flex h-[420px] w-full flex-col items-center justify-center gap-3 bg-[#1c1c1e] px-6 text-center">
@@ -228,18 +241,40 @@ export function ComplexAccessGate({
       )}
 
       {canViewMedia ? (
-        <ComplexPostChat
-          postId={postId}
-          currentUserId={currentUserId}
-          currentUserName={currentUserName}
-          isOwnPost={isOwnPost}
-          initialMessages={initialChatMessages}
-          collabAvailable={collabAvailable}
-          mediaSlot={inlineMediaEl}
-        />
+        collabAvailable ? (
+          <ComplexPostChat
+            postId={postId}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            isOwnPost={isOwnPost}
+            initialMessages={initialChatMessages}
+            collabAvailable={collabAvailable}
+            mediaSlot={inlineMediaEl}
+          />
+        ) : (
+          // 공동창작 미체크 = DEMO와 동일하게 좋아요/댓글 + (본인 글이면 조회자 목록,
+          // 아니면 메시지) — feed/page.tsx의 followers 공개 게시물과 같은 구성(사용자 요청).
+          <div className="flex flex-wrap border-t border-gray-100 dark:border-gray-800">
+            <LikeButton postId={postId} userId={currentUserId} initialLiked={likedByMe} className="basis-1/3" />
+            <CommentPanel postId={postId} userId={currentUserId} buttonClassName="basis-1/3" />
+            {!isOwnPost ? (
+              <MessageButton
+                currentUserId={currentUserId}
+                otherUserId={authorId}
+                sourcePostId={postId}
+                className="flex basis-1/3 items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-900"
+              >
+                <MailIcon className="h-5 w-5" />
+                메시지
+              </MessageButton>
+            ) : (
+              <PostViewedBy postId={postId} currentUserId={currentUserId} isOwnPost className="basis-1/3" />
+            )}
+          </div>
+        )
       ) : (
         <div className="flex items-center gap-1.5 border-t border-gray-100 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
-          <LockIcon className="h-3.5 w-3.5" /> 초대된 인원만 채팅과 작업물을 볼 수 있어요
+          <LockIcon className="h-3.5 w-3.5" /> 초대된 인원만 볼 수 있어요
         </div>
       )}
     </>
