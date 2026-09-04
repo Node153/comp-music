@@ -84,6 +84,9 @@ export interface Database {
           last_notification_emailed_at: string;
           // 회원 탈퇴 시각(0046) — 탈퇴 전에는 null.
           withdrawn_at: string | null;
+          // 신규 가입 심사 요청 Discord 알림을 보낸 시각(0048) — 보내기 전에는 null.
+          // /api/admin/notify-signup이 null일 때만 채우고 웹훅을 쏜다(중복 발송 방지).
+          admin_notified_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -107,6 +110,7 @@ export interface Database {
           email_notify_peak?: boolean;
           last_notification_emailed_at?: string;
           withdrawn_at?: string | null;
+          admin_notified_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

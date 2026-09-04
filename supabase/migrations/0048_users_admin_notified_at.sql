@@ -1,0 +1,12 @@
+-- 신규 가입 심사 요청 Discord 알림(#8) — 중복 발송 방지용 플래그.
+--
+-- 배경: 관리자 심사 대기열(/admin/verifications, /admin/members)은 있지만 새 가입이
+-- 들어와도 관리자에게 아무 알림이 안 갔다. spec의 48h 심사 SLA를 지키려면 관리자가
+-- admin 페이지를 계속 새로고침해야 해서, 실유저가 늘면 놓치기 쉬웠다.
+--
+-- 동작: 미승인 사용자가 /status 화면을 처음 열면 클라이언트가 /api/admin/notify-signup을
+-- 한 번 호출하고, 그 라우트가 이 컬럼이 null인 경우에만 Discord 웹훅을 쏘고 now()로 채운다.
+-- 이후 재방문에서는 값이 있으면 건너뛴다(동시 요청 경합은 라우트의 조건부 update로 방어).
+-- 서류 심사(DOCUMENT_VERIFICATION_ENABLED)는 베타 단계에서 계속 꺼둔 상태 — 이 알림은
+-- 그와 무관하게 "가입했고 심사 대기 중"인 사람이 생겼다는 사실만 알린다.
+alter table users add column admin_notified_at timestamptz;

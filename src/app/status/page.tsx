@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/LogoutButton";
+import { NotifyAdminOnSignup } from "@/components/NotifyAdminOnSignup";
 import { pageTitle, mutedText } from "@/components/ui/styles";
 import { DOCUMENT_VERIFICATION_ENABLED } from "@/lib/featureFlags";
 
@@ -37,6 +38,9 @@ export default async function StatusPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center gap-4 p-6 text-center">
+      {/* 심사 대기 상태로 이 화면에 처음 들어온 시점에 관리자에게 Discord 알림을 한 번
+          보낸다(#8). 실제 발송/중복 방지는 서버가 판단 — 여기선 트리거만. */}
+      {status === "pending" && <NotifyAdminOnSignup />}
       {status === "pending" && DOCUMENT_VERIFICATION_ENABLED && !latestVerification && (
         <>
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">
