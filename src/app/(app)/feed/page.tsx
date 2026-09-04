@@ -584,15 +584,16 @@ export default async function FeedPage({
   const feedListClass = mobileSnap
     ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_6.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
     : "flex flex-col gap-6";
-  // DEMO는 헤더/캡션/태그/반응줄을 shrink-0으로 고정하고 미디어가 남는 공간을 채운다(flex-1).
-  // overflow-hidden은 쓰지 않는다 — 프레임이 기기별로 몇 px 모자라도 반응줄이 하드클리핑
-  // 되지 않고, 최악의 경우 다음 게시물이 살짝 보이는 정도로만 넘친다.
+  // DEMO 게시물은 대체로 프레임보다 작아서(미디어 max-h를 40svh로 캡) 한 판 안에서 세로
+  // 가운데 정렬(justify-center)한다. 모든 article이 정확히 프레임 높이(h-full)라 스냅이
+  // 게시물 top에 딱 맞아떨어진다 — 예전엔 min-h-full이라 미디어가 큰 글은 프레임보다 커져서
+  // 스냅이 애매하게 어긋났다. 헤더/캡션/태그/반응줄은 shrink-0으로 고정.
   // memo는 안에 채팅창이 있어 프레임 안에서 내부 스크롤(overflow-y-auto)로 처리한다(사용자 결정).
   const articleSnapClass = !mobileSnap
     ? ""
     : isComplex
       ? "max-md:h-full max-md:shrink-0 max-md:snap-start max-md:snap-always max-md:overflow-y-auto"
-      : "max-md:flex max-md:min-h-full max-md:shrink-0 max-md:flex-col max-md:snap-start max-md:snap-always";
+      : "max-md:flex max-md:h-full max-md:shrink-0 max-md:flex-col max-md:justify-center max-md:overflow-hidden max-md:snap-start max-md:snap-always";
 
   return (
     <main
@@ -771,7 +772,7 @@ export default async function FeedPage({
                   {useInlineChatLayout ? null : (
                     <div
                       className={`relative flex items-center justify-center bg-black ${
-                        mobileSnap ? "max-md:min-h-0 max-md:flex-1" : ""
+                        mobileSnap ? "max-md:max-h-[40svh] max-md:shrink-0 max-md:overflow-hidden" : ""
                       }`}
                     >
                       {!isComplex && (
@@ -783,7 +784,7 @@ export default async function FeedPage({
                       {post.isMock ? (
                         <div
                           className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br ${post.gradient} ${
-                            mobileSnap ? "max-md:h-full" : ""
+                            mobileSnap ? "max-md:h-[40svh]" : ""
                           }`}
                         >
                           {post.demoVideoSrc && (
@@ -800,7 +801,7 @@ export default async function FeedPage({
                           src={post.videoSrc}
                           alt={post.caption ?? "이미지 게시물"}
                           className={`aspect-[4/5] w-full object-cover ${
-                            mobileSnap ? "max-md:aspect-auto max-md:h-full" : ""
+                            mobileSnap ? "max-md:aspect-auto max-md:h-[40svh]" : ""
                           }`}
                         />
                       ) : post.videoSrc && post.media_type === "audio" ? (
