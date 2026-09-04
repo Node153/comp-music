@@ -263,14 +263,62 @@ export function ComplexPostChat({
     );
   }
 
-  // 집중 모드가 아니면 파일만 가운데(사용자 요청) — 채팅·업로드·재창작물 스택은 확대해야
-  // 접근 가능하다는 뜻이라, 여기서는 인터랙션 자체를 렌더하지 않는다. grow로 남는 세로
-  // 공간을 흡수하는 건 분할 레이아웃과 동일 — 헤더/캡션/태그 아래 프레임을 이 박스가
-  // 채우고 그 안에서 파일이 items-center justify-center로 가운데 온다.
+  // 메시지 입력 폼 — 접힌 뷰(하단 채팅 절반)와 집중 모드(우측 채팅 컬럼) 둘 다에서 그대로
+  // 재사용한다(사용자 요청: 확대 전에도 입력창이 채팅 영역 안에 있어야 함).
+  const messageForm = (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        sendText();
+      }}
+      className="flex shrink-0 items-center gap-1.5 border-t border-gray-100 p-2 dark:border-gray-800"
+    >
+      <input
+        ref={audioInputRef}
+        type="file"
+        accept="audio/mpeg,audio/mp3,audio/wav"
+        className="hidden"
+        disabled={!canUploadWork}
+        onChange={handleAudioFileInput}
+      />
+      <button
+        type="button"
+        disabled={!canUploadWork || sending}
+        title={canUploadWork ? "음원 작업물 올리기" : "공동창작 게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
+        onClick={() => audioInputRef.current?.click()}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:text-gray-300 dark:hover:bg-gray-800"
+      >
+        <UploadIcon className="h-4 w-4" />
+      </button>
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="메시지 보내기..."
+        className="w-full flex-1 rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-300 dark:bg-gray-900 dark:text-gray-200 dark:focus:ring-violet-700"
+      />
+      <button
+        type="submit"
+        disabled={sending}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+      >
+        ➤
+      </button>
+    </form>
+  );
+
+  // 집중 모드가 아니면 위(파일)/아래(채팅)로 화면을 정확히 반 나눈다(사용자 요청) —
+  // flex-1 두 개를 flex-col에 넣으면 남는 세로 공간을 50:50으로 나눠 갖는다. 아래쪽
+  // 메시지 목록만 자체 스크롤(min-h-0 + overflow-y-auto)하고, 재창작물 스택·새로고침
+  // 버튼처럼 덜 중요한 건 확대해야 보이는 채로 남긴다.
   if (!focused) {
     return (
-      <div className="flex grow shrink-0 items-center justify-center border-t border-gray-100 p-4 dark:border-gray-800">
-        {mediaSlot}
+      <div className="flex min-h-0 grow shrink-0 flex-col border-t border-gray-100 dark:border-gray-800">
+        <div className="flex min-h-0 flex-1 items-center justify-center p-4">{mediaSlot}</div>
+        <div className="flex min-h-0 flex-1 flex-col border-t border-gray-100 dark:border-gray-800">
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">{renderMessages()}</div>
+          {messageForm}
+        </div>
       </div>
     );
   }
@@ -352,45 +400,7 @@ export function ComplexPostChat({
         </div>
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          sendText();
-        }}
-        className="flex items-center gap-1.5 border-t border-gray-100 p-2 dark:border-gray-800"
-      >
-        <input
-          ref={audioInputRef}
-          type="file"
-          accept="audio/mpeg,audio/mp3,audio/wav"
-          className="hidden"
-          disabled={!canUploadWork}
-          onChange={handleAudioFileInput}
-        />
-        <button
-          type="button"
-          disabled={!canUploadWork || sending}
-          title={canUploadWork ? "음원 작업물 올리기" : "공동창작 게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
-          onClick={() => audioInputRef.current?.click()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:text-gray-300 dark:hover:bg-gray-800"
-        >
-          <UploadIcon className="h-4 w-4" />
-        </button>
-        <input
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="메시지 보내기..."
-          className="w-full flex-1 rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-300 dark:bg-gray-900 dark:text-gray-200 dark:focus:ring-violet-700"
-        />
-        <button
-          type="submit"
-          disabled={sending}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
-        >
-          ➤
-        </button>
-      </form>
+      {messageForm}
     </div>
   );
 }
