@@ -586,8 +586,9 @@ export default async function FeedPage({
     ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_6.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
     : "flex flex-col gap-6";
   // 모바일: article이 정확히 스냅 프레임 높이(h-full)라 스냅이 게시물 top에 딱 맞는다.
-  // 데스크톱: DEMO는 미디어(1:1 정사각)가 높이를 정하는 자연 높이 카드(md:max-w-[620px]로 좁혀
-  //   인스타 웹처럼 가운데 정렬) — 예전엔 md에서도 100dvh로 고정해 여백이 너무 많았다.
+  // 데스크톱: DEMO는 미디어 박스 4:3(md:aspect-[4/3]) 안에 1:1 정사각 미디어가 담기고,
+  //   그 미디어가 카드 높이를 정하는 자연 높이 카드다(md:max-w-[620px]로 좁혀 인스타 웹처럼
+  //   가운데 정렬) — 예전엔 md에서도 100dvh로 고정해 여백이 너무 많았다.
   //   memo는 채팅이 있어 데스크톱에서도 고정 프레임 + 내부 스크롤을 유지한다.
   // 헤더/캡션/태그/반응줄은 shrink-0, 미디어는 max-h 캡(아래) — 합이 프레임보다 작아 안 잘린다.
   const articleSnapClass = !oneScreenFeed
@@ -774,7 +775,7 @@ export default async function FeedPage({
                     <div
                       className={`relative flex w-full items-center justify-center bg-black ${
                         oneScreenFeed
-                          ? "shrink-0 overflow-hidden max-h-[40svh] md:max-h-none"
+                          ? "shrink-0 overflow-hidden max-h-[40svh] md:max-h-none md:aspect-[4/3]"
                           : ""
                       }`}
                     >
@@ -787,7 +788,7 @@ export default async function FeedPage({
                       {post.isMock ? (
                         <div
                           className={`relative flex w-full items-center justify-center bg-gradient-to-br ${post.gradient} ${
-                            oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "h-[420px]"
+                            oneScreenFeed ? "h-[40svh] md:h-full md:w-auto md:aspect-square" : "h-[420px]"
                           }`}
                         >
                           {post.demoVideoSrc && (
@@ -804,7 +805,7 @@ export default async function FeedPage({
                           src={post.videoSrc}
                           alt={post.caption ?? "이미지 게시물"}
                           className={`w-full object-cover ${
-                            oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "aspect-[4/5]"
+                            oneScreenFeed ? "h-[40svh] md:h-full md:w-auto md:aspect-square" : "aspect-[4/5]"
                           }`}
                         />
                       ) : post.videoSrc && post.media_type === "audio" ? (
