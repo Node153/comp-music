@@ -597,7 +597,12 @@ export default async function FeedPage({
   const articleSnapClass = !oneScreenFeed
     ? ""
     : isComplex
-      ? "shrink-0 overflow-y-auto h-full md:h-[calc(100dvh_-_7rem)] max-md:snap-start max-md:snap-always"
+      // memo: article 자체를 flex-col로 만들어야 안의 ComplexPostChat이 grow로 남는 세로
+      // 공간을 흡수해서 메시지 입력칸을 프레임 맨 아래로 밀어낼 수 있다(사용자 요청) —
+      // 예전엔 block이라 채팅 내용이 짧으면 입력칸이 그 바로 아래 뜨고 그 밑으로 빈
+      // 공간이 남았다. 채팅이 프레임보다 길면(shrink-0) article의 overflow-y-auto가 그대로
+      // 전체 스크롤을 맡는다(내부 이중 스크롤 없음).
+      ? "flex flex-col shrink-0 overflow-y-auto h-full md:h-[calc(100dvh_-_7rem)] max-md:snap-start max-md:snap-always"
       : "flex shrink-0 flex-col justify-center overflow-hidden h-full md:h-[calc(100dvh_-_7rem)] md:mx-auto md:w-full md:max-w-[760px] max-md:snap-start max-md:snap-always";
 
   return (
@@ -721,7 +726,7 @@ export default async function FeedPage({
               {post.caption && (
                 <p
                   className={`px-3 pb-2 text-sm text-gray-700 dark:text-gray-300 ${
-                    oneScreenFeed && !isComplex ? "line-clamp-3 shrink-0" : ""
+                    oneScreenFeed ? (isComplex ? "shrink-0" : "line-clamp-3 shrink-0") : ""
                   }`}
                 >
                   {post.caption}

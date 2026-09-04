@@ -37,12 +37,15 @@ export function PostFocusToggle({
   return (
     <div
       className={
+        // flex-col: 안의 ComplexPostChat이 grow로 남는 세로 공간을 흡수해서 메시지
+        // 입력칸을 화면 맨 아래로 밀어낸다(사용자 요청) — block이면 채팅이 짧을 때
+        // 입력칸이 내용 바로 아래 뜨고 그 밑에 빈 공간만 남았다.
         focused
-          ? "fixed inset-x-0 bottom-0 top-14 z-50 overflow-y-auto bg-white dark:bg-black"
+          ? "fixed inset-x-0 bottom-0 top-14 z-50 flex flex-col overflow-y-auto bg-white dark:bg-black"
           : "contents"
       }
     >
-      <div className="flex items-center gap-2 p-3">
+      <div className="flex shrink-0 items-center gap-2 p-3">
         <Avatar userId={authorId} name={authorName} className="h-8 w-8 text-xs" />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800 dark:text-gray-200">

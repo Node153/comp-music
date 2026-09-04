@@ -260,7 +260,12 @@ export function ComplexPostChat({
   }
 
   return (
-    <div className="border-t border-gray-100 dark:border-gray-800">
+    // grow + shrink-0: 부모(article/집중모드 패널)가 flex-col이고 남는 세로 공간이 있으면
+    // 그 공간을 이 블록이 다 흡수하고, justify-between으로 미디어+채팅 영역과 입력창
+    // 사이에 몰아줘서 입력창이 항상 프레임 맨 아래에 붙는다(사용자 요청). shrink-0이라
+    // 채팅이 길어서 프레임보다 커지면 압축되지 않고 그대로 부모의 overflow-y-auto가
+    // 전체를 스크롤한다 — 이 블록 안에서 따로 스크롤이 생기지 않는다.
+    <div className="flex grow shrink-0 flex-col justify-between border-t border-gray-100 dark:border-gray-800">
       {/* 왼쪽: 미디어(1차) + 재창작물 스택(2차+, 접기 가능) · 오른쪽: 실시간 채팅. */}
       <div className="flex divide-x divide-gray-100 dark:divide-gray-800">
         <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
