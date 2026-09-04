@@ -586,16 +586,19 @@ export default async function FeedPage({
     ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_6.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
     : "flex flex-col gap-6";
   // 모바일: article이 정확히 스냅 프레임 높이(h-full)라 스냅이 게시물 top에 딱 맞는다.
-  // 데스크톱: DEMO는 미디어 박스 4:3(md:aspect-[4/3]) 안에 1:1 정사각 미디어가 담기고,
-  //   그 미디어가 카드 높이를 정하는 자연 높이 카드다(md:max-w-[620px]로 좁혀 인스타 웹처럼
-  //   가운데 정렬) — 예전엔 md에서도 100dvh로 고정해 여백이 너무 많았다.
-  //   memo는 채팅이 있어 데스크톱에서도 고정 프레임 + 내부 스크롤을 유지한다.
-  // 헤더/캡션/태그/반응줄은 shrink-0, 미디어는 max-h 캡(아래) — 합이 프레임보다 작아 안 잘린다.
+  // 데스크톱: article도 다시 고정 프레임(md:h-[calc(100dvh-7rem)])으로 — 카드 하나가
+  //   모니터 크기와 무관하게 항상 화면 한 판을 채운다(사용자 요청, "한 게시물만 보이게").
+  //   미디어 박스는 flex-1로 남는 공간을 다 먹고, 그 안의 1:1 정사각 미디어는 박스의
+  //   짧은 변에 맞춰 가운데 정렬(레터박스) — 예전처럼 폭 기준 4:3 고정 박스로 하면 큰
+  //   모니터에서 박스가 남는 세로 공간을 못 채워 여백이 다시 생겼다. md:max-w-[760px]로
+  //   카드 폭도 좀 더 키움(기존 620px). memo는 채팅이 있어 원래도 고정 프레임 + 내부 스크롤.
+  // 헤더/캡션/태그/반응줄은 shrink-0, 미디어는 min-h-0으로 눌러도 되게 — 합이 프레임과
+  // 같아 안 잘리고 안 남는다.
   const articleSnapClass = !oneScreenFeed
     ? ""
     : isComplex
       ? "shrink-0 overflow-y-auto h-full md:h-[calc(100dvh_-_7rem)] max-md:snap-start max-md:snap-always"
-      : "flex shrink-0 flex-col justify-center overflow-hidden h-full md:h-auto md:mx-auto md:w-full md:max-w-[620px] max-md:snap-start max-md:snap-always";
+      : "flex shrink-0 flex-col justify-center overflow-hidden h-full md:h-[calc(100dvh_-_7rem)] md:mx-auto md:w-full md:max-w-[760px] max-md:snap-start max-md:snap-always";
 
   return (
     <main
@@ -775,7 +778,7 @@ export default async function FeedPage({
                     <div
                       className={`relative flex w-full items-center justify-center bg-black ${
                         oneScreenFeed
-                          ? "shrink-0 overflow-hidden max-h-[40svh] md:max-h-none md:aspect-[4/3]"
+                          ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-[760px] md:min-h-0 md:flex-1"
                           : ""
                       }`}
                     >
