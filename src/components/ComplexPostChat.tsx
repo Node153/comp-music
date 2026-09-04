@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
+import { usePostFocused } from "@/components/PostFocusContext";
 import { XIcon, UploadIcon } from "@/components/icons";
 
 export type ChatMessage = {
@@ -65,6 +66,9 @@ export function ComplexPostChat({
   mediaSlot: React.ReactNode;
 }) {
   const supabase = createClient();
+  // 집중 모드가 아니면(피드에 카드로 떠 있을 때) 채팅·재창작물 스택은 숨기고 파일만
+  // 가운데에 보여준다 — 확대해야만(집중 모드) 미디어|채팅 반반 분할이 나타난다(사용자 요청).
+  const focused = usePostFocused();
   const canUploadWork = collabAvailable || isOwnPost;
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
@@ -256,6 +260,18 @@ export function ComplexPostChat({
           </p>
         )}
       </>
+    );
+  }
+
+  // 집중 모드가 아니면 파일만 가운데(사용자 요청) — 채팅·업로드·재창작물 스택은 확대해야
+  // 접근 가능하다는 뜻이라, 여기서는 인터랙션 자체를 렌더하지 않는다. grow로 남는 세로
+  // 공간을 흡수하는 건 분할 레이아웃과 동일 — 헤더/캡션/태그 아래 프레임을 이 박스가
+  // 채우고 그 안에서 파일이 items-center justify-center로 가운데 온다.
+  if (!focused) {
+    return (
+      <div className="flex grow shrink-0 items-center justify-center border-t border-gray-100 p-4 dark:border-gray-800">
+        {mediaSlot}
+      </div>
     );
   }
 

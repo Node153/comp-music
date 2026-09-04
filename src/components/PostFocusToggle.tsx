@@ -10,6 +10,7 @@ import { useState } from "react";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { Avatar } from "@/components/Avatar";
 import { ComperBadge } from "@/components/ComperBadge";
+import { PostFocusProvider } from "@/components/PostFocusContext";
 import { XIcon, ExpandIcon } from "@/components/icons";
 
 export function PostFocusToggle({
@@ -67,7 +68,10 @@ export function PostFocusToggle({
         )}
         {optionsMenu}
       </div>
-      {children}
+      {/* ComplexPostChat이 focused 값을 보고 레이아웃을 바꾼다(사용자 요청 — 집중 모드일
+          때만 미디어|채팅 반반 분할, 그 전엔 파일만 가운데). children은 서버가 만든 고정
+          트리라 prop으로 못 내려주니 Context로 전달한다. */}
+      <PostFocusProvider focused={focused}>{children}</PostFocusProvider>
     </div>
   );
 }
