@@ -56,6 +56,13 @@ const COMPLEX_VISIBILITY_OPTIONS: { value: ComplexVisibility; label: string; ico
   { value: "followers", label: "Companion 공개", icon: "👥" },
   { value: "specific", label: "초대한 사람만", icon: "🔒" },
 ];
+// memo 게시 형태 — 화면 표시·선택용 값이고 실제로는 posts.collab_available(boolean)에
+// 저장된다(정책 변경, 사용자 요청 — 체크박스 대신 단독/협업 중 하나를 고르는 선택형 버튼).
+type ComplexPostMode = "solo" | "collab";
+const COMPLEX_POST_MODE_OPTIONS: { value: ComplexPostMode; label: string; icon: string }[] = [
+  { value: "solo", label: "단독 게시물", icon: "🎵" },
+  { value: "collab", label: "협업 게시물", icon: "🤝" },
+];
 // posts.expire_hours는 not null 컬럼이라 demo(영구노출)에도 값이 필요하지만,
 // 영구노출 여부는 expires_at(null)로만 판단하므로(feed/page.tsx 쿼리 참고) 이 값 자체는 화면에 노출되지 않는다.
 const PERMANENT_POST_EXPIRE_HOURS_PLACEHOLDER: ExpireHours = 48;
@@ -689,22 +696,32 @@ export default function UploadPage() {
           </div>
 
           {/* 공동창작 여부가 memo 업로드 형태 자체를 가른다(정책 변경, 사용자 요청) — 파일
-              종류·커버 이미지 필요 여부가 여기 값에 따라 바뀌므로 업로드 칸보다 먼저 보여준다. */}
+              종류·커버 이미지 필요 여부가 여기 값에 따라 바뀌므로 업로드 칸보다 먼저 보여준다.
+              체크박스 대신 단독/협업 둘 중 하나를 고르는 선택형 버튼으로(사용자 요청) —
+              공개범위(COMPLEX_VISIBILITY_OPTIONS)와 같은 패턴. */}
           {uploadType === "complex" && (
             <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-2 rounded-xl border border-gray-200 px-3.5 py-3 text-sm dark:border-gray-700 dark:text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={collabAvailable}
-                  onChange={(e) => handleCollabAvailableChange(e.target.checked)}
-                  className="h-4 w-4 accent-black dark:accent-white"
-                />
-                공동창작
-              </label>
+              <span className={darkLabel}>게시 형태</span>
+              <div className="grid grid-cols-2 gap-2">
+                {COMPLEX_POST_MODE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleCollabAvailableChange(option.value === "collab")}
+                    className={selectableButtonClass(
+                      collabAvailable === (option.value === "collab"),
+                      "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition",
+                    )}
+                  >
+                    <span className="text-base">{option.icon}</span>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
               <p className="px-1 text-xs text-gray-400 dark:text-gray-500">
                 {collabAvailable
                   ? "Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요 — 음원(mp3/wav)만 올릴 수 있어요."
-                  : "체크 해제 시 DEMO처럼 영상·음원 업로드 + 커버 이미지 + 좋아요·댓글·조회자 목록으로 게시돼요."}
+                  : "DEMO처럼 영상·음원 업로드 + 커버 이미지 + 좋아요·댓글·조회자 목록으로 게시돼요."}
               </p>
             </div>
           )}
