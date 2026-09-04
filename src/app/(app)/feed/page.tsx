@@ -573,8 +573,28 @@ export default async function FeedPage({
     : { data: [] as { question: string; answer: string }[] };
   const heroMessages = (heroRows ?? []).map((r) => ({ q: r.question, a: r.answer }));
 
+  // 모바일(md 미만): 릴스/쇼츠식으로 한 게시물이 화면 한 판을 채우고 스냅 스크롤된다.
+  // 데스크톱은 기존 카드 피드 그대로(사용자 결정). 비로그인 미리보기는 상단바/하단 탭바가
+  // 없어(GuestTopNav만) 높이 계산이 달라지므로 스냅을 적용하지 않고 기존 스크롤을 유지한다.
+  // 높이 = 100dvh − MobileTopBar(h-12) − BottomNav(h-14) = 100dvh − 6.5rem.
+  const mobileSnap = !!currentUser;
+  const feedListClass = mobileSnap
+    ? "flex flex-col md:gap-6 max-md:h-[calc(100dvh-6.5rem)] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
+    : "flex flex-col gap-6";
+  // DEMO는 헤더/캡션/반응줄은 고정 높이로 두고 미디어가 남는 공간을 채운다(flex-1). memo는
+  // 안에 채팅창이 있어 프레임 안에서 내부 스크롤(overflow-y-auto)로 처리한다(사용자 결정).
+  const articleSnapClass = !mobileSnap
+    ? ""
+    : isComplex
+      ? "max-md:h-full max-md:shrink-0 max-md:snap-start max-md:snap-always max-md:overflow-y-auto"
+      : "max-md:flex max-md:h-full max-md:shrink-0 max-md:flex-col max-md:snap-start max-md:snap-always max-md:overflow-hidden";
+
   return (
-    <main className="mx-auto max-w-[900px] px-0 pb-24 pt-0 md:px-4 md:pb-8 md:pt-4">
+    <main
+      className={`mx-auto max-w-[900px] px-0 pt-0 md:px-4 md:pb-8 md:pt-4 ${
+        mobileSnap ? "pb-24 max-md:pb-0" : "pb-24"
+      }`}
+    >
       {!currentUser && (
         <div className="mx-3 mb-4 flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 md:mx-0">
           <p className="text-sm text-gray-600">
@@ -619,9 +639,8 @@ export default async function FeedPage({
 
       {/* DEMO 피드는 열자마자 게시물이 아니라 힐링 멘트가 먼저 보이도록 한 판 비운다.
           태그 필터 중일 때는(결과를 보러 온 상태) 생략. */}
-      {showHero && <FeedHero messages={heroMessages} />}
-
-      <div className="flex flex-col gap-6">
+      <div className={feedListClass}>
+        {showHero && <FeedHero messages={heroMessages} snap={mobileSnap} />}
         {allPosts.map((post) => {
           const author = userMap.get(post.user_id);
           const profile = profileMap.get(post.user_id);
@@ -662,7 +681,7 @@ export default async function FeedPage({
             <article
               key={post.id}
               id={post.id}
-              className="scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400"
+              className={`scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400 ${articleSnapClass}`}
             >
               <PostEngagementProvider
                 initialLikeCount={likeCount}
@@ -689,7 +708,13 @@ export default async function FeedPage({
                 }
               >
               {post.caption && (
-                <p className="px-3 pb-2 text-sm text-gray-700 dark:text-gray-300">{post.caption}</p>
+                <p
+                  className={`px-3 pb-2 text-sm text-gray-700 dark:text-gray-300 ${
+                    mobileSnap && !isComplex ? "max-md:line-clamp-3" : ""
+                  }`}
+                >
+                  {post.caption}
+                </p>
               )}
 
               {isComplex && post.visibility === "invite_only" ? (
@@ -739,7 +764,11 @@ export default async function FeedPage({
                       전부(followers/invite_only 가리지 않고) 방장과 Companion인 사람에게만
                       보이므로, 굳이 이 유형만 따로 표시할 이유가 없다(위 posts 필터 참고). */}
                   {useInlineChatLayout ? null : (
-                    <div className="relative flex items-center justify-center bg-black">
+                    <div
+                      className={`relative flex items-center justify-center bg-black ${
+                        mobileSnap ? "max-md:min-h-0 max-md:flex-1" : ""
+                      }`}
+                    >
                       {!isComplex && (
                         <div className="absolute right-3 top-3 z-10">
                           <EngagementMeter />
@@ -748,7 +777,9 @@ export default async function FeedPage({
 
                       {post.isMock ? (
                         <div
-                          className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br ${post.gradient}`}
+                          className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br ${post.gradient} ${
+                            mobileSnap ? "max-md:h-full" : ""
+                          }`}
                         >
                           {post.demoVideoSrc && (
                             <MockPlayOverlay
@@ -763,7 +794,9 @@ export default async function FeedPage({
                         <img
                           src={post.videoSrc}
                           alt={post.caption ?? "이미지 게시물"}
-                          className="aspect-[4/5] w-full object-cover"
+                          className={`aspect-[4/5] w-full object-cover ${
+                            mobileSnap ? "max-md:aspect-auto max-md:h-full" : ""
+                          }`}
                         />
                       ) : post.videoSrc && post.media_type === "audio" ? (
                         <div className="flex w-full flex-col items-center gap-3 p-4">

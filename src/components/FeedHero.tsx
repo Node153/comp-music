@@ -20,7 +20,9 @@ const FALLBACK_MESSAGES: HeroMessage[] = [
   },
 ];
 
-export function FeedHero({ messages }: { messages?: HeroMessage[] }) {
+// snap=true면 모바일 릴스식 스냅 피드의 첫 칸으로 들어가므로 화면 한 판(h-full)에 맞춘다.
+// 아니면(비로그인 미리보기 등) 기존처럼 min-h-svh로 한 판을 비운다.
+export function FeedHero({ messages, snap = false }: { messages?: HeroMessage[]; snap?: boolean }) {
   const list = messages && messages.length > 0 ? messages : FALLBACK_MESSAGES;
 
   // 서버 렌더와 첫 클라이언트 렌더는 동일하게(idx 0, 투명). 마운트 후 랜덤으로 골라
@@ -39,7 +41,11 @@ export function FeedHero({ messages }: { messages?: HeroMessage[] }) {
   const m = list[Math.min(idx, list.length - 1)];
 
   return (
-    <section className="flex min-h-svh flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+    <section
+      className={`flex flex-col items-center justify-center gap-6 px-6 py-16 text-center ${
+        snap ? "max-md:h-full max-md:shrink-0 max-md:snap-start md:min-h-svh" : "min-h-svh"
+      }`}
+    >
       <div className={`transition-opacity duration-700 ease-in-out ${shown ? "opacity-100" : "opacity-0"}`}>
         <p className="text-lg font-semibold leading-snug text-gray-900 dark:text-gray-100 md:text-2xl">
           {m.q}
