@@ -573,32 +573,33 @@ export default async function FeedPage({
     : { data: [] as { question: string; answer: string }[] };
   const heroMessages = (heroRows ?? []).map((r) => ({ q: r.question, a: r.answer }));
 
-  // 모바일(md 미만): 릴스/쇼츠식으로 한 게시물이 화면 한 판을 채우고 스냅 스크롤된다.
-  // 데스크톱은 기존 카드 피드 그대로(사용자 결정). 비로그인 미리보기는 상단바/하단 탭바가
-  // 없어(GuestTopNav만) 높이 계산이 달라지므로 스냅을 적용하지 않고 기존 스크롤을 유지한다.
-  // 프레임 높이 = 100svh − MobileTopBar(h-12) − BottomNav(h-14) − iOS 하단 세이프에어리어.
-  //   · dvh가 아니라 svh: 주소창이 보일 때(가장 작을 때) 기준으로 잡아야 좋아요/댓글 줄이
-  //     하단 탭바 뒤로 잘리지 않는다(dvh는 스크롤 중 늘었다 줄었다 해서 그 순간 잘림).
-  //   · env(safe-area-inset-bottom): 홈 인디케이터가 있는 기기에서 탭바 아래 여백까지 뺀다.
-  const mobileSnap = !!currentUser;
-  const feedListClass = mobileSnap
+  // 한 게시물 = 한 화면. 게시물마다 고정 프레임 높이 안에 컴팩트하게 담고 세로 가운데 정렬한다.
+  //   · 모바일(md 미만): 릴스/쇼츠식 스냅 스크롤. 프레임 = 100svh − MobileTopBar(h-12) −
+  //     BottomNav(h-14) − iOS 하단 세이프에어리어. dvh가 아니라 svh인 이유: 주소창이 보일 때
+  //     (가장 작을 때) 기준으로 잡아야 좋아요/댓글 줄이 하단 탭바 뒤로 안 잘림.
+  //   · 데스크톱(md 이상): 스냅은 없이 일반 스크롤이지만 카드 높이는 똑같이 고정한다.
+  //     프레임 = 100dvh − TopNav(h-14) − 상하 여백(≈ 3.5rem) = 100dvh − 7rem.
+  //   · 비로그인 미리보기는 상단바/탭바 구성이 달라(GuestTopNav만) 높이 계산이 어긋나므로
+  //     기존 카드 피드(자연 높이)를 그대로 둔다.
+  const oneScreenFeed = !!currentUser;
+  const feedListClass = oneScreenFeed
     ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_6.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
     : "flex flex-col gap-6";
-  // DEMO 게시물은 대체로 프레임보다 작아서(미디어 max-h를 40svh로 캡) 한 판 안에서 세로
-  // 가운데 정렬(justify-center)한다. 모든 article이 정확히 프레임 높이(h-full)라 스냅이
-  // 게시물 top에 딱 맞아떨어진다 — 예전엔 min-h-full이라 미디어가 큰 글은 프레임보다 커져서
-  // 스냅이 애매하게 어긋났다. 헤더/캡션/태그/반응줄은 shrink-0으로 고정.
+  // 모든 article이 정확히 프레임 높이라(모바일 h-full = 스냅 컨테이너, 데스크톱 md:h-[calc]),
+  // 모바일에선 스냅이 게시물 top에 딱 맞고 데스크톱에선 스크롤 시 한 게시물씩 화면을 채운다.
+  // 헤더/캡션/태그/반응줄은 shrink-0, 미디어는 max-h 캡(아래) — 합이 프레임보다 작아 안 잘린다.
   // memo는 안에 채팅창이 있어 프레임 안에서 내부 스크롤(overflow-y-auto)로 처리한다(사용자 결정).
-  const articleSnapClass = !mobileSnap
+  const frameH = "h-full md:h-[calc(100dvh_-_7rem)]";
+  const articleSnapClass = !oneScreenFeed
     ? ""
     : isComplex
-      ? "max-md:h-full max-md:shrink-0 max-md:snap-start max-md:snap-always max-md:overflow-y-auto"
-      : "max-md:flex max-md:h-full max-md:shrink-0 max-md:flex-col max-md:justify-center max-md:overflow-hidden max-md:snap-start max-md:snap-always";
+      ? `shrink-0 overflow-y-auto ${frameH} max-md:snap-start max-md:snap-always`
+      : `flex shrink-0 flex-col justify-center overflow-hidden ${frameH} max-md:snap-start max-md:snap-always`;
 
   return (
     <main
       className={`mx-auto max-w-[900px] px-0 pt-0 md:px-4 md:pb-8 md:pt-4 ${
-        mobileSnap ? "pb-24 max-md:pb-0" : "pb-24"
+        oneScreenFeed ? "pb-24 max-md:pb-0" : "pb-24"
       }`}
     >
       {!currentUser && (
@@ -646,7 +647,7 @@ export default async function FeedPage({
       {/* DEMO 피드는 열자마자 게시물이 아니라 힐링 멘트가 먼저 보이도록 한 판 비운다.
           태그 필터 중일 때는(결과를 보러 온 상태) 생략. */}
       <div className={feedListClass}>
-        {showHero && <FeedHero messages={heroMessages} snap={mobileSnap} />}
+        {showHero && <FeedHero messages={heroMessages} snap={oneScreenFeed} />}
         {allPosts.map((post) => {
           const author = userMap.get(post.user_id);
           const profile = profileMap.get(post.user_id);
@@ -716,7 +717,7 @@ export default async function FeedPage({
               {post.caption && (
                 <p
                   className={`px-3 pb-2 text-sm text-gray-700 dark:text-gray-300 ${
-                    mobileSnap && !isComplex ? "max-md:line-clamp-3 max-md:shrink-0" : ""
+                    oneScreenFeed && !isComplex ? "line-clamp-3 shrink-0" : ""
                   }`}
                 >
                   {post.caption}
@@ -772,7 +773,9 @@ export default async function FeedPage({
                   {useInlineChatLayout ? null : (
                     <div
                       className={`relative flex items-center justify-center bg-black ${
-                        mobileSnap ? "max-md:max-h-[40svh] max-md:shrink-0 max-md:overflow-hidden" : ""
+                        oneScreenFeed
+                          ? "shrink-0 overflow-hidden max-h-[40svh] md:max-h-[46dvh]"
+                          : ""
                       }`}
                     >
                       {!isComplex && (
@@ -783,8 +786,8 @@ export default async function FeedPage({
 
                       {post.isMock ? (
                         <div
-                          className={`relative flex h-[420px] w-full items-center justify-center bg-gradient-to-br ${post.gradient} ${
-                            mobileSnap ? "max-md:h-[40svh]" : ""
+                          className={`relative flex w-full items-center justify-center bg-gradient-to-br ${post.gradient} ${
+                            oneScreenFeed ? "h-[40svh] md:h-[46dvh]" : "h-[420px]"
                           }`}
                         >
                           {post.demoVideoSrc && (
@@ -800,8 +803,8 @@ export default async function FeedPage({
                         <img
                           src={post.videoSrc}
                           alt={post.caption ?? "이미지 게시물"}
-                          className={`aspect-[4/5] w-full object-cover ${
-                            mobileSnap ? "max-md:aspect-auto max-md:h-[40svh]" : ""
+                          className={`w-full object-cover ${
+                            oneScreenFeed ? "h-[40svh] md:h-[46dvh]" : "aspect-[4/5]"
                           }`}
                         />
                       ) : post.videoSrc && post.media_type === "audio" ? (
@@ -833,7 +836,7 @@ export default async function FeedPage({
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 max-md:shrink-0">
+                  <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 shrink-0">
                     {post.content_type && (
                       <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400">
                         {CONTENT_TYPE_LABEL[post.content_type]}
@@ -873,7 +876,7 @@ export default async function FeedPage({
                     <GuestEngagementRow likeCount={likeCount} commentCount={commentCount} />
                   ) : post.isMock ? (
                     <div
-                      className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 max-md:shrink-0 dark:border-gray-800 dark:text-gray-300"
+                      className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 shrink-0 dark:border-gray-800 dark:text-gray-300"
                       title="샘플 게시물이라 실제로 누를 수는 없어요"
                     >
                       <span className="inline-flex items-center gap-1"><HeartIcon className="h-5 w-5" /> {likeCount > 0 ? likeCount : ""}</span>
@@ -881,7 +884,7 @@ export default async function FeedPage({
                     </div>
                   ) : (
                 currentUser && (
-                  <div className="flex flex-wrap border-t border-gray-100 max-md:shrink-0">
+                  <div className="flex flex-wrap border-t border-gray-100 shrink-0">
                     <LikeButton
                       postId={post.id}
                       userId={currentUser.id}

@@ -43,7 +43,9 @@ export function FeedHero({ messages, snap = false }: { messages?: HeroMessage[];
   return (
     <section
       className={`flex flex-col items-center justify-center gap-6 px-6 py-16 text-center ${
-        snap ? "max-md:h-full max-md:shrink-0 max-md:snap-start md:min-h-svh" : "min-h-svh"
+        snap
+          ? "max-md:h-full max-md:shrink-0 max-md:snap-start md:h-[calc(100dvh_-_7rem)]"
+          : "min-h-svh"
       }`}
     >
       <div className={`transition-opacity duration-700 ease-in-out ${shown ? "opacity-100" : "opacity-0"}`}>
