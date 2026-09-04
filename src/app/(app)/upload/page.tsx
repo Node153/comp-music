@@ -490,8 +490,9 @@ export default function UploadPage() {
         setError(collabAvailable ? "음원(mp3/wav) 파일을 업로드해주세요." : "영상 또는 음원 파일을 업로드해주세요.");
         return;
       }
-      // 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 커버 이미지도 똑같이 필수.
-      if (!collabAvailable && !coverFile && !coverGifUrl) {
+      // 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 커버 이미지도 똑같이 필수 —
+      // 단, 영상은 그 자체로 보여줄 화면이 있어서 예외(사용자 요청, DEMO와 동일 규칙).
+      if (!collabAvailable && complexKind !== "video" && !coverFile && !coverGifUrl) {
         setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
         return;
       }
@@ -522,11 +523,15 @@ export default function UploadPage() {
       }
 
       // 공동창작 미체크일 때만 커버 이미지 업로드(DEMO와 동일 로직) — collab는 여전히
-      // 채팅 중심이라 커버가 없다.
+      // 채팅 중심이라 커버가 없다. 영상은 커버가 선택이라(위 검증) 안 골랐으면 null 그대로.
       let complexThumbnailPath: string | null = null;
       if (!collabAvailable) {
         try {
-          complexThumbnailPath = coverGifUrl ?? (await uploadFileToR2(coverFile!));
+          if (coverGifUrl) {
+            complexThumbnailPath = coverGifUrl;
+          } else if (coverFile) {
+            complexThumbnailPath = await uploadFileToR2(coverFile);
+          }
         } catch (err) {
           setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
           setLoading(false);
@@ -590,7 +595,8 @@ export default function UploadPage() {
       setError("영상 또는 음원(mp3/wav)을 업로드해주세요.");
       return;
     }
-    if (!coverFile && !coverGifUrl) {
+    // 영상은 그 자체로 보여줄 화면이 있어서 커버 이미지 필수에서 예외(사용자 요청).
+    if (mediaKind !== "video" && !coverFile && !coverGifUrl) {
       setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
       return;
     }
@@ -621,12 +627,16 @@ export default function UploadPage() {
       return;
     }
 
-    // 커버 이미지는 이제 필수(위에서 검증됨) — thumbnail_url(원래 있던 미사용 컬럼)에 저장한다.
-    // GIF를 골랐으면 GIPHY 자체 URL을 그대로 쓰고(resolveMediaUrl이 읽을 때 구분), 직접 올린
-    // 사진이면 R2에 업로드해서 key를 저장한다.
-    let thumbnailPath: string;
+    // 커버 이미지는 음원일 때만 필수(위에서 검증됨) — 영상은 그 자체가 화면이라 없어도 됨.
+    // thumbnail_url(원래 있던 미사용 컬럼)에 저장한다. GIF를 골랐으면 GIPHY 자체 URL을
+    // 그대로 쓰고(resolveMediaUrl이 읽을 때 구분), 직접 올린 사진이면 R2에 업로드해서 key를 저장한다.
+    let thumbnailPath: string | null = null;
     try {
-      thumbnailPath = coverGifUrl ?? (await uploadFileToR2(coverFile!));
+      if (coverGifUrl) {
+        thumbnailPath = coverGifUrl;
+      } else if (coverFile) {
+        thumbnailPath = await uploadFileToR2(coverFile);
+      }
     } catch (err) {
       setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
       setLoading(false);
@@ -759,7 +769,7 @@ export default function UploadPage() {
                 />
               )}
               <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
-                <span className={darkLabel}>커버 이미지 (필수)</span>
+                <span className={darkLabel}>커버 이미지 {mediaKind === "video" ? "(선택)" : "(필수)"}</span>
                 <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
               </div>
               {coverGifUrl ? (
@@ -850,7 +860,7 @@ export default function UploadPage() {
               {!collabAvailable && (
                 <>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
-                    <span className={darkLabel}>커버 이미지 (필수)</span>
+                    <span className={darkLabel}>커버 이미지 {complexKind === "video" ? "(선택)" : "(필수)"}</span>
                     <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
                   </div>
                   {coverGifUrl ? (
