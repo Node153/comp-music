@@ -576,18 +576,23 @@ export default async function FeedPage({
   // 모바일(md 미만): 릴스/쇼츠식으로 한 게시물이 화면 한 판을 채우고 스냅 스크롤된다.
   // 데스크톱은 기존 카드 피드 그대로(사용자 결정). 비로그인 미리보기는 상단바/하단 탭바가
   // 없어(GuestTopNav만) 높이 계산이 달라지므로 스냅을 적용하지 않고 기존 스크롤을 유지한다.
-  // 높이 = 100dvh − MobileTopBar(h-12) − BottomNav(h-14) = 100dvh − 6.5rem.
+  // 프레임 높이 = 100svh − MobileTopBar(h-12) − BottomNav(h-14) − iOS 하단 세이프에어리어.
+  //   · dvh가 아니라 svh: 주소창이 보일 때(가장 작을 때) 기준으로 잡아야 좋아요/댓글 줄이
+  //     하단 탭바 뒤로 잘리지 않는다(dvh는 스크롤 중 늘었다 줄었다 해서 그 순간 잘림).
+  //   · env(safe-area-inset-bottom): 홈 인디케이터가 있는 기기에서 탭바 아래 여백까지 뺀다.
   const mobileSnap = !!currentUser;
   const feedListClass = mobileSnap
-    ? "flex flex-col md:gap-6 max-md:h-[calc(100dvh-6.5rem)] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
+    ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_6.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
     : "flex flex-col gap-6";
-  // DEMO는 헤더/캡션/반응줄은 고정 높이로 두고 미디어가 남는 공간을 채운다(flex-1). memo는
-  // 안에 채팅창이 있어 프레임 안에서 내부 스크롤(overflow-y-auto)로 처리한다(사용자 결정).
+  // DEMO는 헤더/캡션/태그/반응줄을 shrink-0으로 고정하고 미디어가 남는 공간을 채운다(flex-1).
+  // overflow-hidden은 쓰지 않는다 — 프레임이 기기별로 몇 px 모자라도 반응줄이 하드클리핑
+  // 되지 않고, 최악의 경우 다음 게시물이 살짝 보이는 정도로만 넘친다.
+  // memo는 안에 채팅창이 있어 프레임 안에서 내부 스크롤(overflow-y-auto)로 처리한다(사용자 결정).
   const articleSnapClass = !mobileSnap
     ? ""
     : isComplex
       ? "max-md:h-full max-md:shrink-0 max-md:snap-start max-md:snap-always max-md:overflow-y-auto"
-      : "max-md:flex max-md:h-full max-md:shrink-0 max-md:flex-col max-md:snap-start max-md:snap-always max-md:overflow-hidden";
+      : "max-md:flex max-md:min-h-full max-md:shrink-0 max-md:flex-col max-md:snap-start max-md:snap-always";
 
   return (
     <main
@@ -710,7 +715,7 @@ export default async function FeedPage({
               {post.caption && (
                 <p
                   className={`px-3 pb-2 text-sm text-gray-700 dark:text-gray-300 ${
-                    mobileSnap && !isComplex ? "max-md:line-clamp-3" : ""
+                    mobileSnap && !isComplex ? "max-md:line-clamp-3 max-md:shrink-0" : ""
                   }`}
                 >
                   {post.caption}
@@ -827,7 +832,7 @@ export default async function FeedPage({
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
+                  <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 max-md:shrink-0">
                     {post.content_type && (
                       <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400">
                         {CONTENT_TYPE_LABEL[post.content_type]}
@@ -867,7 +872,7 @@ export default async function FeedPage({
                     <GuestEngagementRow likeCount={likeCount} commentCount={commentCount} />
                   ) : post.isMock ? (
                     <div
-                      className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 dark:border-gray-800 dark:text-gray-300"
+                      className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 max-md:shrink-0 dark:border-gray-800 dark:text-gray-300"
                       title="샘플 게시물이라 실제로 누를 수는 없어요"
                     >
                       <span className="inline-flex items-center gap-1"><HeartIcon className="h-5 w-5" /> {likeCount > 0 ? likeCount : ""}</span>
@@ -875,7 +880,7 @@ export default async function FeedPage({
                     </div>
                   ) : (
                 currentUser && (
-                  <div className="flex flex-wrap border-t border-gray-100">
+                  <div className="flex flex-wrap border-t border-gray-100 max-md:shrink-0">
                     <LikeButton
                       postId={post.id}
                       userId={currentUser.id}
