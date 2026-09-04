@@ -34,7 +34,21 @@ const SUBMIT_PHRASES = [
   "그냥 혀유~ 될 겨.",
 ];
 
-const EXPIRE_HOURS_OPTIONS: ExpireHours[] = [6, 12, 24, 48];
+// 단독 게시물은 시간 단위, 협업 게시물은 일 단위(사용자 요청 — "협업게시물은 시간제한
+// 말고 기간제한으로 변경, 1d 3d 5d 7d"). 값은 그대로 posts.expire_hours(시간)에 저장되고
+// 화면 라벨만 다르다 — 24h(1일)가 두 세트 모두에 있어서 모드를 바꿔도 항상 유효한 기본값.
+const SOLO_EXPIRE_HOURS_OPTIONS: { hours: ExpireHours; label: string }[] = [
+  { hours: 6, label: "6h" },
+  { hours: 12, label: "12h" },
+  { hours: 24, label: "24h" },
+  { hours: 48, label: "48h" },
+];
+const COLLAB_EXPIRE_HOURS_OPTIONS: { hours: ExpireHours; label: string }[] = [
+  { hours: 24, label: "1d" },
+  { hours: 72, label: "3d" },
+  { hours: 120, label: "5d" },
+  { hours: 168, label: "7d" },
+];
 
 // TopNav의 피드 탭(♾️ demo / 🌀 Complex)과 동일한 개념 — 어느 피드로 게시할지 선택.
 // 둘 다 실제 posts에 저장됨(0012_complex_access_and_chat) — Complex는 visibility로 구분되고
@@ -443,6 +457,9 @@ export default function UploadPage() {
   // 공동창작을 나중에 켜서 이미 골라둔 영상이 더 이상 허용 안 되는 경우 정리.
   function handleCollabAvailableChange(checked: boolean) {
     setCollabAvailable(checked);
+    // 노출 기간 옵션 세트(시간/일)가 모드마다 달라서, 다른 세트에 없는 값을 고른 채로
+    // 넘어가지 않게 24h(=1d, 두 세트 공통값)로 리셋한다.
+    setExpireHours(24);
     if (checked && complexKind === "video") {
       setComplexFile(null);
       setComplexKind(null);
@@ -1073,19 +1090,19 @@ export default function UploadPage() {
               )}
 
               <div className="flex flex-col gap-1.5">
-                <span className={darkLabel}>노출 시간</span>
+                <span className={darkLabel}>{collabAvailable ? "노출 기간" : "노출 시간"}</span>
                 <div className="grid grid-cols-4 gap-2">
-                  {EXPIRE_HOURS_OPTIONS.map((h) => (
+                  {(collabAvailable ? COLLAB_EXPIRE_HOURS_OPTIONS : SOLO_EXPIRE_HOURS_OPTIONS).map((option) => (
                     <button
-                      key={h}
+                      key={option.hours}
                       type="button"
-                      onClick={() => setExpireHours(h)}
+                      onClick={() => setExpireHours(option.hours)}
                       className={selectableButtonClass(
-                        expireHours === h,
+                        expireHours === option.hours,
                         "rounded-xl border px-2 py-2 text-sm font-medium transition",
                       )}
                     >
-                      {h}h
+                      {option.label}
                     </button>
                   ))}
                 </div>

@@ -20,7 +20,9 @@ export type ContentType =
 // 여전히 Phase 1 대비로만 남겨둠(0012의 posts_visibility_check 제약과 값 목록을 맞출 것).
 export type PostVisibility = "public" | "major" | "school" | "followers" | "invite_only" | "private";
 export type PostStatus = "scheduled" | "published" | "expired" | "deleted";
-export type ExpireHours = 6 | 12 | 24 | 48;
+// 6/12/24/48은 memo 단독 게시물(시간 단위), 24/72/120/168은 협업 게시물(1/3/5/7일,
+// 사용자 요청 — "협업게시물은 시간제한 말고 기간제한") — 24는 두 세트에 공통.
+export type ExpireHours = 6 | 12 | 24 | 48 | 72 | 120 | 168;
 // 0010_posts_media_type + 0011_posts_audio_media_type: 업로드 화면에서 영상/이미지/음원 중
 // 하나를 고르며, 고른 쪽 컬럼(video_url/image_url/audio_url)만 채워진다.
 export type MediaType = "video" | "image" | "audio";
