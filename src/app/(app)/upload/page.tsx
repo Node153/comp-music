@@ -221,7 +221,7 @@ function UploadDropbox({
       ) : (
         <>
           <p className="text-lg font-bold text-gray-800 dark:text-gray-100">Upload</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">{UPLOADABLE_FORMATS}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{formatsLabel}</p>
         </>
       )}
     </div>
