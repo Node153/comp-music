@@ -492,7 +492,7 @@ export default function UploadPage() {
       }
       // 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 커버 이미지도 똑같이 필수 —
       // 단, 영상은 그 자체로 보여줄 화면이 있어서 예외(사용자 요청, DEMO와 동일 규칙).
-      if (!collabAvailable && complexKind !== "video" && !coverFile && !coverGifUrl) {
+      if (!collabAvailable && complexKind === "audio" && !coverFile && !coverGifUrl) {
         setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
         return;
       }
@@ -596,7 +596,7 @@ export default function UploadPage() {
       return;
     }
     // 영상은 그 자체로 보여줄 화면이 있어서 커버 이미지 필수에서 예외(사용자 요청).
-    if (mediaKind !== "video" && !coverFile && !coverGifUrl) {
+    if (mediaKind === "audio" && !coverFile && !coverGifUrl) {
       setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
       return;
     }
@@ -768,69 +768,75 @@ export default function UploadPage() {
                   tone="demo"
                 />
               )}
-              <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
-                <span className={darkLabel}>커버 이미지 {mediaKind === "video" ? "(선택)" : "(필수)"}</span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
-              </div>
-              {coverGifUrl ? (
-                <div className="flex items-center gap-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={coverGifUrl}
-                    alt="선택한 GIF"
-                    className="h-16 w-16 rounded-lg object-cover"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setCoverGifUrl(null)}
-                    className="text-sm"
-                  >
-                    GIF 제거
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={handleCoverChange}
-                      className={darkFileInput}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setGifPickerOpen(true)}
-                      className="shrink-0 text-sm"
-                    >
-                      GIF로 만들기
-                    </Button>
+              {/* 커버 이미지는 음원일 때만 — 영상은 그 자체가 화면이라 버튼 자체를 안 보여준다
+                  (사용자 요청: "없어도 되는 게 아니라 없어야 해"). 평소(파일 선택 전)에도 숨김. */}
+              {mediaKind === "audio" && (
+                <>
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
+                    <span className={darkLabel}>커버 이미지 (필수)</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
                   </div>
-                  {coverObjectUrl && (
+                  {coverGifUrl ? (
                     <div className="flex items-center gap-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={coverObjectUrl}
-                        alt="선택한 커버 이미지"
-                        className="h-24 w-24 rounded-lg object-cover"
+                        src={coverGifUrl}
+                        alt="선택한 GIF"
+                        className="h-16 w-16 rounded-lg object-cover"
                       />
                       <Button
                         type="button"
                         variant="ghost"
-                        onClick={() => {
-                          setCoverFile(null);
-                          setCoverFileError(null);
-                        }}
+                        onClick={() => setCoverGifUrl(null)}
                         className="text-sm"
                       >
-                        이미지 제거
+                        GIF 제거
                       </Button>
                     </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={handleCoverChange}
+                          className={darkFileInput}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setGifPickerOpen(true)}
+                          className="shrink-0 text-sm"
+                        >
+                          GIF로 만들기
+                        </Button>
+                      </div>
+                      {coverObjectUrl && (
+                        <div className="flex items-center gap-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={coverObjectUrl}
+                            alt="선택한 커버 이미지"
+                            className="h-24 w-24 rounded-lg object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                              setCoverFile(null);
+                              setCoverFileError(null);
+                            }}
+                            className="text-sm"
+                          >
+                            이미지 제거
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </div>
+                  {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
+                </>
               )}
-              {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
             </div>
           ) : (
             <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
@@ -856,11 +862,12 @@ export default function UploadPage() {
                   src={complexObjectUrl}
                 />
               )}
-              {/* 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 커버 이미지도 필수로 받는다. */}
-              {!collabAvailable && (
+              {/* 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 음원일 때만 커버 이미지
+                  버튼을 보여준다 — 영상은 그 자체가 화면이라 버튼 자체를 숨긴다. */}
+              {!collabAvailable && complexKind === "audio" && (
                 <>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
-                    <span className={darkLabel}>커버 이미지 {complexKind === "video" ? "(선택)" : "(필수)"}</span>
+                    <span className={darkLabel}>커버 이미지 (필수)</span>
                     <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
                   </div>
                   {coverGifUrl ? (
