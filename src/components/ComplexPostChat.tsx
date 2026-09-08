@@ -284,7 +284,7 @@ export function ComplexPostChat({
       <button
         type="button"
         disabled={!canUploadWork || sending}
-        title={canUploadWork ? "음원 작업물 올리기" : "공동창작 게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
+        title={canUploadWork ? "음원 작업물 올리기" : "합작게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
         onClick={() => audioInputRef.current?.click()}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:text-gray-300 dark:hover:bg-gray-800"
       >
@@ -314,7 +314,30 @@ export function ComplexPostChat({
   if (!focused) {
     return (
       <div className="flex min-h-0 grow shrink-0 flex-col border-t border-gray-100 dark:border-gray-800">
-        <div className="flex min-h-0 flex-1 items-center justify-center p-4">{mediaSlot}</div>
+        {/* 사운드바는 위로 붙이고(상단정렬), 그 아래는 재창작물(추가 사운드바)이 쌓일
+            자리를 사운드바 한 칸 높이의 빈 줄칸으로 미리 잡아둔다(사용자 요청). */}
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">
+          {mediaSlot}
+          {secondaryStack.map((card) => (
+            <div
+              key={card.generation}
+              className="flex shrink-0 flex-col gap-1.5 rounded-xl bg-neutral-900 p-2.5"
+            >
+              <span className="text-[11px] text-neutral-400">
+                {card.generation}차 · {card.work.senderName}
+              </span>
+              {card.work.fileUrl && <audio src={card.work.fileUrl} controls className="h-8 w-full" />}
+            </div>
+          ))}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={`slot-${i}`}
+              className="flex h-[76px] shrink-0 items-center justify-center rounded-xl border border-dashed border-gray-200 text-[11px] text-gray-300 dark:border-neutral-700 dark:text-neutral-600"
+            >
+              다음 사운드바 자리
+            </div>
+          ))}
+        </div>
         <div className="flex min-h-0 flex-1 flex-col border-t border-gray-100 dark:border-gray-800">
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">{renderMessages()}</div>
           {messageForm}

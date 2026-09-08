@@ -875,7 +875,7 @@ export default async function FeedPage({
                       ))}
                     {post.collab_available && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
-                        <UsersIcon className="h-3.5 w-3.5" /> 공동창작{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
+                        <UsersIcon className="h-3.5 w-3.5" /> 합작게시물{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
                       </span>
                     )}
                   </div>
