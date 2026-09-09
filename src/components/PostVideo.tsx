@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylistOptional } from "@/components/PlaylistContext";
+import { createClient } from "@/lib/supabase/client";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
 export function PostVideo({
@@ -73,6 +74,11 @@ export function PostVideo({
     };
     if (playlist) playlist.playNow(trackData, { skipRefresh: true });
     else play(trackData);
+    // DEMO 조회수(0052) — 재생이 시작될 때마다 카운트(유튜브처럼 중복 재생도 매번 센다,
+    // 사용자 요청). memo는 아직 조회수 개념이 없어서 tone="demo"일 때만 기록한다.
+    if (tone === "demo") {
+      void createClient().rpc("increment_post_view", { pid: postId });
+    }
   }
 
   function handlePause() {

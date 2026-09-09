@@ -21,9 +21,9 @@ import { LikeButton } from "./LikeButton";
 import { CommentPanel } from "./CommentPanel";
 import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
-import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
+import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO, formatCompactCount } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
-import { HeartIcon, CommentIcon, UsersIcon, MailIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, UsersIcon, MailIcon, PlayIcon } from "@/components/icons";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -268,6 +268,8 @@ function buildDemoMockPosts(
       isMock: true as const,
       gradient: m.gradient,
       demoVideoSrc: m.demoVideoSrc ?? null,
+      // mock 게시물은 조회수(0052) 실집계가 없어 0 고정 — 목데이터라 재생 자체가 카운트 안 됨.
+      view_count: 0,
     };
   });
 }
@@ -318,7 +320,7 @@ export default async function FeedPage({
   const currentUserName = me?.name || "나";
 
   const postsSelect =
-    "id, user_id, video_url, image_url, audio_url, media_type, thumbnail_url, title, caption, content_type, instrument_tags, visibility, collab_available, collab_role_needed, published_at, expires_at";
+    "id, user_id, video_url, image_url, audio_url, media_type, thumbnail_url, title, caption, content_type, instrument_tags, visibility, collab_available, collab_role_needed, published_at, expires_at, view_count";
   const postsQuery = supabase
     .from("posts")
     .select(postsSelect)
@@ -976,6 +978,13 @@ export default async function FeedPage({
                     {post.collab_available && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
                         <UsersIcon className="h-3.5 w-3.5" /> 합작게시물{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
+                      </span>
+                    )}
+                    {/* 조회수(0052) — DEMO 전용, 아직 PEAK 기준에는 안 씀(데이터만 우선 쌓는 중,
+                        /goal 논의). 0이면 아직 아무도 안 봤다는 뜻이라 굳이 안 보여준다. */}
+                    {!isComplex && post.view_count > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                        <PlayIcon className="h-3 w-3" /> {formatCompactCount(post.view_count)}
                       </span>
                     )}
                   </div>

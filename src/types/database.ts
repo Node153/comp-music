@@ -239,6 +239,8 @@ export interface Database {
           published_at: string | null;
           expire_hours: ExpireHours;
           expires_at: string | null;
+          // DEMO(visibility='public') 조회수(0052) — increment_post_view() 함수로만 증가.
+          view_count: number;
           created_at: string;
         };
         Insert: {
@@ -261,6 +263,7 @@ export interface Database {
           published_at?: string | null;
           expire_hours: ExpireHours;
           expires_at?: string | null;
+          view_count?: number;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["posts"]["Insert"]>;
@@ -595,6 +598,11 @@ export interface Database {
       can_access_post_content: {
         Args: { pid: string; uid: string };
         Returns: boolean;
+      };
+      // increment_post_view(0052) — DEMO 조회수 증가. 비로그인 방문자도 호출 가능(anon 권한).
+      increment_post_view: {
+        Args: { pid: string };
+        Returns: void;
       };
     };
     Enums: Record<string, never>;

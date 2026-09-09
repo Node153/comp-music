@@ -24,3 +24,13 @@ const TAG_COLOR_CLASS = "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gr
 export function tagColorClass(_tag: string) {
   return TAG_COLOR_CLASS;
 }
+
+// 조회수 등 큰 숫자를 사운드클라우드처럼 축약 표기(106K, 66.1K)한다 — 한국어 로케일로 하면
+// "10.6만"이 되어버려서 명시적으로 "en"을 쓴다(사용자가 참고 이미지로 보여준 표기와 동일).
+const compactNumberFormatter = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+export function formatCompactCount(n: number): string {
+  return compactNumberFormatter.format(n);
+}
