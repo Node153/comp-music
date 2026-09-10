@@ -12,6 +12,7 @@ import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
 import { ComplexAccessGate } from "@/components/ComplexAccessGate";
 import { PostFocusToggle } from "@/components/PostFocusToggle";
+import { AddToPlaylistButton } from "@/components/AddToPlaylistButton";
 import { MemoGuideCards } from "@/components/MemoGuideCards";
 import { FeedHero } from "@/components/FeedHero";
 import { PostOptionsMenu } from "@/components/PostOptionsMenu";
@@ -676,6 +677,23 @@ export default async function FeedPage({
           // 미체크는 DEMO와 동일하게 독립 미디어 박스 + 좋아요/댓글로 간다(사용자 요청).
           // "Companion 공개"(followers) 게시물은 피드 쿼리 단계에서 이미 Companion만
           // 걸러진 상태라(위 posts 필터) 항상 열람 가능.
+          // DEMO 탭에서 재생 가능한(오디오·영상) 게시물이면 헤더에 "플레이리스트에 담기"
+          // 버튼을 붙인다. mock 게시물은 demoVideoSrc, 실제 게시물은 signed URL(videoSrc).
+          const playlistSrc = post.isMock ? post.demoVideoSrc : post.videoSrc;
+          const playlistTrack =
+            !!currentUser && !isComplex && post.media_type !== "image" && playlistSrc
+              ? {
+                  id: post.id,
+                  title:
+                    post.caption ||
+                    (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) ||
+                    "음원",
+                  author: author?.name ?? "알 수 없음",
+                  videoSrc: playlistSrc,
+                  posterSrc: post.posterSrc ?? null,
+                }
+              : null;
+
           const useInlineChatLayout = isComplex && post.collab_available;
           const inlineMediaEl =
             useInlineChatLayout && post.videoSrc ? (
@@ -728,6 +746,9 @@ export default async function FeedPage({
                       initialTags={post.instrument_tags ?? []}
                     />
                   ) : undefined
+                }
+                addToPlaylistButton={
+                  playlistTrack ? <AddToPlaylistButton track={playlistTrack} /> : undefined
                 }
               >
               {post.caption && (

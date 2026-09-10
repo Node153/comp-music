@@ -21,6 +21,7 @@ export function PostFocusToggle({
   expiresAt,
   isComplex,
   optionsMenu,
+  addToPlaylistButton,
   children,
 }: {
   authorId: string;
@@ -31,6 +32,8 @@ export function PostFocusToggle({
   isComplex: boolean;
   // 게시물 작성자 본인일 때만 부모(feed/page.tsx)가 <PostOptionsMenu>를 넘겨준다.
   optionsMenu?: React.ReactNode;
+  // DEMO 게시물이고 재생 가능한 미디어면 부모가 <AddToPlaylistButton>을 넘겨준다.
+  addToPlaylistButton?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [focused, setFocused] = useState(false);
@@ -56,6 +59,7 @@ export function PostFocusToggle({
           <span className="truncate text-xs text-gray-400 dark:text-gray-500">{metaLine}</span>
         </div>
         {expiresAt && <TimeLimitBadge expiresAt={expiresAt} />}
+        {addToPlaylistButton}
         {isComplex && (
           <button
             type="button"

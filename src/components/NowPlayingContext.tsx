@@ -10,6 +10,8 @@ export type NowPlayingTrack = {
   title: string;
   author: string;
   videoSrc: string;
+  // 사운드바 우측 커버 썸네일용(플레이리스트에서 담은 트랙이면 채워짐).
+  posterSrc?: string | null;
 };
 
 type NowPlayingContextValue = {

@@ -250,3 +250,59 @@ export function EyeIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function CheckIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+export function ListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+export function SkipBackIcon({ className }: IconProps) {
+  return (
+    <svg {...base} fill="currentColor" className={className} aria-hidden="true">
+      <path d="M18 5v14l-11-7z" stroke="none" />
+      <rect x="4" y="5" width="2.5" height="14" stroke="none" />
+    </svg>
+  );
+}
+
+export function SkipForwardIcon({ className }: IconProps) {
+  return (
+    <svg {...base} fill="currentColor" className={className} aria-hidden="true">
+      <path d="M6 5v14l11-7z" stroke="none" />
+      <rect x="17.5" y="5" width="2.5" height="14" stroke="none" />
+    </svg>
+  );
+}
