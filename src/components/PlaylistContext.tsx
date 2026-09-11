@@ -39,6 +39,10 @@ type PlaylistContextValue = {
   playNow: (track: PlaylistTrack) => void;
   removeRecent: (id: string) => void;
   clearRecent: () => void;
+  /** 담기/최근들은에 같은 id가 있으면 videoSrc 등을 최신 값으로 교체(없으면 아무 일도 안 함).
+   * videoSrc는 만료되는 R2 signed URL이라 localStorage에 오래 남아있던 항목은 재생이 안 될 수
+   * 있음 — 그 게시물이 피드에 다시 렌더될 때마다(AddToPlaylistButton) 슬쩍 갱신해둔다. */
+  refresh: (track: PlaylistTrack) => void;
 };
 
 const PlaylistContext = createContext<PlaylistContextValue | null>(null);
@@ -150,6 +154,14 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 
   const clearRecent = useCallback(() => setRecentlyPlayed([]), []);
 
+  const refresh = useCallback((next: PlaylistTrack) => {
+    // id가 없으면 이전 배열 참조를 그대로 돌려줘서 불필요한 리렌더가 안 나게 한다.
+    setItems((prev) => (prev.some((t) => t.id === next.id) ? prev.map((t) => (t.id === next.id ? next : t)) : prev));
+    setRecentlyPlayed((prev) =>
+      prev.some((t) => t.id === next.id) ? prev.map((t) => (t.id === next.id ? next : t)) : prev,
+    );
+  }, []);
+
   return (
     <PlaylistContext.Provider
       value={{
@@ -171,6 +183,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         playNow,
         removeRecent,
         clearRecent,
+        refresh,
       }}
     >
       {children}

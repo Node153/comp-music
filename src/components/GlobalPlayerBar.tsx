@@ -160,16 +160,25 @@ export function GlobalPlayerBar() {
 
   return (
     <>
+      {/* display:none 대신 1x1px+opacity-0로 숨긴다 — 일부 브라우저(WebKit 계열)는
+          display:none인 <video>의 디코딩을 아예 정지시켜서, 화면에 보이는 영상 미리보기는
+          멀쩡한데 이 안 보이는 재생 엘리먼트만 소리가 안 나는 경우가 있다고 알려져 있다. */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <video ref={videoRef} className="hidden" playsInline />
+      <video
+        ref={videoRef}
+        playsInline
+        aria-hidden="true"
+        tabIndex={-1}
+        className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
+      />
       {/* 바 배경 = DEMO 탭 배경(#fafafa)과 memo 탭 배경(#1c1c1e)의 정확한 중간값(#8b8b8c) —
           사용자 요청: 아이콘이 아니라 사운드바 자체를 이 중립 회색으로.
-          데스크톱 레이아웃: 파형(가운데 열)을 피드 게시물 폭(md:max-w-[760px], feed/page.tsx의
-          articleSnapClass와 동일 값)으로 고정하고, 좌우 열을 똑같은 minmax(0,1fr)로 줘서 파형이
-          "화면 자체의" 정중앙에 오게 만든다(사용자 요청 — 파형이 정렬 기준, 나머지 아이콘은
-          그 파형 양옆에 붙임). 좌우 폭이 같은 1fr이라 안의 내용물 크기와 무관하게 가운데 열은
-          항상 정확히 화면 중앙에 위치한다. */}
-      <div className="fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t border-black/15 bg-[#8b8b8c] px-3 text-white md:bottom-0 md:grid-cols-[minmax(0,1fr)_760px_minmax(0,1fr)] md:gap-4 md:px-4">
+          데스크톱 레이아웃: 파형(가운데 열)을 고정폭(900px — feed/page.tsx <main>의
+          max-w-[900px]과 동일 값, 게시물 카드(760px)보다 조금 더 넓게)으로 두고, 좌우 열을
+          똑같은 minmax(0,1fr)로 줘서 파형이 "화면 자체의" 정중앙에 오게 만든다(사용자 요청 —
+          파형이 정렬 기준, 나머지 아이콘은 그 파형 양옆에 붙임). 좌우 폭이 같은 1fr이라 안의
+          내용물 크기와 무관하게 가운데 열은 항상 정확히 화면 중앙에 위치한다. */}
+      <div className="fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t border-black/15 bg-[#8b8b8c] px-3 text-white md:bottom-0 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4">
         {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
             justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}
         <div className="flex items-center gap-1 justify-self-end">
