@@ -12,6 +12,8 @@ export type PlaylistTrack = NowPlayingTrack;
 
 const STORAGE_KEY = "comp:demo-playlist:v1";
 const QUEUE_OPEN_KEY = "comp:demo-playlist:queue-open";
+const RECENT_KEY = "comp:demo-playlist:recent:v1";
+const RECENT_MAX = 20;
 
 type PlaylistContextValue = {
   items: PlaylistTrack[];
@@ -31,6 +33,12 @@ type PlaylistContextValue = {
   queueOpen: boolean;
   setQueueOpen: (v: boolean) => void;
   toggleQueue: () => void;
+  /** 피드에서 바로 튼 트랙 히스토리(최신 순). "다음 트랙"(담기 큐)과 별개. */
+  recentlyPlayed: PlaylistTrack[];
+  /** 지금 재생 + "최근 들은"에 기록(피드 재생버튼용) */
+  playNow: (track: PlaylistTrack) => void;
+  removeRecent: (id: string) => void;
+  clearRecent: () => void;
 };
 
 const PlaylistContext = createContext<PlaylistContextValue | null>(null);
@@ -38,6 +46,7 @@ const PlaylistContext = createContext<PlaylistContextValue | null>(null);
 export function PlaylistProvider({ children }: { children: React.ReactNode }) {
   const { track, play } = useNowPlaying();
   const [items, setItems] = useState<PlaylistTrack[]>([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<PlaylistTrack[]>([]);
   const [queueOpen, setQueueOpenState] = useState(false);
   const loadedRef = useRef(false);
 
@@ -48,6 +57,12 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) setItems(parsed.filter((t) => t && t.id && t.videoSrc));
+      }
+      const rawRecent = localStorage.getItem(RECENT_KEY);
+      if (rawRecent) {
+        const parsed = JSON.parse(rawRecent);
+        if (Array.isArray(parsed))
+          setRecentlyPlayed(parsed.filter((t) => t && t.id && t.videoSrc).slice(0, RECENT_MAX));
       }
       setQueueOpenState(localStorage.getItem(QUEUE_OPEN_KEY) === "1");
     } catch {
@@ -65,6 +80,15 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       // 무시
     }
   }, [items]);
+
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recentlyPlayed));
+    } catch {
+      // 무시
+    }
+  }, [recentlyPlayed]);
 
   useEffect(() => {
     if (!loadedRef.current) return;
@@ -112,6 +136,20 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [currentIndex, items, play]);
 
+  const playNow = useCallback(
+    (next: PlaylistTrack) => {
+      play(next);
+      setRecentlyPlayed((prev) => [next, ...prev.filter((t) => t.id !== next.id)].slice(0, RECENT_MAX));
+    },
+    [play],
+  );
+
+  const removeRecent = useCallback((id: string) => {
+    setRecentlyPlayed((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const clearRecent = useCallback(() => setRecentlyPlayed([]), []);
+
   return (
     <PlaylistContext.Provider
       value={{
@@ -129,6 +167,10 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         queueOpen,
         setQueueOpen,
         toggleQueue,
+        recentlyPlayed,
+        playNow,
+        removeRecent,
+        clearRecent,
       }}
     >
       {children}
@@ -140,4 +182,9 @@ export function usePlaylist() {
   const ctx = useContext(PlaylistContext);
   if (!ctx) throw new Error("usePlaylist은 PlaylistProvider 안에서만 사용할 수 있어요");
   return ctx;
+}
+
+// 비로그인(게스트) 피드처럼 PlaylistProvider 밖에서도 렌더될 수 있는 컴포넌트용 — 없으면 null.
+export function usePlaylistOptional() {
+  return useContext(PlaylistContext);
 }

@@ -4,21 +4,19 @@
 // 업로드 쪽은 File을 바로 갖고 있지만 피드는 R2 signed URL만 있어서, fetch로 받아온 뒤
 // 같은 computeWaveformBars로 분석한다. signed URL이 만료되기 전(발급 후 30분)에만 유효 —
 // 이미 <audio src>가 같은 URL을 쓰고 있어서 새로운 제약은 아니다.
-// posterSrc(커버 이미지)가 있으면 파형 대신 이미지 위에 재생 버튼을 얹은 형태로 바뀐다 —
-// 둘을 동시에 보여주지 않는다(커버를 넣은 이유가 파형 대신 앨범아트를 보여주려는 것이므로).
+// posterSrc(커버 이미지)가 있으면 파형 대신 이미지 위에 재생 버튼을 얹은 형태로 바뀐다.
 //
-// /goal 사운드바 개편(사운드클라우드/비트포트 레퍼런스) — 얇고 촘촘한 막대를 중앙 기준
-// 위아래 대칭(미러)으로 세우고, 재생 위치는 세로선(플레이헤드)으로 짚어준다. 모양은
-// DEMO/memo 공통이고 색만 tone별로 다르다: DEMO는 파이오니어 CDJ류처럼 진폭에 따라
-// 골드 3단계(어두운 브라스~밝은 샴페인)로 화려하게, memo는 보라 단색으로 차분하게 —
-// memo는 채팅 속에서 짧게 확인하는 용도라 DEMO만큼 화려할 필요는 없다는 판단.
+// mode:
+//  - "inline" (기본, memo 탭): 자체 <audio>로 카드 안에서 재생.
+//  - "global" (DEMO 탭): 재생을 하단 GlobalPlayerBar(<video> 하나)로 넘기고 "최근 들은"에 기록.
+//    카드는 파형·재생버튼만 보여주고, 이 트랙이 하단 바의 현재 곡일 때만 진행률이 반영된다.
 import { useEffect, useRef, useState } from "react";
 import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
 import { useMediaProgress } from "@/lib/useMediaProgress";
+import { useNowPlaying } from "@/components/NowPlayingContext";
+import { usePlaylistOptional } from "@/components/PlaylistContext";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
-// 화면이 넓어질수록(카드 너비 최대 900px) 막대가 굵어 보이지 않도록 넉넉하게 잡음 —
-// flex-1로 폭을 다 채우는 구조라 막대 수가 적으면 넓은 화면에서 각져 보인다.
 const SLIM_BAR_COUNT = 200;
 
 const TONE = {
@@ -43,25 +41,29 @@ export function SoundbarPlayer({
   title,
   posterSrc,
   tone = "memo",
+  mode = "inline",
+  trackId,
+  author,
+  authorId,
 }: {
   src: string;
   title: string;
   posterSrc?: string | null;
   tone?: "demo" | "memo";
+  mode?: "inline" | "global";
+  trackId?: string;
+  author?: string;
+  authorId?: string;
 }) {
   const [bars, setBars] = useState<number[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [currentTime, setCurrentTime] = useMediaProgress(audioRef, isPlaying);
   const style = TONE[tone];
+  const isGlobal = mode === "global";
 
+  // ---- 파형 분석 (모드 공통) ----
   useEffect(() => {
     if (posterSrc) return; // 커버 이미지 모드에서는 파형을 안 그리니 분석 자체를 건너뛴다.
     let cancelled = false;
-    // <audio src>는 태그라 CORS 영향 없이 바로 재생되지만, 파형 분석을 위한 fetch()는
-    // R2 도메인에 대한 브라우저 CORS 처리가 불안정해서 우리 서버 프록시(같은 출처)를 거친다.
     fetch(`/api/media/waveform-proxy?url=${encodeURIComponent(src)}`)
       .then((res) => res.arrayBuffer())
       .then((buf) => computeWaveformBars(buf, SLIM_BAR_COUNT))
@@ -76,7 +78,48 @@ export function SoundbarPlayer({
     };
   }, [src, posterSrc]);
 
+  // ---- inline 모드: 자체 <audio> ----
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [inlinePlaying, setInlinePlaying] = useState(false);
+  const [inlineDuration, setInlineDuration] = useState(0);
+  const [inlineTime, setInlineTime] = useMediaProgress(audioRef, inlinePlaying);
+
+  // ---- global 모드: 하단 바 공유 ----
+  const {
+    track: nowTrack,
+    isPlaying: nowPlaying,
+    videoRef,
+    toggle: nowToggle,
+    pause: nowPause,
+    duration: globalDuration,
+  } = useNowPlaying();
+  const playlist = usePlaylistOptional();
+  const isThisTrack = isGlobal && !!trackId && nowTrack?.id === trackId;
+  const [globalTime] = useMediaProgress(videoRef, isThisTrack && nowPlaying);
+
+  const isPlaying = isGlobal ? isThisTrack && nowPlaying : inlinePlaying;
+  const currentTime = isGlobal ? (isThisTrack ? globalTime : 0) : inlineTime;
+  const duration = isGlobal ? (isThisTrack ? globalDuration : 0) : inlineDuration;
+
+  function startGlobal() {
+    if (trackId && playlist)
+      playlist.playNow({
+        id: trackId,
+        title,
+        author: author ?? "",
+        authorId,
+        videoSrc: src,
+        posterSrc: posterSrc ?? null,
+      });
+  }
+
   function togglePlay() {
+    if (isGlobal) {
+      if (!isThisTrack) startGlobal();
+      else if (nowPlaying) nowPause();
+      else nowToggle();
+      return;
+    }
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) audio.play();
@@ -84,23 +127,31 @@ export function SoundbarPlayer({
   }
 
   function seekFromClientX(clientX: number, rect: DOMRect) {
-    const audio = audioRef.current;
-    if (!audio || !duration) return;
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    audio.currentTime = ratio * duration;
+    if (isGlobal) {
+      if (isThisTrack && videoRef.current && globalDuration) {
+        videoRef.current.currentTime = ratio * globalDuration;
+      } else {
+        startGlobal();
+      }
+      return;
+    }
+    const audio = audioRef.current;
+    if (!audio || !inlineDuration) return;
+    audio.currentTime = ratio * inlineDuration;
   }
 
   const playedRatio = duration > 0 ? currentTime / duration : 0;
   const playedBarCount = bars ? Math.round(playedRatio * bars.length) : 0;
 
-  const audioEl = (
+  const audioEl = isGlobal ? null : (
     <audio
       ref={audioRef}
       src={src}
-      onPlay={() => setIsPlaying(true)}
-      onPause={() => setIsPlaying(false)}
-      onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-      onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+      onPlay={() => setInlinePlaying(true)}
+      onPause={() => setInlinePlaying(false)}
+      onTimeUpdate={(e) => setInlineTime(e.currentTarget.currentTime)}
+      onLoadedMetadata={(e) => setInlineDuration(e.currentTarget.duration)}
       className="hidden"
     />
   );

@@ -689,6 +689,7 @@ export default async function FeedPage({
                     (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) ||
                     "음원",
                   author: author?.name ?? "알 수 없음",
+                  authorId: post.user_id,
                   videoSrc: playlistSrc,
                   posterSrc: post.posterSrc ?? null,
                 }
@@ -834,6 +835,7 @@ export default async function FeedPage({
                               postId={post.id}
                               title={post.caption}
                               author={author?.name ?? "알 수 없음"}
+                              authorId={post.user_id}
                               videoSrc={post.demoVideoSrc}
                             />
                           )}
@@ -853,6 +855,10 @@ export default async function FeedPage({
                             title={post.caption || "음원"}
                             posterSrc={post.posterSrc}
                             tone="demo"
+                            mode={currentUser ? "global" : "inline"}
+                            trackId={post.id}
+                            author={author?.name ?? "알 수 없음"}
+                            authorId={post.user_id}
                           />
                         </div>
                       ) : post.videoSrc ? (
