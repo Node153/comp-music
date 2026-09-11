@@ -2,8 +2,10 @@
 
 // 사운드클라우드 참고 — 화면 하단에 항상 고정되는 한 줄짜리 플레이어 바. 실제 재생 엘리먼트가
 // 여기 하나뿐이고 (app) 레이아웃에 마운트돼 페이지 이동에도 안 끊긴다.
-// 레이아웃은 3분할 그리드로 폭을 고정한다(제목/파형 영역이 트랙마다 흔들리지 않게):
-//   왼쪽=트랜스포트 / 가운데=경과시간·파형(탐색)·총시간 / 오른쪽=커버·제목·게시자 + 볼륨·대기열
+// 레이아웃은 3분할 그리드: 가운데(파형)를 피드 게시물 폭(760px)으로 고정하고 좌우를 같은
+// 1fr로 둬서 파형이 화면 정중앙에 오게 하고, 나머지 아이콘은 그 파형 기준 좌우에 붙인다
+// (사용자 요청 — 트랜스포트는 왼쪽 열의 오른쪽 끝에, 트랙정보·볼륨·대기열은 오른쪽 열의
+// 왼쪽 끝에, 둘 다 파형과 맞닿게).
 // 바 자체가 항상 하단에 고정이라 별도 "닫기(X)" 버튼은 없음(사용자 요청) — 재생 정지는
 // 재생/일시정지 토글로, 큐 비우기는 QueuePanel 쪽에서.
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -119,35 +121,24 @@ export function GlobalPlayerBar() {
     const video = videoRef.current;
     if (!video) return;
 
-    const commitDuration = (d: number) => {
-      if (Number.isFinite(d) && d > 0) setDuration(d);
-    };
-
-    const onLoaded = () => {
-      if (Number.isFinite(video.duration) && video.duration > 0) {
-        commitDuration(video.duration);
-        return;
-      }
-      // 일부 R2 signed URL 스트리밍 응답은 메타데이터 단계에서 duration을 Infinity/NaN으로
-      // 보고한다(청크 전송이라 브라우저가 전체 길이를 못 잼) — 끝까지 탐색을 한 번 시도시키면
-      // 브라우저가 실제 길이를 계산해 durationchange로 알려주는, 널리 쓰이는 우회법.
-      const resumeAt = video.currentTime;
-      const onDurationChange = () => {
-        video.removeEventListener("durationchange", onDurationChange);
-        commitDuration(video.duration);
-        video.currentTime = resumeAt;
-      };
-      video.addEventListener("durationchange", onDurationChange);
-      video.currentTime = 1e101;
+    // loadedmetadata·durationchange 둘 다 그냥 듣기만 한다 — 이전에 "duration이 Infinity로
+    // 잡히는 스트림을 강제로 끝까지 탐색시켜(currentTime=1e101) 우회"하는 로직이 있었는데,
+    // R2 signed URL에 그 탐색이 실패 범위 요청(Range)으로 튕기면서 오히려 재생 자체가 멈추는
+    // 회귀가 생겼다(사용자 제보: "재생 버튼은 동작하나 소리가 안 남"). 재생을 절대 건드리지
+    // 않는 안전한 방식으로 되돌림 — duration이 늦게 잡히거나 부정확해도 재생 자체는 항상 된다.
+    const onDurationKnown = () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) setDuration(video.duration);
     };
     // 큐에 다음 곡이 있으면 이어서 재생, 없으면 그 자리에서 멈춘다(바·대기열은 유지 — X로만 닫음).
     const onEnded = () => {
       if (!playNext()) pause();
     };
-    video.addEventListener("loadedmetadata", onLoaded);
+    video.addEventListener("loadedmetadata", onDurationKnown);
+    video.addEventListener("durationchange", onDurationKnown);
     video.addEventListener("ended", onEnded);
     return () => {
-      video.removeEventListener("loadedmetadata", onLoaded);
+      video.removeEventListener("loadedmetadata", onDurationKnown);
+      video.removeEventListener("durationchange", onDurationKnown);
       video.removeEventListener("ended", onEnded);
     };
   }, [videoRef, pause, playNext, setDuration]);
@@ -173,13 +164,15 @@ export function GlobalPlayerBar() {
       <video ref={videoRef} className="hidden" playsInline />
       {/* 바 배경 = DEMO 탭 배경(#fafafa)과 memo 탭 배경(#1c1c1e)의 정확한 중간값(#8b8b8c) —
           사용자 요청: 아이콘이 아니라 사운드바 자체를 이 중립 회색으로.
-          배경은 화면 전체 폭을 채우되(fixed inset-x-0), 실제 컨트롤은 max-w로 가운데 묶어서
-          넓은 모니터에서 파형이 끝없이 늘어나거나 우측 트랙 정보가 화면 맨 끝으로 밀려나지
-          않게 한다(사용자 요청 — 파형 줄이고, 트랙 정보는 파형 바로 오른쪽에 붙여서). */}
-      <div className="fixed inset-x-0 bottom-14 z-50 h-16 border-t border-black/15 bg-[#8b8b8c] text-white md:bottom-0">
-        <div className="mx-auto grid h-full max-w-[1100px] grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 px-3 md:grid-cols-[128px_minmax(0,1fr)_300px] md:gap-4 md:px-4">
-          {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택) */}
-          <div className="flex items-center gap-1 justify-self-start">
+          데스크톱 레이아웃: 파형(가운데 열)을 피드 게시물 폭(md:max-w-[760px], feed/page.tsx의
+          articleSnapClass와 동일 값)으로 고정하고, 좌우 열을 똑같은 minmax(0,1fr)로 줘서 파형이
+          "화면 자체의" 정중앙에 오게 만든다(사용자 요청 — 파형이 정렬 기준, 나머지 아이콘은
+          그 파형 양옆에 붙임). 좌우 폭이 같은 1fr이라 안의 내용물 크기와 무관하게 가운데 열은
+          항상 정확히 화면 중앙에 위치한다. */}
+      <div className="fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t border-black/15 bg-[#8b8b8c] px-3 text-white md:bottom-0 md:grid-cols-[minmax(0,1fr)_760px_minmax(0,1fr)] md:gap-4 md:px-4">
+        {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
+            justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}
+        <div className="flex items-center gap-1 justify-self-end">
           <button
             onClick={() => playPrev()}
             disabled={!hasPrev}
@@ -312,7 +305,6 @@ export function GlobalPlayerBar() {
             <ListIcon className="h-4 w-4" />
           </button>
         </div>
-      </div>
       </div>
     </>
   );
