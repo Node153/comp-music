@@ -306,3 +306,22 @@ export function SkipForwardIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function VolumeIcon({ className, muted = false }: IconProps & { muted?: boolean }) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <polygon points="4 9 8 9 12 5 12 19 8 15 4 15 4 9" fill="currentColor" stroke="none" />
+      {muted ? (
+        <>
+          <line x1="16.5" y1="9.5" x2="21" y2="14.5" />
+          <line x1="21" y1="9.5" x2="16.5" y2="14.5" />
+        </>
+      ) : (
+        <>
+          <path d="M16 8.5a5 5 0 0 1 0 7" />
+          <path d="M18.5 6a9 9 0 0 1 0 12" />
+        </>
+      )}
+    </svg>
+  );
+}
