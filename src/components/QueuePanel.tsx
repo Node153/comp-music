@@ -49,6 +49,11 @@ function QueueRow({
         {t.posterSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={t.posterSrc} alt="" className="h-full w-full object-cover" />
+        ) : t.mediaType === "video" ? (
+          // 별도 커버를 안 올린 영상 게시물 — 헤드폰 아이콘 대신 영상 자체의 첫 프레임을
+          // 썸네일처럼 보여준다(재생은 안 시킴, muted라 소리도 안 남).
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video src={t.videoSrc} muted playsInline preload="metadata" className="h-full w-full object-cover" />
         ) : (
           <HeadphonesIcon className="h-4 w-4 text-black/45" />
         )}

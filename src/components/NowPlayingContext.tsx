@@ -17,6 +17,9 @@ export type NowPlayingTrack = {
   // memo(비공개) 게시물의 노출 만료 시각 — 있으면 재생목록에 남은 시간 카운트다운을 보여준다.
   // DEMO는 영구노출이라 항상 null/undefined.
   expiresAt?: string | null;
+  // 영상 게시물인데 별도 커버(posterSrc)가 없을 때, 재생목록 썸네일을 헤드폰 아이콘 대신
+  // 영상 자체의 첫 프레임으로 보여주기 위한 구분(QueuePanel).
+  mediaType?: "audio" | "video";
 };
 
 type NowPlayingContextValue = {

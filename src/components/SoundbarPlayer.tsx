@@ -117,6 +117,7 @@ export function SoundbarPlayer({
           videoSrc: src,
           posterSrc: posterSrc ?? null,
           expiresAt,
+          mediaType: "audio",
         },
         { skipRefresh: true },
       );

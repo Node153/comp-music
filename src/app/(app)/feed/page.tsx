@@ -700,6 +700,7 @@ export default async function FeedPage({
                   videoSrc: playlistSrc,
                   posterSrc: post.posterSrc ?? null,
                   expiresAt: post.expires_at ?? null,
+                  mediaType: post.media_type === "audio" ? ("audio" as const) : ("video" as const),
                 }
               : null;
 
