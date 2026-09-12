@@ -22,8 +22,8 @@ export const link = "text-sm font-medium text-blue-600 hover:underline";
 
 export const card = "rounded-2xl border border-gray-200 bg-white p-4";
 
-// (app) 라우트 그룹 화면(피드 제외) 공통 래퍼 — 모바일은 여백만 있는 전체폭, md 이상은 회색 배경 위 흰 카드(페이스북 참고).
-// 카드 자체는 흰색 유지(텍스트 대비) — 카드 바깥/주변 전체 배경(캔버스)이 메인 그레이 컬러인 건
-// PageCanvas가 담당한다(DEMO/memo 피드 탭 제외).
+// (app) 라우트 그룹 화면(피드 제외) 공통 래퍼 — 모바일은 여백만 있는 전체폭, md 이상은 메인 그레이
+// 캔버스(PageCanvas) 위 카드(페이스북 참고). 카드는 흰색이 아니라 캔버스보다 살짝 밝은
+// box-gray — 흰색/검정은 버튼 등 강조용으로만 남기고 카드 자체는 그레이 계열을 유지한다.
 export const pageCard =
-  "mx-auto max-w-[600px] bg-white p-6 pb-24 md:my-6 md:rounded-lg md:border md:border-gray-200 md:pb-6";
+  "mx-auto max-w-[600px] bg-box-gray p-6 pb-24 md:my-6 md:rounded-lg md:border md:border-gray-500 md:pb-6";

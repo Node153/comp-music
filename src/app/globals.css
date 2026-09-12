@@ -26,6 +26,10 @@
   /* 메인 그레이 컬러 — 상단 메뉴바 아이콘(검색/Drop/Chat/Alerts/Help/Me)을 눌러 이동하는
      페이지(피드 DEMO/memo 탭 제외)의 배경색. bg-main-gray/text-main-gray/border-main-gray로 쓴다. */
   --color-main-gray: #8b8b8c;
+  /* 박스(카드) 컬러 — main-gray 캔버스 위에 흰색 대신 쓰는, 캔버스보다 살짝 밝은 그레이.
+     이 톤 위에서는 흰색/검정은 강조(버튼·활성 탭 등)용으로만 남기고, 나머지 보더·서브텍스트류는
+     이 회색과 대비가 나게 각 화면에서 gray-500~700 계열로 조정한다. bg-box-gray로 쓴다. */
+  --color-box-gray: #a8a8a9;
 }
 
 /* 기본은 라이트 테마 고정(시스템 다크모드 설정과 무관) — Complex 탭에서만 .dark 클래스로 명시적 전환 */

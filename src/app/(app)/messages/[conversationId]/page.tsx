@@ -76,7 +76,7 @@ export default async function ConversationPage({
   }
 
   return (
-    <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-[600px] flex-col bg-white p-6 md:my-6 md:h-[70vh] md:rounded-lg md:border md:border-gray-200">
+    <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-[600px] flex-col bg-box-gray p-6 md:my-6 md:h-[70vh] md:rounded-lg md:border md:border-gray-500">
       <MarkMessagesRead conversationId={conversationId} currentUserId={currentUser.id} />
       <div className="flex items-center gap-3 pb-3">
         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
@@ -92,7 +92,7 @@ export default async function ConversationPage({
         <div className="flex flex-col">
           <h1 className="text-base font-semibold text-gray-900">{otherUser?.name ?? "알 수 없음"}</h1>
           {otherUserStatus !== "offline" && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-600">
               {otherUserStatus === "online" ? "온라인" : "자리 비움"}
             </span>
           )}
@@ -100,7 +100,7 @@ export default async function ConversationPage({
       </div>
 
       {pinnedPost?.videoSrc && (
-        <div className="mb-2 flex items-center gap-3 rounded-xl border border-gray-200 p-2">
+        <div className="mb-2 flex items-center gap-3 rounded-xl border border-gray-500 p-2">
           {pinnedPost.isImage ? (
             <img src={pinnedPost.videoSrc} alt="" className="h-14 w-8 rounded-lg object-cover" />
           ) : pinnedPost.isAudio ? (

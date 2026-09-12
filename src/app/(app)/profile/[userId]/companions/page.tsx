@@ -57,7 +57,7 @@ export default async function CompanionsPage({
       <li key={id}>
         <Link
           href={`/profile/${id}`}
-          className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50"
+          className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-300"
         >
           <Avatar userId={id} name={u.display_name} className="h-10 w-10 text-sm" />
           <div className="flex flex-1 flex-col">
@@ -80,7 +80,7 @@ export default async function CompanionsPage({
     <main className={pageCard}>
       <h1 className={pageTitle}>
         {isOwnProfile ? "나의 Companion" : "Companion"}{" "}
-        <span className="text-gray-400">{accepted.length}명</span>
+        <span className="text-gray-600">{accepted.length}명</span>
       </h1>
 
       {incoming.length > 0 && (
@@ -93,7 +93,7 @@ export default async function CompanionsPage({
       <ul className="mt-2 flex flex-col">
         {accepted.map((r) => renderRow(otherId(r)))}
         {accepted.length === 0 && (
-          <p className="py-10 text-center text-sm text-gray-400">아직 Companion이 없습니다</p>
+          <p className="py-10 text-center text-sm text-gray-600">아직 Companion이 없습니다</p>
         )}
       </ul>
     </main>

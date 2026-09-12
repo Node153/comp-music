@@ -30,7 +30,7 @@ export default async function MessagesPage() {
         <SearchTriggerButton
           title="새 대화 시작"
           aria-label="새 대화 시작"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-300 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           <EditIcon className="h-5 w-5" />
         </SearchTriggerButton>
@@ -40,7 +40,7 @@ export default async function MessagesPage() {
           <li key={c.id}>
             <Link
               href={c.href}
-              className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-50"
+              className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-300"
             >
               <span className="relative flex h-12 w-12 shrink-0 items-center justify-center">
                 <Avatar userId={c.otherUserId} name={c.otherName} className="h-12 w-12 text-base" />
@@ -62,7 +62,7 @@ export default async function MessagesPage() {
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1">
                 {c.lastMessage && (
-                  <span className="text-[11px] text-gray-400">{timeAgo(c.lastMessage.createdAt)}</span>
+                  <span className="text-[11px] text-gray-600">{timeAgo(c.lastMessage.createdAt)}</span>
                 )}
                 {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-black" />}
               </div>
@@ -71,8 +71,8 @@ export default async function MessagesPage() {
         ))}
         {conversations.length === 0 && (
           <li className="flex flex-col items-center gap-3 py-16 text-center">
-            <MailIcon className="h-8 w-8 text-gray-300" />
-            <p className="text-sm text-gray-400">아직 대화가 없어요</p>
+            <MailIcon className="h-8 w-8 text-gray-600" />
+            <p className="text-sm text-gray-600">아직 대화가 없어요</p>
             <SearchTriggerButton className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
               사람 찾아 대화 시작하기
             </SearchTriggerButton>

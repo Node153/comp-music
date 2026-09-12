@@ -57,7 +57,7 @@ export default async function NotificationsPage({
       <MarkNotificationsSeen userId={user.id} />
       <div className="flex items-center justify-between">
         <h1 className={pageTitle}>알림</h1>
-        <Link href="/notifications/settings" className="text-sm text-gray-400 hover:text-gray-600">
+        <Link href="/notifications/settings" className="text-sm text-gray-600 hover:text-gray-800">
           알림 설정
         </Link>
       </div>
@@ -70,7 +70,7 @@ export default async function NotificationsPage({
             className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
               activeCategory === option.value
                 ? "border-black bg-black text-white"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                : "border-gray-500 text-gray-600 hover:bg-gray-300"
             }`}
           >
             {option.label}
@@ -80,7 +80,7 @@ export default async function NotificationsPage({
 
       <div className="mt-4 flex flex-col gap-2">
         {items.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-400">아직 알림이 없어요</p>
+          <p className="py-10 text-center text-sm text-gray-600">아직 알림이 없어요</p>
         ) : (
           items.map((item) => {
             const avatar =
@@ -95,8 +95,8 @@ export default async function NotificationsPage({
               <Link
                 key={`${item.type}-${item.id}`}
                 href={item.href}
-                className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition hover:bg-gray-50 ${
-                  item.unread ? "border-gray-300 bg-gray-50" : "border-gray-200"
+                className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition hover:bg-gray-300 ${
+                  item.unread ? "border-gray-300 bg-gray-300" : "border-gray-500"
                 }`}
               >
                 {avatar}
@@ -117,7 +117,7 @@ export default async function NotificationsPage({
                   {item.type === "comment" && (
                     <p className="mt-0.5 truncate text-sm text-gray-500">“{item.content}”</p>
                   )}
-                  <span className="mt-1 text-xs text-gray-400">{timeAgo(item.createdAt)}</span>
+                  <span className="mt-1 text-xs text-gray-600">{timeAgo(item.createdAt)}</span>
                 </div>
                 {item.unread && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
               </Link>

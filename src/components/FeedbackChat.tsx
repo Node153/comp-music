@@ -158,10 +158,10 @@ export function FeedbackChat({
   }
 
   return (
-    <div className="flex h-full min-h-[320px] flex-col rounded-xl border border-gray-200 dark:border-gray-800">
+    <div className="flex h-full min-h-[320px] flex-col rounded-xl border border-gray-500 dark:border-gray-800">
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <p className="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+          <p className="py-10 text-center text-sm text-gray-600 dark:text-gray-500">
             아직 대화가 없어요. 하고 싶은 말을 편하게 남겨보세요.
           </p>
         )}
@@ -170,7 +170,7 @@ export function FeedbackChat({
           const canDelete = isMe || isAdmin;
           return (
             <div key={m.id} className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
-              <span className="flex items-center gap-1.5 px-1 text-[11px] text-gray-400 dark:text-gray-500">
+              <span className="flex items-center gap-1.5 px-1 text-[11px] text-gray-600 dark:text-gray-500">
                 {/* 태그번호(#0038)는 피드백 채팅에서 노출하지 않음 (사용자 요청) — 닉네임만. */}
                 <span className="font-medium text-gray-500 dark:text-gray-400">{m.nickname}</span>
                 {m.isComper && <ComperBadge />}
@@ -180,7 +180,7 @@ export function FeedbackChat({
                   <button
                     type="button"
                     onClick={() => handleDelete(m.id)}
-                    className="text-gray-300 transition hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
+                    className="text-gray-600 transition hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
                     title="삭제"
                   >
                     ✕
@@ -191,7 +191,7 @@ export function FeedbackChat({
                 className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm ${
                   isMe
                     ? "bg-black text-white dark:bg-white dark:text-black"
-                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                    : "bg-gray-300 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
                 }`}
               >
                 {m.content}
@@ -203,7 +203,7 @@ export function FeedbackChat({
       </div>
       <form
         onSubmit={handleSend}
-        className="flex items-center gap-2 border-t border-gray-200 p-2.5 dark:border-gray-800"
+        className="flex items-center gap-2 border-t border-gray-500 p-2.5 dark:border-gray-800"
       >
         <input
           type="text"
@@ -211,7 +211,7 @@ export function FeedbackChat({
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_LEN}
           placeholder="메시지 보내기 (전체 회원에게 공개)"
-          className="flex-1 rounded-full border border-gray-300 px-3.5 py-2 text-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white"
+          className="flex-1 rounded-full border border-gray-300 bg-white px-3.5 py-2 text-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white"
         />
         <button
           type="submit"

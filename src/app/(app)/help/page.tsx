@@ -48,7 +48,7 @@ export default async function HelpPage() {
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 bg-white p-6 pb-24 md:my-6 md:rounded-lg md:border md:border-gray-200 md:pb-6">
+    <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 bg-box-gray p-6 pb-24 md:my-6 md:rounded-lg md:border md:border-gray-500 md:pb-6">
       <div>
         <h1 className={pageTitle}>Help</h1>
         <p className={`${mutedText} mt-1`}>공지사항을 확인하고, 하고 싶은 말을 남겨주세요.</p>
@@ -58,12 +58,12 @@ export default async function HelpPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <section className="flex min-w-0 flex-col gap-3">
           <h2 className={sectionTitle}>📣 공지사항</h2>
-          <div className="flex flex-col gap-3 overflow-y-auto rounded-xl border border-gray-200 p-4 md:h-[600px]">
+          <div className="flex flex-col gap-3 overflow-y-auto rounded-xl border border-gray-500 p-4 md:h-[600px]">
             {(announcements ?? []).map((a) => (
-              <article key={a.id} className="rounded-xl border border-gray-200 p-4">
+              <article key={a.id} className="rounded-xl border border-gray-500 p-4">
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="font-semibold text-gray-900">{a.title}</h3>
-                  <span className="shrink-0 text-xs text-gray-400">
+                  <span className="shrink-0 text-xs text-gray-600">
                     {new Date(a.created_at).toLocaleDateString("ko-KR")}
                   </span>
                 </div>
@@ -73,7 +73,7 @@ export default async function HelpPage() {
               </article>
             ))}
             {(announcements ?? []).length === 0 && (
-              <p className="py-6 text-center text-sm text-gray-400">아직 공지사항이 없습니다</p>
+              <p className="py-6 text-center text-sm text-gray-600">아직 공지사항이 없습니다</p>
             )}
           </div>
         </section>
@@ -87,7 +87,7 @@ export default async function HelpPage() {
             {user ? (
               <FeedbackChat currentUserId={user.id} isAdmin={isAdmin} initialMessages={feedbackMessages} />
             ) : (
-              <p className="flex h-full items-center justify-center rounded-xl border border-gray-200 text-center text-sm text-gray-400 dark:border-gray-800 dark:text-gray-500">
+              <p className="flex h-full items-center justify-center rounded-xl border border-gray-500 text-center text-sm text-gray-600 dark:border-gray-800 dark:text-gray-500">
                 로그인 후 이용할 수 있어요.
               </p>
             )}

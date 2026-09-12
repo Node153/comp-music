@@ -130,12 +130,12 @@ const darkLabel = `${labelClass} dark:text-gray-300`;
 const darkField = `${field} dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-white dark:focus:ring-white`;
 const darkErrorText = `${errorText} dark:text-red-400`;
 const darkFileInput =
-  "text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 dark:text-gray-400 dark:file:bg-gray-800 dark:file:text-gray-200 dark:hover:file:bg-gray-700";
+  "text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-300 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 dark:text-gray-400 dark:file:bg-gray-800 dark:file:text-gray-200 dark:hover:file:bg-gray-700";
 
 function selectableButtonClass(active: boolean, base: string) {
   const colors = active
     ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-    : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800";
+    : "border-gray-300 text-gray-700 hover:bg-gray-300 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800";
   return `${base} ${colors}`;
 }
 
@@ -143,7 +143,7 @@ function selectableButtonClass(active: boolean, base: string) {
 // 다른 selectableButtonClass 사용처와 다르게 각자 고유 색으로 구분한다.
 function uploadTypeButtonClass(value: UploadType, active: boolean, base: string) {
   if (!active) {
-    return `${base} border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800`;
+    return `${base} border-gray-300 text-gray-500 hover:bg-gray-300 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800`;
   }
   const colors =
     value === "complex"
@@ -155,7 +155,7 @@ function uploadTypeButtonClass(value: UploadType, active: boolean, base: string)
 function chipButtonClass(active: boolean) {
   const colors = active
     ? "bg-black text-white dark:bg-white dark:text-black"
-    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700";
+    : "bg-gray-300 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700";
   return `rounded-full px-3 py-1.5 text-sm font-medium transition ${colors}`;
 }
 
@@ -200,8 +200,8 @@ function UploadDropbox({
       }}
       className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
         dragOver
-          ? "border-black bg-gray-50 dark:border-white dark:bg-gray-900"
-          : "border-gray-300 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-900"
+          ? "border-black bg-gray-300 dark:border-white dark:bg-gray-900"
+          : "border-gray-300 hover:border-gray-400 hover:bg-gray-300 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-900"
       }`}
     >
       <input
@@ -236,12 +236,12 @@ function UploadDropbox({
           <p className="max-w-full truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
             {file.name}
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Click or drop to replace</p>
+          <p className="text-xs text-gray-600 dark:text-gray-500">Click or drop to replace</p>
         </>
       ) : (
         <>
           <p className="text-lg font-bold text-gray-800 dark:text-gray-100">Upload</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">{formatsLabel}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-500">{formatsLabel}</p>
         </>
       )}
     </div>
@@ -709,7 +709,7 @@ export default function UploadPage() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="text-xs text-gray-600 dark:text-gray-500">
               {uploadType === "complex"
                 ? "Companion공개 또는 특정인초대 · 노출 시간 지나면 자동 삭제"
                 : "전체공개 · 노출 시간 제한 없음"}
@@ -739,7 +739,7 @@ export default function UploadPage() {
                   </button>
                 ))}
               </div>
-              <p className="px-1 text-xs text-gray-400 dark:text-gray-500">
+              <p className="px-1 text-xs text-gray-600 dark:text-gray-500">
                 {collabAvailable
                   ? "Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요 — 음원(mp3/wav)만 올릴 수 있어요."
                   : "DEMO처럼 영상·음원 업로드 + 커버 이미지 + 좋아요·댓글·조회자 목록으로 게시돼요."}
@@ -748,7 +748,7 @@ export default function UploadPage() {
           )}
 
           {uploadType === "demo" ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
+            <div className="flex flex-col gap-3 rounded-xl border border-gray-500 p-3 dark:border-gray-800">
               <span className={darkLabel}>업로드</span>
               <UploadDropbox
                 file={mediaFile}
@@ -783,9 +783,9 @@ export default function UploadPage() {
                   (사용자 요청: "없어도 되는 게 아니라 없어야 해"). 평소(파일 선택 전)에도 숨김. */}
               {mediaKind === "audio" && (
                 <>
-                  <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
+                  <div className="flex items-center justify-between border-t border-gray-500 pt-3 dark:border-gray-800">
                     <span className={darkLabel}>커버 이미지 (필수)</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
                   </div>
                   {coverGifUrl ? (
                     <div className="flex items-center gap-2">
@@ -850,7 +850,7 @@ export default function UploadPage() {
               )}
             </div>
           ) : (
-            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
+            <div className="flex flex-col gap-3 rounded-xl border border-gray-500 p-3 dark:border-gray-800">
               <span className={darkLabel}>업로드</span>
               <UploadDropbox
                 file={complexFile}
@@ -877,9 +877,9 @@ export default function UploadPage() {
                   버튼을 보여준다 — 영상은 그 자체가 화면이라 버튼 자체를 숨긴다. */}
               {!collabAvailable && complexKind === "audio" && (
                 <>
-                  <div className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
+                  <div className="flex items-center justify-between border-t border-gray-500 pt-3 dark:border-gray-800">
                     <span className={darkLabel}>커버 이미지 (필수)</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
                   </div>
                   {coverGifUrl ? (
                     <div className="flex items-center gap-2">
@@ -960,7 +960,7 @@ export default function UploadPage() {
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <span className={darkLabel}>해시태그</span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">
+                <span className="text-xs text-gray-600 dark:text-gray-500">
                   {selectedTags.length}/{MIN_TAGS}개 이상 선택
                 </span>
               </div>
@@ -1001,16 +1001,16 @@ export default function UploadPage() {
               </div>
               {/* 예전엔 훑어보는 용도로 자동 무한 스크롤(marquee)했는데, 항목이 계속 움직이면
                   원하는 태그를 클릭하기 불편하다는 피드백으로 고정 목록 + 수동 스크롤로 변경. */}
-              <div className="max-h-48 overflow-y-auto rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-gray-500 p-3 dark:border-gray-700">
                 {filteredGenres.length === 0 && filteredPopularUserTags.length === 0 ? (
-                  <p className="py-2 text-sm text-gray-400 dark:text-gray-500">
+                  <p className="py-2 text-sm text-gray-600 dark:text-gray-500">
                     일치하는 해시태그가 없어요. Enter나 추가 버튼으로 그대로 추가할 수 있어요.
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {filteredPopularUserTags.length > 0 && (
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-500">
                           🔥 인기 사용자 태그
                         </span>
                         <div className="flex flex-wrap gap-1.5">
@@ -1117,9 +1117,9 @@ export default function UploadPage() {
             previewOpen ? "md:w-[400px] md:opacity-100" : "md:w-0 md:opacity-0"
           }`}
         >
-          <div className="flex w-[400px] shrink-0 flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
+          <div className="flex w-[400px] shrink-0 flex-col gap-3 rounded-2xl border border-gray-500 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
             <span className={darkLabel}>미리보기 — 게시하면 이렇게 보여요</span>
-            <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800">
+            <div className="overflow-hidden rounded-xl border border-gray-500 dark:border-gray-800">
               <div className="relative flex aspect-square items-center justify-center bg-black">
                 {previewVideoSrc ? (
                   <video src={previewVideoSrc} poster={previewCoverSrc ?? undefined} controls muted className="h-full w-full object-cover" />
@@ -1132,14 +1132,14 @@ export default function UploadPage() {
               </div>
               <div className="flex flex-col gap-2 p-3">
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {caption || <span className="text-gray-400 dark:text-gray-600">캡션이 여기 보여요</span>}
+                  {caption || <span className="text-gray-600 dark:text-gray-600">캡션이 여기 보여요</span>}
                 </p>
                 {selectedTags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedTags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400"
+                        className="rounded-full bg-gray-300 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400"
                       >
                         #{tag}
                       </span>
