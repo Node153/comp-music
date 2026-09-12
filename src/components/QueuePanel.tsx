@@ -5,7 +5,7 @@
 //  - "담기": + 버튼으로 담은 재생 큐(items)
 //  - "최근 들은": 피드에서 재생버튼으로 바로 튼 트랙 히스토리(recentlyPlayed)
 // 플레이어 바의 리스트 버튼으로 열고 닫으며(상태는 PlaylistContext), 둘 다 비어 있으면 안 뜬다.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePlaylist, type PlaylistTrack } from "@/components/PlaylistContext";
 import { useNowPlaying } from "@/components/NowPlayingContext";
@@ -13,6 +13,28 @@ import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { XIcon, PlayIcon, PauseIcon, HeadphonesIcon, PlusIcon, CheckIcon } from "@/components/icons";
 
 type Tab = "queue" | "recent";
+
+// 별도 커버 없는 영상 트랙의 썸네일 — 브라우저가 첫 프레임을 알아서 그려주길 기다리는 대신,
+// loadeddata 직후 아주 살짝(0.05초) seek해서 확실히 한 프레임을 그리게 강제한다. Safari 등
+// 일부 브라우저는 poster 없는 <video>를 그냥 두면 검은 화면으로 남겨두는 경우가 있어서다
+// (preload="metadata"만으로는 실제 프레임 데이터를 안 받아오기도 함 — auto로 바꿈).
+function VideoFrameThumbnail({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  return (
+    // eslint-disable-next-line jsx-a11y/media-has-caption
+    <video
+      ref={ref}
+      src={src}
+      muted
+      playsInline
+      preload="auto"
+      onLoadedData={(e) => {
+        if (e.currentTarget.currentTime === 0) e.currentTarget.currentTime = 0.05;
+      }}
+      className="h-full w-full object-cover"
+    />
+  );
+}
 
 function QueueRow({
   t,
@@ -52,8 +74,7 @@ function QueueRow({
         ) : t.mediaType === "video" ? (
           // 별도 커버를 안 올린 영상 게시물 — 헤드폰 아이콘 대신 영상 자체의 첫 프레임을
           // 썸네일처럼 보여준다(재생은 안 시킴, muted라 소리도 안 남).
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={t.videoSrc} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+          <VideoFrameThumbnail src={t.videoSrc} />
         ) : (
           <HeadphonesIcon className="h-4 w-4 text-black/45" />
         )}

@@ -7,7 +7,7 @@
 // 꽉 채우고(원본 비율과 안 맞으면 자동으로 살짝 잘림), 브라우저 기본 <video controls>
 // 대신 MockPlayOverlay와 같은 커스텀 재생 버튼을 쓴다(브라우저마다 다르게 생긴 네이티브
 // 컨트롤이 앱 톤과 안 맞는다는 지적). tone="memo"(기본값)는 예전 방식 그대로.
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylistOptional } from "@/components/PlaylistContext";
 import { PlayIcon, PauseIcon } from "@/components/icons";
@@ -29,10 +29,28 @@ export function PostVideo({
   posterSrc?: string | null;
   tone?: "demo" | "memo";
 }) {
-  const { track, play, pause } = useNowPlaying();
+  const { track, play, pause, videoRef: globalVideoRef } = useNowPlaying();
   const playlist = usePlaylistOptional();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // 이 게시물이 하단 사운드바(전역 <video>, 소리를 실제로 내는 쪽)의 현재 트랙일 때,
+  // 바에서 탐색(seek)하면 여기 보이는 음소거 미리보기 영상도 같은 위치로 맞춘다 — 둘은
+  // 서로 다른 <video> 엘리먼트라 안 그러면 소리는 A 지점, 화면은 B 지점을 보여주게
+  // 된다(사용자 제보: "특정 지점으로 재생하면 영상이랑 싱크가 안맞음").
+  useEffect(() => {
+    if (track?.id !== postId) return;
+    const globalVideo = globalVideoRef.current;
+    const localVideo = videoRef.current;
+    if (!globalVideo || !localVideo) return;
+    const syncTime = () => {
+      if (Math.abs(localVideo.currentTime - globalVideo.currentTime) > 0.3) {
+        localVideo.currentTime = globalVideo.currentTime;
+      }
+    };
+    globalVideo.addEventListener("seeked", syncTime);
+    return () => globalVideo.removeEventListener("seeked", syncTime);
+  }, [track?.id, postId, globalVideoRef]);
 
   function handlePlay() {
     setIsPlaying(true);

@@ -677,18 +677,13 @@ export default async function FeedPage({
           // 미체크는 DEMO와 동일하게 독립 미디어 박스 + 좋아요/댓글로 간다(사용자 요청).
           // "Companion 공개"(followers) 게시물은 피드 쿼리 단계에서 이미 Companion만
           // 걸러진 상태라(위 posts 필터) 항상 열람 가능.
-          // 재생 가능한(오디오·영상) 게시물이면 헤더에 "플레이리스트에 담기" 버튼을 붙인다 —
-          // DEMO는 전부, memo(isComplex)는 합작 게시물만 제외(사용자 요청 — 합작은 실시간
-          // 채팅용 게시물이라 배경 재생 목적의 플레이리스트 대상이 아님). mock 게시물은
-          // demoVideoSrc, 실제 게시물은 signed URL(videoSrc). memo는 노출 기한이 있어서
-          // expiresAt을 같이 담아 재생목록에서 남은 시간을 보여줄 수 있게 한다(DEMO는 영구
-          // 노출이라 expires_at이 항상 null).
+          // 재생 가능한(오디오·영상) DEMO 게시물이면 헤더에 "플레이리스트에 담기" 버튼을
+          // 붙인다. memo는 담기 금지(사용자 요청 — 한 번 "합작 제외하고 허용"으로 열었다가
+          // 다시 완전히 막기로 정정받음) — !isComplex로 DEMO만 남긴다. mock 게시물은
+          // demoVideoSrc, 실제 게시물은 signed URL(videoSrc).
           const playlistSrc = post.isMock ? post.demoVideoSrc : post.videoSrc;
           const playlistTrack =
-            !!currentUser &&
-            (!isComplex || !post.collab_available) &&
-            post.media_type !== "image" &&
-            playlistSrc
+            !!currentUser && !isComplex && post.media_type !== "image" && playlistSrc
               ? {
                   id: post.id,
                   title:
@@ -869,6 +864,10 @@ export default async function FeedPage({
                             author={author?.name ?? "알 수 없음"}
                             authorId={post.user_id}
                             expiresAt={post.expires_at}
+                            // memo 오디오는 계속 하단 바로 재생은 되지만(페이지 이동해도
+                            // 안 끊기는 기존 동작 유지) 재생목록/최근들은엔 안 남게 —
+                            // "담기 금지" 요청과 짝을 맞춤(DEMO만 기록).
+                            recordInPlaylist={!isComplex}
                           />
                         </div>
                       ) : post.videoSrc ? (
