@@ -148,11 +148,14 @@ export function GlobalPlayerBar() {
   }, [videoRef, pause, playNext, setDuration]);
 
   // memo(비공개) 오디오/영상 게시물은 expiresAt(노출 만료 시각)을 들고 있다 — DEMO는
-  // 영구노출이라 안 붙는 필드라, 이 값의 유무로 지금 재생 중인 트랙이 memo 쪽인지 구분해
-  // 사운드바 배경을 그때만 보라색으로 바꾼다(사용자 요청). SoundbarPlayer의 memo 톤과
-  // 같은 violet 계열.
+  // 영구노출이라 안 붙는 필드라, 이 값의 유무로 지금 재생 중인 트랙이 memo 쪽인지 구분한다.
+  // (한 번 바 배경 자체를 보라색으로 바꿨다가 "바는 원복, 파형만 포인트 컬러로"로 정정받음
+  // — 바 배경은 항상 중립 회색 고정, 파형만 memo 포인트 컬러(violet)로 바뀐다.)
   const isMemoTrack = !!track?.expiresAt;
-  const barBg = isMemoTrack ? "bg-violet-600" : "bg-[#8b8b8c]";
+  const barBg = "bg-[#8b8b8c]";
+  // SoundbarPlayer의 memo 톤(playedColor: "#8b6fd9", playheadColor: "#c4b5f2")과 같은 값.
+  const playedColor = (v: number) => (isMemoTrack ? "#8b6fd9" : demoBandColor(v));
+  const playheadColor = isMemoTrack ? "#c4b5f2" : "#f5d999";
 
   const pct = duration > 0 ? (progress / duration) * 100 : 0;
   const playedBarCount = Math.round((pct / 100) * bars.length);
@@ -182,10 +185,11 @@ export function GlobalPlayerBar() {
         tabIndex={-1}
         className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
       />
-      {/* 바 배경 = 기본은 DEMO 탭 배경(#fafafa)과 memo 탭 배경(#1c1c1e)의 정확한 중간값
-          (#8b8b8c) — 사용자 요청: 아이콘이 아니라 사운드바 자체를 이 중립 회색으로.
-          다만 지금 재생 중인 트랙이 memo(비공개) 게시물이면 그때만 보라색으로 바뀐다
-          (barBg, 위 isMemoTrack 참고 — 사용자 요청).
+      {/* 바 배경 = DEMO 탭 배경(#fafafa)과 memo 탭 배경(#1c1c1e)의 정확한 중간값(#8b8b8c) —
+          사용자 요청: 아이콘이 아니라 사운드바 자체를 이 중립 회색으로, 항상 고정(트랙 종류와
+          무관 — 한 번 memo 재생 시 바 배경 자체를 보라색으로 바꿨다가 "바는 원복, 파형만
+          포인트 컬러로"로 정정받음). 대신 재생 중인 트랙이 memo면 파형(playedColor/
+          playheadColor, 위 isMemoTrack 참고)만 violet 계열로 바뀐다.
           데스크톱 레이아웃: 파형(가운데 열)을 고정폭(900px — feed/page.tsx <main>의
           max-w-[900px]과 동일 값, 게시물 카드(760px)보다 조금 더 넓게)으로 두고, 좌우 열을
           똑같은 minmax(0,1fr)로 줘서 파형이 "화면 자체의" 정중앙에 오게 만든다(사용자 요청 —
@@ -240,14 +244,14 @@ export function GlobalPlayerBar() {
                 className="w-full flex-1 rounded-[1px]"
                 style={{
                   height: `${Math.max(6, v * 100)}%`,
-                  background: i < playedBarCount ? demoBandColor(v) : "rgba(255,255,255,0.22)",
+                  background: i < playedBarCount ? playedColor(v) : "rgba(255,255,255,0.22)",
                 }}
               />
             ))}
             {track && (
               <span
-                className="pointer-events-none absolute top-0 h-full w-px bg-[#f5d999]"
-                style={{ left: `${pct}%` }}
+                className="pointer-events-none absolute top-0 h-full w-px"
+                style={{ left: `${pct}%`, background: playheadColor }}
               />
             )}
           </button>
