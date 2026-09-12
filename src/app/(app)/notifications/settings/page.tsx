@@ -75,20 +75,20 @@ export default function NotificationSettingsPage() {
 
   return (
     <main className={pageCard}>
-      <Link href="/notifications" className="text-sm text-gray-600 hover:text-gray-800">
+      <Link href="/notifications" className="text-sm text-black hover:underline">
         ← 알림
       </Link>
-      <h1 className={`${pageTitle} mt-2`}>알림 설정</h1>
-      <p className={`${mutedText} mt-1`}>
+      <h1 className={`${pageTitle} !text-black mt-2`}>알림 설정</h1>
+      <p className={`${mutedText} !text-active-gray mt-1`}>
         아직 모바일 앱이 없어서, 켜둔 알림은 가입하신 이메일로 보내드려요.
       </p>
 
-      <div className="mt-6 flex flex-col divide-y divide-gray-500">
+      <div className="mt-6 flex flex-col divide-y divide-box-gray">
         {PREFERENCE_ROWS.map((row) => (
           <div key={row.key} className="flex items-center justify-between gap-4 py-3.5">
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-900">{row.label}</span>
-              <span className="text-xs text-gray-600">{row.description}</span>
+              <span className="text-sm font-medium text-black">{row.label}</span>
+              <span className="text-xs text-active-gray">{row.description}</span>
             </div>
             <button
               type="button"
@@ -98,11 +98,11 @@ export default function NotificationSettingsPage() {
               disabled={!prefs || saving === row.key}
               onClick={() => prefs && toggle(row.key, !prefs[row.key])}
               className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${
-                prefs?.[row.key] ? "bg-black" : "bg-gray-200"
+                prefs?.[row.key] ? "bg-demo-bg" : "bg-box-gray"
               }`}
             >
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-main-gray shadow transition ${
                   prefs?.[row.key] ? "left-[22px]" : "left-0.5"
                 }`}
               />
@@ -113,7 +113,7 @@ export default function NotificationSettingsPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <p className="mt-6 text-xs text-gray-600">
+      <p className="mt-6 text-xs text-active-gray">
         하루에 한 번, 켜둔 알림을 모아서 보내드려요.
       </p>
     </main>

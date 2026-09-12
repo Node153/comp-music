@@ -5,7 +5,7 @@ import { getR2SignedUrl } from "@/lib/r2/storage";
 import { MarkNotificationsSeen } from "@/components/MarkNotificationsSeen";
 import { MessageButton } from "@/components/MessageButton";
 import { LogoutButton } from "@/components/LogoutButton";
-import { badge, pageCard } from "@/components/ui/styles";
+import { pageCard } from "@/components/ui/styles";
 import { Avatar } from "@/components/Avatar";
 import { ComperBadge } from "@/components/ComperBadge";
 import { getAdminIds } from "@/lib/admins";
@@ -107,22 +107,22 @@ export default async function ProfilePage({
         <Avatar userId={userId} name={user.display_name} className="h-16 w-16 text-2xl" />
         <div className="flex flex-1 flex-col gap-1 pt-1">
           <div className="flex items-center justify-between">
-            <h1 className="flex items-center gap-1.5 text-xl font-bold text-gray-900">
+            <h1 className="flex items-center gap-1.5 text-xl font-bold text-black">
               {user.display_name}
               {isComper && <ComperBadge />}
             </h1>
             {isOwnProfile && <LogoutButton />}
           </div>
           {isOwnProfile && me && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-black">
               {me.nickname}
-              {!isComper && <span className="text-gray-400">#{me.nickname_tag}</span>}
+              {!isComper && <span className="text-black">#{me.nickname_tag}</span>}
             </p>
           )}
-          <div className="flex gap-4 text-sm text-gray-600">
-            <Link href={`/profile/${userId}/companions`} className="hover:text-gray-900">
+          <div className="flex gap-4 text-sm text-black">
+            <Link href={`/profile/${userId}/companions`} className="hover:underline">
               {isOwnProfile ? "나의 Companion" : "Companion"}{" "}
-              <span className="font-semibold text-gray-900">{companionCount ?? 0}명</span>
+              <span className="font-semibold text-black">{companionCount ?? 0}명</span>
             </Link>
           </div>
         </div>
@@ -130,28 +130,28 @@ export default async function ProfilePage({
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {profile?.school && (profile.school_public || isOwnProfile) && (
-          <span className={badge}>{profile.school}</span>
+          <span className="rounded-full bg-box-gray px-2.5 py-1 text-xs text-black">{profile.school}</span>
         )}
         {(profile?.instruments ?? []).map((inst) => (
-          <span key={inst} className={badge}>
+          <span key={inst} className="rounded-full bg-box-gray px-2.5 py-1 text-xs text-black">
             {inst}
           </span>
         ))}
       </div>
-      {profile?.bio && <p className="mt-3 text-sm leading-relaxed text-gray-700">{profile.bio}</p>}
+      {profile?.bio && <p className="mt-3 text-sm leading-relaxed text-black">{profile.bio}</p>}
 
       <div className="mt-4 flex gap-2">
         {isOwnProfile ? (
           <>
             <Link
               href="/profile/edit"
-              className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+              className="flex-1 rounded-xl bg-box-gray px-4 py-2.5 text-center text-sm font-medium text-black transition hover:opacity-80"
             >
               프로필 수정
             </Link>
             <Link
               href="/profile/manage"
-              className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+              className="flex-1 rounded-xl bg-box-gray px-4 py-2.5 text-center text-sm font-medium text-black transition hover:opacity-80"
             >
               게시물 관리
             </Link>
@@ -167,7 +167,7 @@ export default async function ProfilePage({
               <MessageButton
                 currentUserId={currentUser.id}
                 otherUserId={userId}
-                className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
+                className="flex-1 rounded-xl bg-box-gray px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-80"
               >
                 메시지 보내기
               </MessageButton>

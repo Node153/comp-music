@@ -9,7 +9,7 @@ import { WithdrawAccountSection } from "./WithdrawAccountSection";
 export default function ProfileEditPage() {
   return (
     <main className={`${pageCard} flex flex-col gap-6`}>
-      <h1 className={pageTitle}>프로필 수정</h1>
+      <h1 className={`${pageTitle} !text-black`}>프로필 수정</h1>
       <ProfilePhotoForm />
       <NicknameForm />
       <ProfileDetailsForm />

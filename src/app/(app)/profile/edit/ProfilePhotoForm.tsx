@@ -9,9 +9,11 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
 import { Avatar } from "@/components/Avatar";
-import { label, errorText } from "@/components/ui/styles";
+import { errorText } from "@/components/ui/styles";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+// 그레이 3단계만 쓰는 화면이라 공유 label 토큰 대신 여기서 검정 글씨로 직접 정의한다.
+const blackLabel = "text-sm font-medium text-black";
 
 export function ProfilePhotoForm() {
   const supabase = createClient();
@@ -81,7 +83,7 @@ export function ProfilePhotoForm() {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className={label}>프로필 사진</span>
+      <span className={blackLabel}>프로필 사진</span>
       <div className="flex items-center gap-3">
         <Avatar
           key={photoVersion}
@@ -95,7 +97,7 @@ export function ProfilePhotoForm() {
             type="button"
             disabled={uploading}
             onClick={() => inputRef.current?.click()}
-            className="rounded-xl border border-gray-300 px-3.5 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-xl bg-box-gray px-3.5 py-2 text-sm font-medium text-black transition hover:opacity-80 disabled:opacity-50"
           >
             {uploading ? "업로드 중..." : "사진 바꾸기"}
           </button>
@@ -103,7 +105,7 @@ export function ProfilePhotoForm() {
             type="button"
             disabled={uploading}
             onClick={handleRemove}
-            className="rounded-xl px-3.5 py-2 text-sm text-gray-400 transition hover:text-red-600 disabled:opacity-50"
+            className="rounded-xl px-3.5 py-2 text-sm text-black transition hover:text-red-600 disabled:opacity-50"
           >
             제거
           </button>

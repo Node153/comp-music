@@ -40,7 +40,7 @@ export default async function ManagePostsPage() {
 
   return (
     <main className={pageCard}>
-      <h1 className={pageTitle}>내 게시물 관리</h1>
+      <h1 className={`${pageTitle} !text-black`}>내 게시물 관리</h1>
       <PostsGrid posts={postsWithVideo} />
     </main>
   );

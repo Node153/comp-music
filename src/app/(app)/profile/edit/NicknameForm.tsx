@@ -6,10 +6,16 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { field, label, errorText } from "@/components/ui/styles";
+import { errorText } from "@/components/ui/styles";
 import { hasWhitespace } from "@/lib/nicknameExamples";
 import { useNicknamePhrases } from "@/lib/useNicknamePhrases";
 import { DiceIcon } from "@/components/icons";
+
+// 그레이 3단계(옅은/중간/짙은)만 쓰는 화면이라, 여러 색을 한번에 묶은 공유 토큰(field/label)
+// 대신 여기서 직접 정의한다 — 공유 토큰은 이 화면 밖(로그인 등)에서도 쓰여서 그대로 둔다.
+const grayField =
+  "w-full rounded-xl border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-black focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray";
+const blackLabel = "text-sm font-medium text-black";
 
 export function NicknameForm() {
   const supabase = createClient();
@@ -64,8 +70,8 @@ export function NicknameForm() {
 
   return (
     <form onSubmit={save} className="flex flex-col gap-1.5">
-      <span className={label}>닉네임</span>
-      <p className="text-xs text-gray-400">
+      <span className={blackLabel}>닉네임</span>
+      <p className="text-xs text-black">
         신원이 드러나지 않도록, 개성 있고 재미있는 닉네임을 사용해 주세요.
       </p>
       <div className="flex gap-1.5">
@@ -78,18 +84,18 @@ export function NicknameForm() {
           disabled={!loaded}
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
-          className={field}
+          className={grayField}
         />
         <button
           type="button"
           onClick={() => setNickname(pickNickname())}
           title="다른 닉네임 뽑기"
           disabled={!loaded}
-          className="flex shrink-0 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+          className="flex shrink-0 items-center justify-center rounded-xl bg-box-gray px-3.5 text-black transition hover:opacity-80 disabled:opacity-50"
         >
           <DiceIcon className="h-4 w-4" />
         </button>
-        <Button type="submit" disabled={saving || !loaded} className="shrink-0 px-4">
+        <Button type="submit" disabled={saving || !loaded} className="shrink-0 px-4 !bg-demo-bg !text-black">
           {saving ? "저장 중..." : "저장"}
         </Button>
       </div>

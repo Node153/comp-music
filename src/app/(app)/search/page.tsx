@@ -9,7 +9,7 @@ import { SearchPanel } from "@/components/SearchPanel";
 export default function SearchPage() {
   return (
     <main className={pageCard}>
-      <h1 className={pageTitle}>검색</h1>
+      <h1 className={`${pageTitle} !text-black`}>검색</h1>
       <div className="mt-3">
         <SearchPanel />
       </div>

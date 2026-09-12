@@ -22,8 +22,9 @@ export const link = "text-sm font-medium text-blue-600 hover:underline";
 
 export const card = "rounded-2xl border border-gray-200 bg-white p-4";
 
-// (app) 라우트 그룹 화면(피드 제외) 공통 래퍼 — 모바일은 여백만 있는 전체폭, md 이상은 메인 그레이
-// 캔버스(PageCanvas) 위 카드(페이스북 참고). 카드는 흰색이 아니라 캔버스보다 살짝 밝은
-// box-gray — 흰색/검정은 버튼 등 강조용으로만 남기고 카드 자체는 그레이 계열을 유지한다.
+// (app) 라우트 그룹 화면(피드 제외) 공통 래퍼 — 모바일은 여백만 있는 전체폭, md 이상은 짙은 그레이
+// 캔버스(PageCanvas) 위 중간톤 카드(페이스북 참고). 그레이는 옅은/중간/짙은 + 활성화 박스 전용
+// demo-bg 4가지만 쓴다(globals.css 참고) — 채색된(배경 있는) 박스는 테두리를 따로 안 그리고,
+// 검정은 글씨 전용으로만 남긴다.
 export const pageCard =
-  "mx-auto max-w-[600px] bg-box-gray p-6 pb-24 md:my-6 md:rounded-lg md:border md:border-gray-500 md:pb-6";
+  "mx-auto max-w-[600px] bg-main-gray p-6 pb-24 md:my-6 md:rounded-lg md:pb-6";

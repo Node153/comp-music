@@ -61,9 +61,9 @@ export function CompanionButton({
   const disconnect = () => run("none", deletePairRow);
 
   const primaryClass =
-    "flex-1 rounded-xl bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50";
+    "flex-1 rounded-xl bg-demo-bg px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-90 disabled:opacity-50";
   const secondaryClass =
-    "flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-900 transition hover:bg-gray-50 disabled:opacity-50";
+    "flex-1 rounded-xl bg-box-gray px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-80 disabled:opacity-50";
 
   if (relation === "incoming") {
     return (

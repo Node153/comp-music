@@ -76,23 +76,23 @@ export default async function ConversationPage({
   }
 
   return (
-    <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-[600px] flex-col bg-box-gray p-6 md:my-6 md:h-[70vh] md:rounded-lg md:border md:border-gray-500">
+    <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-[600px] flex-col bg-main-gray p-6 md:my-6 md:h-[70vh] md:rounded-lg">
       <MarkMessagesRead conversationId={conversationId} currentUserId={currentUser.id} />
       <div className="flex items-center gap-3 pb-3">
         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
           <Avatar userId={otherUserId} name={otherUser?.name ?? "?"} className="h-9 w-9 text-sm" />
           {otherUserStatus !== "offline" && (
             <span
-              className={`absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-white ${
+              className={`absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-box-gray ${
                 otherUserStatus === "online" ? "bg-emerald-500" : "bg-amber-400"
               }`}
             />
           )}
         </span>
         <div className="flex flex-col">
-          <h1 className="text-base font-semibold text-gray-900">{otherUser?.name ?? "알 수 없음"}</h1>
+          <h1 className="text-base font-semibold text-black">{otherUser?.name ?? "알 수 없음"}</h1>
           {otherUserStatus !== "offline" && (
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-active-gray">
               {otherUserStatus === "online" ? "온라인" : "자리 비움"}
             </span>
           )}
@@ -100,17 +100,17 @@ export default async function ConversationPage({
       </div>
 
       {pinnedPost?.videoSrc && (
-        <div className="mb-2 flex items-center gap-3 rounded-xl border border-gray-500 p-2">
+        <div className="mb-2 flex items-center gap-3 rounded-xl bg-box-gray p-2">
           {pinnedPost.isImage ? (
             <img src={pinnedPost.videoSrc} alt="" className="h-14 w-8 rounded-lg object-cover" />
           ) : pinnedPost.isAudio ? (
-            <div className="flex h-14 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-800 text-sm">
+            <div className="flex h-14 w-8 shrink-0 items-center justify-center rounded-lg bg-main-gray text-sm">
               🎵
             </div>
           ) : (
             <video src={pinnedPost.videoSrc} muted className="h-14 w-8 rounded-lg object-cover" />
           )}
-          <span className="truncate text-xs text-gray-500">
+          <span className="truncate text-xs text-active-gray">
             {pinnedPost.caption ?? "게시물에서 시작된 대화"}
           </span>
         </div>

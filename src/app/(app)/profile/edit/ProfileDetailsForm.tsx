@@ -18,7 +18,13 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { PositionTagPicker } from "@/components/PositionTagPicker";
 import { VisibilityToggle } from "@/components/VisibilityToggle";
-import { field, label, errorText } from "@/components/ui/styles";
+import { errorText } from "@/components/ui/styles";
+
+// 그레이 3단계(옅은/중간/짙은)만 쓰는 화면이라, 여러 색을 한번에 묶은 공유 토큰(field/label)
+// 대신 여기서 직접 정의한다 — 공유 토큰은 이 화면 밖(가입 인증 서류 제출 등)에서도 쓰여서 그대로 둔다.
+const grayField =
+  "w-full rounded-xl border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-black focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray";
+const blackLabel = "text-sm font-medium text-black";
 
 type UserType = "student" | "activist";
 
@@ -132,7 +138,7 @@ export function ProfileDetailsForm() {
     <form onSubmit={save} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <span className={label}>활동 유형</span>
+          <span className={blackLabel}>활동 유형</span>
           <VisibilityToggle
             checked={details.userTypePublic}
             disabled={!loaded}
@@ -146,10 +152,10 @@ export function ProfileDetailsForm() {
               type="button"
               disabled={!loaded}
               onClick={() => setDetails((d) => ({ ...d, userType: option.value }))}
-              className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${
+              className={`rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                 details.userType === option.value
-                  ? "border-black bg-black text-white"
-                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  ? "bg-demo-bg text-black"
+                  : "bg-box-gray text-black hover:opacity-80"
               }`}
             >
               {option.label}
@@ -159,7 +165,7 @@ export function ProfileDetailsForm() {
       </div>
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <span className={label}>{details.userType === "activist" ? "출신 학교 (선택)" : "학교"}</span>
+          <span className={blackLabel}>{details.userType === "activist" ? "출신 학교 (선택)" : "학교"}</span>
           <VisibilityToggle
             checked={details.schoolPublic}
             disabled={!loaded}
@@ -172,7 +178,7 @@ export function ProfileDetailsForm() {
           disabled={!loaded}
           value={details.school}
           onChange={(e) => setDetails((d) => ({ ...d, school: e.target.value }))}
-          className={field}
+          className={grayField}
         />
       </div>
       <PositionTagPicker
@@ -181,7 +187,7 @@ export function ProfileDetailsForm() {
       />
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <span className={label}>지역</span>
+          <span className={blackLabel}>지역</span>
           <VisibilityToggle
             checked={details.regionPublic}
             disabled={!loaded}
@@ -194,18 +200,18 @@ export function ProfileDetailsForm() {
           disabled={!loaded}
           value={details.region}
           onChange={(e) => setDetails((d) => ({ ...d, region: e.target.value }))}
-          className={field}
+          className={grayField}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className={label}>소개글</span>
+        <span className={blackLabel}>소개글</span>
         <textarea
           placeholder="나를 소개해주세요"
           rows={3}
           disabled={!loaded}
           value={details.bio}
           onChange={(e) => setDetails((d) => ({ ...d, bio: e.target.value }))}
-          className={field}
+          className={grayField}
         />
       </div>
       {message &&
@@ -214,7 +220,11 @@ export function ProfileDetailsForm() {
         ) : (
           <p className="text-sm text-green-600">{message.text}</p>
         ))}
-      <Button type="submit" disabled={saving || !loaded || !details.userType} className="mt-1 w-full">
+      <Button
+        type="submit"
+        disabled={saving || !loaded || !details.userType}
+        className="mt-1 w-full !bg-demo-bg !text-black"
+      >
         {saving ? "저장 중..." : "저장"}
       </Button>
     </form>

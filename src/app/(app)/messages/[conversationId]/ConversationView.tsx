@@ -110,7 +110,7 @@ export function ConversationView({
     <>
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 && (
-          <p className="py-10 text-center text-sm text-gray-600">첫 메시지를 보내보세요</p>
+          <p className="py-10 text-center text-sm text-active-gray">첫 메시지를 보내보세요</p>
         )}
         {messages.map((m, i) => {
           const isMe = m.sender_id === currentUserId;
@@ -126,13 +126,13 @@ export function ConversationView({
               <div className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
                 <span
                   className={`max-w-[240px] rounded-3xl px-4 py-2 text-sm ${
-                    isMe ? "bg-black text-white" : "bg-gray-300 text-gray-900"
+                    isMe ? "bg-demo-bg text-black" : "bg-box-gray text-black"
                   }`}
                 >
                   {m.content}
                 </span>
                 {isLastInGroup && (
-                  <span className="px-1 text-[11px] text-gray-600">
+                  <span className="px-1 text-[11px] text-active-gray">
                     {timeAgo(m.created_at)}
                     {isMe && i === lastMineIndex && m.read_at && " · 읽음"}
                   </span>
@@ -143,18 +143,18 @@ export function ConversationView({
         })}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={handleSend} className="flex gap-2 border-t border-gray-500 pt-3">
+      <form onSubmit={handleSend} className="flex gap-2 border-t border-box-gray pt-3">
         <input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="메시지 보내기"
-          className="flex-1 rounded-full border border-gray-300 bg-white px-3.5 py-2.5 text-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+          className="flex-1 rounded-full border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-black focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray"
         />
         <button
           type="submit"
           disabled={sending}
-          className="rounded-full bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
+          className="rounded-full bg-demo-bg px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-90 disabled:opacity-50"
         >
           전송
         </button>

@@ -56,8 +56,8 @@ export default async function NotificationsPage({
     <main className={pageCard}>
       <MarkNotificationsSeen userId={user.id} />
       <div className="flex items-center justify-between">
-        <h1 className={pageTitle}>알림</h1>
-        <Link href="/notifications/settings" className="text-sm text-gray-600 hover:text-gray-800">
+        <h1 className={`${pageTitle} !text-black`}>알림</h1>
+        <Link href="/notifications/settings" className="text-sm text-black hover:underline">
           알림 설정
         </Link>
       </div>
@@ -67,10 +67,8 @@ export default async function NotificationsPage({
           <Link
             key={option.value}
             href={option.value === "all" ? "/notifications" : `/notifications?type=${option.value}`}
-            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
-              activeCategory === option.value
-                ? "border-black bg-black text-white"
-                : "border-gray-500 text-gray-600 hover:bg-gray-300"
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition hover:opacity-80 ${
+              activeCategory === option.value ? "bg-demo-bg text-black" : "bg-box-gray text-black"
             }`}
           >
             {option.label}
@@ -80,28 +78,30 @@ export default async function NotificationsPage({
 
       <div className="mt-4 flex flex-col gap-2">
         {items.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-600">아직 알림이 없어요</p>
+          <p className="py-10 text-center text-sm text-black">아직 알림이 없어요</p>
         ) : (
           items.map((item) => {
             const avatar =
               item.type === "peak" ? (
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-500 text-base dark:bg-gray-600">
-                  <FlameIcon className="h-4 w-4 text-white" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-demo-bg text-base">
+                  <FlameIcon className="h-4 w-4 text-black" />
                 </span>
               ) : (
                 <Avatar userId={item.actorId} name={item.actorName} className="h-9 w-9 text-sm" />
               );
+            // 안읽음(중요) = 검정, 읽음(덜 중요) = 짙은 톤 글씨로 구분.
+            const textColor = item.unread ? "text-black" : "text-active-gray";
             return (
               <Link
                 key={`${item.type}-${item.id}`}
                 href={item.href}
-                className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition hover:bg-gray-300 ${
-                  item.unread ? "border-gray-300 bg-gray-300" : "border-gray-500"
+                className={`flex items-start gap-3 rounded-xl px-4 py-3 transition hover:opacity-90 ${
+                  item.unread ? "bg-demo-bg" : "bg-box-gray"
                 }`}
               >
                 {avatar}
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <p className="text-sm text-gray-800">
+                  <p className={`text-sm ${textColor}`}>
                     {item.type === "peak" ? (
                       "회원님의 게시물이 PEAK에 도달했어요"
                     ) : (
@@ -115,9 +115,9 @@ export default async function NotificationsPage({
                     )}
                   </p>
                   {item.type === "comment" && (
-                    <p className="mt-0.5 truncate text-sm text-gray-500">“{item.content}”</p>
+                    <p className={`mt-0.5 truncate text-sm ${textColor}`}>“{item.content}”</p>
                   )}
-                  <span className="mt-1 text-xs text-gray-600">{timeAgo(item.createdAt)}</span>
+                  <span className={`mt-1 text-xs ${textColor}`}>{timeAgo(item.createdAt)}</span>
                 </div>
                 {item.unread && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-red-500" />}
               </Link>

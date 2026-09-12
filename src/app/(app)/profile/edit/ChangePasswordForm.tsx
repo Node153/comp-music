@@ -6,9 +6,14 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { field, label, errorText } from "@/components/ui/styles";
+import { errorText } from "@/components/ui/styles";
 
 const MIN_LENGTH = 8;
+// 그레이 3단계(옅은/중간/짙은)만 쓰는 화면이라, 여러 색을 한번에 묶은 공유 토큰(field/label)
+// 대신 여기서 직접 정의한다 — 공유 토큰은 이 화면 밖(로그인 등)에서도 쓰여서 그대로 둔다.
+const grayField =
+  "w-full rounded-xl border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-black focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray";
+const blackLabel = "text-sm font-medium text-black";
 
 export function ChangePasswordForm() {
   const supabase = createClient();
@@ -43,15 +48,15 @@ export function ChangePasswordForm() {
 
   return (
     <form onSubmit={save} className="flex flex-col gap-1.5">
-      <span className={label}>비밀번호 변경</span>
-      <p className="text-xs text-gray-400">{MIN_LENGTH}자 이상. 변경 즉시 적용돼요.</p>
+      <span className={blackLabel}>비밀번호 변경</span>
+      <p className="text-xs text-black">{MIN_LENGTH}자 이상. 변경 즉시 적용돼요.</p>
       <input
         type="password"
         placeholder="새 비밀번호"
         autoComplete="new-password"
         value={pw}
         onChange={(e) => setPw(e.target.value)}
-        className={field}
+        className={grayField}
       />
       <div className="flex gap-1.5">
         <input
@@ -60,9 +65,9 @@ export function ChangePasswordForm() {
           autoComplete="new-password"
           value={pw2}
           onChange={(e) => setPw2(e.target.value)}
-          className={field}
+          className={grayField}
         />
-        <Button type="submit" disabled={saving || !pw || !pw2} className="shrink-0 px-4">
+        <Button type="submit" disabled={saving || !pw || !pw2} className="shrink-0 px-4 !bg-demo-bg !text-black">
           {saving ? "변경 중..." : "변경"}
         </Button>
       </div>

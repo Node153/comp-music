@@ -31,11 +31,11 @@ export function WithdrawAccountSection() {
 
   if (!open) {
     return (
-      <div className="mt-6 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <div className="mt-6 border-t border-box-gray pt-6">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="text-sm text-gray-400 hover:text-red-600"
+          className="text-sm text-black hover:text-red-600"
         >
           회원 탈퇴
         </button>
@@ -66,7 +66,7 @@ export function WithdrawAccountSection() {
           type="button"
           onClick={() => setOpen(false)}
           disabled={loading}
-          className="rounded-full px-4 py-2 text-sm text-gray-500 transition hover:bg-gray-100 dark:hover:bg-gray-900"
+          className="rounded-full px-4 py-2 text-sm text-black transition hover:bg-box-gray"
         >
           취소
         </button>

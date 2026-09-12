@@ -11,7 +11,7 @@ import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
 import { LockIcon } from "@/components/icons";
-import { field, label as labelClass, errorText, pageCard } from "@/components/ui/styles";
+import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
 import type { ExpireHours } from "@/types/database";
 
@@ -120,42 +120,52 @@ function readImageDimensions(file: File): Promise<{ width: number; height: numbe
   });
 }
 
-// 아래 dark: 조합은 Complex 선택 시 <html>에 .dark가 붙는 것에 반응하는 용도.
-// 이 페이지 밖(예: /profile/manage)에도 재사용되는 공유 스타일(pageCard/labelClass/field)은
-// 건드리지 않고, 여기서만 dark: 클래스를 덧붙여 확장한다.
+// 그레이는 옅은(box-gray)/중간(main-gray)/짙은(active-gray) + 활성화 박스 전용 demo-bg(#fafafa,
+// DEMO 탭 배경색) 4가지만 쓴다(globals.css 참고, 2번째 수정 — 활성화 박스는 이제 데모탭 배경색).
+// 이 페이지 밖(예: /profile/manage)에도 재사용되는 공유 스타일(pageCard/labelClass/errorText)은
+// 건드리지 않고, 여기서만 색만 이 4가지+검정 글씨로 덮어써(grayField는 아예 새로 정의) 확장한다.
 // w-full: pageCard는 max-w만 있어서 카드 폭이 내용물 고유 너비를 따라간다 — 해시태그 검색으로
 // 칩 목록이 줄면 폼 전체가 좁아지는 문제가 있어 이 페이지에서는 폭을 항상 max-w까지 고정.
-const darkPageCard = `${pageCard} w-full dark:border-gray-800 dark:bg-gray-950`;
-const darkLabel = `${labelClass} dark:text-gray-300`;
-const darkField = `${field} dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-white dark:focus:ring-white`;
-const darkErrorText = `${errorText} dark:text-red-400`;
-const darkFileInput =
-  "text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-300 file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 dark:text-gray-400 dark:file:bg-gray-800 dark:file:text-gray-200 dark:hover:file:bg-gray-700";
+const wideCard = `${pageCard} w-full`;
+const blackLabel = `${labelClass} !text-black`;
+// 폼 안의 인풋 = "박스 안에 박스"라 옅은 그레이 배경(채색된 박스라 평소엔 테두리 없음),
+// 포커스만 활성화 상태를 나타내는 테두리(짙은 그레이)로 보여준다.
+const grayField =
+  "w-full rounded-xl border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-black focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray";
+const fileInputClass =
+  "text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-main-gray file:px-3 file:py-2 file:text-sm file:font-medium file:text-black hover:file:opacity-80";
+// 공유 <Button variant="primary">는 기본이 검정 배경(다른 화면들과 공유하는 토큰이라 그대로 둠) —
+// 이 화면(그레이 3단계 규칙)에서만 !important로 활성화 박스 색(demo-bg)으로 덮어쓴다.
+const primaryButtonClass = "!bg-demo-bg !text-black";
 
+// 채색(배경)이 있는 박스는 테두리를 따로 안 그린다 — 배경색만으로 구분.
 function selectableButtonClass(active: boolean, base: string) {
-  const colors = active
-    ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-    : "border-gray-300 text-gray-700 hover:bg-gray-300 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800";
+  const colors = active ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-80";
   return `${base} ${colors}`;
 }
 
-// 게시 유형 토글 전용 — DEMO(메인 화이트/포인트 골드) vs complex(메인 블랙/포인트 퍼플)를
-// 다른 selectableButtonClass 사용처와 다르게 각자 고유 색으로 구분한다.
+// 게시 유형 토글 전용 — DEMO(메인 화이트/포인트 골드) vs complex(메인 짙은 그레이/포인트 퍼플)를
+// 다른 selectableButtonClass 사용처와 다르게 각자 고유 색으로 구분한다(그레이 규칙과
+// 무관한 브랜드 강조색이라 그대로 둔다 — 검정은 금지라 memo 쪽은 active-gray를 쓴다).
+// 이 둘은 브랜드 테두리(violet/gold)가 있어 base에 border를 따로 붙여 호출한다.
 function uploadTypeButtonClass(value: UploadType, active: boolean, base: string) {
   if (!active) {
-    return `${base} border-gray-300 text-gray-500 hover:bg-gray-300 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800`;
+    return `${base} bg-box-gray text-black hover:opacity-80`;
   }
   const colors =
     value === "complex"
-      ? "border-violet-500 bg-black text-violet-300"
-      : "border-demo-gold bg-white text-demo-gold";
+      ? "border border-violet-500 bg-active-gray text-violet-300"
+      : "border border-demo-gold bg-white text-demo-gold";
   return `${base} ${colors}`;
 }
 
+// 해시태그 목록 박스는 채색 없이 테두리만(사용자 지시 — "이전처럼") 그려서 안의 바탕은
+// 카드 자체 색(main-gray)이 그대로 비친다 — 칩은 그 위에서 옅은 톤(box-gray)으로 도드라지고,
+// 선택되면 활성화 박스 색(demo-bg)으로 바뀐다.
 function chipButtonClass(active: boolean) {
   const colors = active
-    ? "bg-black text-white dark:bg-white dark:text-black"
-    : "bg-gray-300 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700";
+    ? "bg-demo-bg text-black"
+    : "bg-box-gray text-black hover:opacity-80";
   return `rounded-full px-3 py-1.5 text-sm font-medium transition ${colors}`;
 }
 
@@ -199,9 +209,7 @@ function UploadDropbox({
         onSelect(e.dataTransfer.files?.[0] ?? null);
       }}
       className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
-        dragOver
-          ? "border-black bg-gray-300 dark:border-white dark:bg-gray-900"
-          : "border-gray-300 hover:border-gray-400 hover:bg-gray-300 dark:border-gray-700 dark:hover:border-gray-500 dark:hover:bg-gray-900"
+        dragOver ? "border-box-gray bg-demo-bg text-black" : "border-box-gray bg-box-gray text-black hover:opacity-90"
       }`}
     >
       <input
@@ -223,7 +231,7 @@ function UploadDropbox({
             e.stopPropagation();
             onSelect(null);
           }}
-          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-600 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-main-gray text-sm font-bold text-black transition hover:opacity-80"
         >
           ×
         </button>
@@ -233,15 +241,13 @@ function UploadDropbox({
       </span>
       {file ? (
         <>
-          <p className="max-w-full truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
-            {file.name}
-          </p>
-          <p className="text-xs text-gray-600 dark:text-gray-500">Click or drop to replace</p>
+          <p className="max-w-full truncate text-sm font-semibold">{file.name}</p>
+          <p className="text-xs">Click or drop to replace</p>
         </>
       ) : (
         <>
-          <p className="text-lg font-bold text-gray-800 dark:text-gray-100">Upload</p>
-          <p className="text-xs text-gray-600 dark:text-gray-500">{formatsLabel}</p>
+          <p className="text-lg font-bold">Upload</p>
+          <p className="text-xs">{formatsLabel}</p>
         </>
       )}
     </div>
@@ -688,10 +694,10 @@ export default function UploadPage() {
 
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 md:flex-row md:items-start md:justify-center">
-      <main className={`${darkPageCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
+      <main className={`${wideCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <span className={darkLabel}>게시 유형</span>
+            <span className={blackLabel}>게시 유형</span>
             <div className="grid grid-cols-2 gap-2">
               {UPLOAD_TYPE_OPTIONS.map((option) => (
                 <button
@@ -701,7 +707,7 @@ export default function UploadPage() {
                   className={uploadTypeButtonClass(
                     option.value,
                     uploadType === option.value,
-                    "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-bold transition",
+                    "flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold transition",
                   )}
                 >
                   <span className="text-base">{option.icon}</span>
@@ -709,7 +715,7 @@ export default function UploadPage() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-600 dark:text-gray-500">
+            <p className="text-xs text-active-gray">
               {uploadType === "complex"
                 ? "Companion공개 또는 특정인초대 · 노출 시간 지나면 자동 삭제"
                 : "전체공개 · 노출 시간 제한 없음"}
@@ -722,7 +728,7 @@ export default function UploadPage() {
               공개범위(COMPLEX_VISIBILITY_OPTIONS)와 같은 패턴. */}
           {uploadType === "complex" && (
             <div className="flex flex-col gap-1.5">
-              <span className={darkLabel}>게시 형태</span>
+              <span className={blackLabel}>게시 형태</span>
               <div className="grid grid-cols-2 gap-2">
                 {COMPLEX_POST_MODE_OPTIONS.map((option) => (
                   <button
@@ -731,7 +737,7 @@ export default function UploadPage() {
                     onClick={() => handleCollabAvailableChange(option.value === "collab")}
                     className={selectableButtonClass(
                       collabAvailable === (option.value === "collab"),
-                      "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition",
+                      "flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium transition",
                     )}
                   >
                     <span className="text-base">{option.icon}</span>
@@ -739,7 +745,7 @@ export default function UploadPage() {
                   </button>
                 ))}
               </div>
-              <p className="px-1 text-xs text-gray-600 dark:text-gray-500">
+              <p className="px-1 text-xs text-active-gray">
                 {collabAvailable
                   ? "Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요 — 음원(mp3/wav)만 올릴 수 있어요."
                   : "DEMO처럼 영상·음원 업로드 + 커버 이미지 + 좋아요·댓글·조회자 목록으로 게시돼요."}
@@ -748,8 +754,8 @@ export default function UploadPage() {
           )}
 
           {uploadType === "demo" ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-gray-500 p-3 dark:border-gray-800">
-              <span className={darkLabel}>업로드</span>
+            <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
+              <span className={blackLabel}>업로드</span>
               <UploadDropbox
                 file={mediaFile}
                 onSelect={handleFileChange}
@@ -757,16 +763,16 @@ export default function UploadPage() {
                 formatsLabel={UPLOADABLE_FORMATS}
               />
               {mediaFile && !mediaKind && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">
+                <p className="text-sm text-amber-600">
                   영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
                 </p>
               )}
-              {mediaFileError && <p className={darkErrorText}>{mediaFileError}</p>}
+              {mediaFileError && <p className={errorText}>{mediaFileError}</p>}
               {showPostPreview && (
                 <button
                   type="button"
                   onClick={() => setPreviewOpen((v) => !v)}
-                  className="hidden self-start text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 md:inline"
+                  className="hidden self-start text-xs font-medium text-black hover:underline md:inline"
                 >
                   {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
                 </button>
@@ -783,9 +789,9 @@ export default function UploadPage() {
                   (사용자 요청: "없어도 되는 게 아니라 없어야 해"). 평소(파일 선택 전)에도 숨김. */}
               {mediaKind === "audio" && (
                 <>
-                  <div className="flex items-center justify-between border-t border-gray-500 pt-3 dark:border-gray-800">
-                    <span className={darkLabel}>커버 이미지 (필수)</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
+                  <div className="flex items-center justify-between border-t border-box-gray pt-3">
+                    <span className={blackLabel}>커버 이미지 (필수)</span>
+                    <span className="text-xs text-active-gray">세로 4:5~가로 1.91:1</span>
                   </div>
                   {coverGifUrl ? (
                     <div className="flex items-center gap-2">
@@ -811,7 +817,7 @@ export default function UploadPage() {
                           type="file"
                           accept="image/png,image/jpeg,image/webp"
                           onChange={handleCoverChange}
-                          className={darkFileInput}
+                          className={fileInputClass}
                         />
                         <Button
                           type="button"
@@ -845,13 +851,13 @@ export default function UploadPage() {
                       )}
                     </div>
                   )}
-                  {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
+                  {coverFileError && <p className={errorText}>{coverFileError}</p>}
                 </>
               )}
             </div>
           ) : (
-            <div className="flex flex-col gap-3 rounded-xl border border-gray-500 p-3 dark:border-gray-800">
-              <span className={darkLabel}>업로드</span>
+            <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
+              <span className={blackLabel}>업로드</span>
               <UploadDropbox
                 file={complexFile}
                 onSelect={handleComplexFileChange}
@@ -859,13 +865,13 @@ export default function UploadPage() {
                 formatsLabel={collabAvailable ? MEMO_UPLOADABLE_FORMATS : UPLOADABLE_FORMATS}
               />
               {complexFile && !complexKind && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">
+                <p className="text-sm text-amber-600">
                   {collabAvailable
                     ? "음원 형식이 아니에요. mp3·wav 파일을 선택해주세요."
                     : "영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요."}
                 </p>
               )}
-              {complexFileError && <p className={darkErrorText}>{complexFileError}</p>}
+              {complexFileError && <p className={errorText}>{complexFileError}</p>}
               {complexFile && complexKind === "audio" && complexObjectUrl && (
                 <SoundbarPreview
                   key={`${complexFile.name}-${complexFile.size}-${complexFile.lastModified}`}
@@ -877,9 +883,9 @@ export default function UploadPage() {
                   버튼을 보여준다 — 영상은 그 자체가 화면이라 버튼 자체를 숨긴다. */}
               {!collabAvailable && complexKind === "audio" && (
                 <>
-                  <div className="flex items-center justify-between border-t border-gray-500 pt-3 dark:border-gray-800">
-                    <span className={darkLabel}>커버 이미지 (필수)</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-500">세로 4:5~가로 1.91:1</span>
+                  <div className="flex items-center justify-between border-t border-box-gray pt-3">
+                    <span className={blackLabel}>커버 이미지 (필수)</span>
+                    <span className="text-xs text-active-gray">세로 4:5~가로 1.91:1</span>
                   </div>
                   {coverGifUrl ? (
                     <div className="flex items-center gap-2">
@@ -905,7 +911,7 @@ export default function UploadPage() {
                           type="file"
                           accept="image/png,image/jpeg,image/webp"
                           onChange={handleCoverChange}
-                          className={darkFileInput}
+                          className={fileInputClass}
                         />
                         <Button
                           type="button"
@@ -939,28 +945,28 @@ export default function UploadPage() {
                       )}
                     </div>
                   )}
-                  {coverFileError && <p className={darkErrorText}>{coverFileError}</p>}
+                  {coverFileError && <p className={errorText}>{coverFileError}</p>}
                 </>
               )}
             </div>
           )}
 
           <div className="flex flex-col gap-1.5">
-            <span className={darkLabel}>캡션</span>
+            <span className={blackLabel}>캡션</span>
             <textarea
               placeholder="어떤 작업물인가요?"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               rows={3}
-              className={darkField}
+              className={grayField}
             />
           </div>
 
           {uploadType === "demo" && (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className={darkLabel}>해시태그</span>
-                <span className="text-xs text-gray-600 dark:text-gray-500">
+                <span className={blackLabel}>해시태그</span>
+                <span className="text-xs text-active-gray">
                   {selectedTags.length}/{MIN_TAGS}개 이상 선택
                 </span>
               </div>
@@ -972,7 +978,7 @@ export default function UploadPage() {
                       key={tag}
                       type="button"
                       onClick={() => toggleTag(tag)}
-                      className="flex items-center gap-1 rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-black"
+                      className="flex items-center gap-1 rounded-full bg-demo-bg px-3 py-1.5 text-sm font-medium text-black"
                     >
                       #{tag}
                       <span aria-hidden>×</span>
@@ -993,24 +999,24 @@ export default function UploadPage() {
                       addCustomTag();
                     }
                   }}
-                  className={darkField}
+                  className={grayField}
                 />
-                <Button type="button" onClick={addCustomTag} className="shrink-0 px-4">
+                <Button type="button" onClick={addCustomTag} className={`shrink-0 px-4 ${primaryButtonClass}`}>
                   추가
                 </Button>
               </div>
               {/* 예전엔 훑어보는 용도로 자동 무한 스크롤(marquee)했는데, 항목이 계속 움직이면
                   원하는 태그를 클릭하기 불편하다는 피드백으로 고정 목록 + 수동 스크롤로 변경. */}
-              <div className="max-h-48 overflow-y-auto rounded-xl border border-gray-500 p-3 dark:border-gray-700">
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-box-gray p-3">
                 {filteredGenres.length === 0 && filteredPopularUserTags.length === 0 ? (
-                  <p className="py-2 text-sm text-gray-600 dark:text-gray-500">
+                  <p className="py-2 text-sm text-active-gray">
                     일치하는 해시태그가 없어요. Enter나 추가 버튼으로 그대로 추가할 수 있어요.
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {filteredPopularUserTags.length > 0 && (
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-gray-600 dark:text-gray-500">
+                        <span className="text-xs font-medium text-black">
                           🔥 인기 사용자 태그
                         </span>
                         <div className="flex flex-wrap gap-1.5">
@@ -1049,7 +1055,7 @@ export default function UploadPage() {
           {uploadType === "complex" && (
             <>
               <div className="flex flex-col gap-1.5">
-                <span className={darkLabel}>공개 범위</span>
+                <span className={blackLabel}>공개 범위</span>
                 <div className="grid grid-cols-2 gap-2">
                   {COMPLEX_VISIBILITY_OPTIONS.map((option) => (
                     <button
@@ -1058,7 +1064,7 @@ export default function UploadPage() {
                       onClick={() => setComplexVisibility(option.value)}
                       className={selectableButtonClass(
                         complexVisibility === option.value,
-                        "flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition",
+                        "flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium transition",
                       )}
                     >
                       {option.value === "specific" ? (
@@ -1074,7 +1080,7 @@ export default function UploadPage() {
 
               {complexVisibility === "specific" && (
                 <div className="flex flex-col gap-1.5">
-                  <span className={darkLabel}>초대할 사람</span>
+                  <span className={blackLabel}>초대할 사람</span>
                   <InviteUserPicker
                     currentUserId={currentUserId ?? ""}
                     value={inviteUsers}
@@ -1084,7 +1090,7 @@ export default function UploadPage() {
               )}
 
               <div className="flex flex-col gap-1.5">
-                <span className={darkLabel}>{collabAvailable ? "노출 기간" : "노출 시간"}</span>
+                <span className={blackLabel}>{collabAvailable ? "노출 기간" : "노출 시간"}</span>
                 <div className="grid grid-cols-4 gap-2">
                   {(collabAvailable ? COLLAB_EXPIRE_HOURS_OPTIONS : SOLO_EXPIRE_HOURS_OPTIONS).map((option) => (
                     <button
@@ -1093,7 +1099,7 @@ export default function UploadPage() {
                       onClick={() => setExpireHours(option.hours)}
                       className={selectableButtonClass(
                         expireHours === option.hours,
-                        "rounded-xl border px-2 py-2 text-sm font-medium transition",
+                        "rounded-xl px-2 py-2 text-sm font-medium transition",
                       )}
                     >
                       {option.label}
@@ -1104,8 +1110,8 @@ export default function UploadPage() {
             </>
           )}
 
-          {error && <p className={darkErrorText}>{error}</p>}
-          <Button type="submit" disabled={loading} className="mt-1 w-full">
+          {error && <p className={errorText}>{error}</p>}
+          <Button type="submit" disabled={loading} className={`mt-1 w-full ${primaryButtonClass}`}>
             {loading ? "게시 중..." : <span suppressHydrationWarning>{submitPhrase}</span>}
           </Button>
         </form>
@@ -1117,9 +1123,12 @@ export default function UploadPage() {
             previewOpen ? "md:w-[400px] md:opacity-100" : "md:w-0 md:opacity-0"
           }`}
         >
-          <div className="flex w-[400px] shrink-0 flex-col gap-3 rounded-2xl border border-gray-500 bg-white p-4 dark:border-gray-800 dark:bg-gray-950">
-            <span className={darkLabel}>미리보기 — 게시하면 이렇게 보여요</span>
-            <div className="overflow-hidden rounded-xl border border-gray-500 dark:border-gray-800">
+          {/* 아래 목업(검정 미디어 박스·흰 캡션 카드·회색 태그칩)은 실제 피드 게시물이 어떻게
+              보일지 그대로 흉내낸 것 — 피드는 이 그레이 3단계 규칙에서 제외라 목업 내부 색은
+              건드리지 않는다. 이 패널 자체(바깥 프레임)만 업로드 화면 UI라 그레이 규칙을 따른다. */}
+          <div className="flex w-[400px] shrink-0 flex-col gap-3 rounded-2xl bg-main-gray p-4">
+            <span className={blackLabel}>미리보기 — 게시하면 이렇게 보여요</span>
+            <div className="overflow-hidden rounded-xl border border-gray-500">
               <div className="relative flex aspect-square items-center justify-center bg-black">
                 {previewVideoSrc ? (
                   <video src={previewVideoSrc} poster={previewCoverSrc ?? undefined} controls muted className="h-full w-full object-cover" />
@@ -1131,15 +1140,15 @@ export default function UploadPage() {
                 )}
               </div>
               <div className="flex flex-col gap-2 p-3">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {caption || <span className="text-gray-600 dark:text-gray-600">캡션이 여기 보여요</span>}
+                <p className="text-sm text-gray-700">
+                  {caption || <span className="text-gray-600">캡션이 여기 보여요</span>}
                 </p>
                 {selectedTags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedTags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-gray-300 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400"
+                        className="rounded-full bg-gray-300 px-2 py-0.5 text-xs text-gray-600"
                       >
                         #{tag}
                       </span>

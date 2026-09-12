@@ -57,15 +57,15 @@ export default async function CompanionsPage({
       <li key={id}>
         <Link
           href={`/profile/${id}`}
-          className="flex items-center gap-3 rounded-xl px-2 py-3 transition hover:bg-gray-300"
+          className="flex items-center gap-3 rounded-xl bg-box-gray px-2 py-3 transition hover:opacity-90"
         >
           <Avatar userId={id} name={u.display_name} className="h-10 w-10 text-sm" />
           <div className="flex flex-1 flex-col">
-            <span className="text-sm font-medium text-gray-900">{u.display_name}</span>
+            <span className="text-sm font-medium text-black">{u.display_name}</span>
             {(() => {
               const visibleSchool = profile?.school_public ? profile.school : null;
               return (visibleSchool || (profile?.instruments ?? []).length > 0) ? (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-black">
                   {[visibleSchool, ...(profile?.instruments ?? [])].filter(Boolean).join(" · ")}
                 </span>
               ) : null;
@@ -78,22 +78,21 @@ export default async function CompanionsPage({
 
   return (
     <main className={pageCard}>
-      <h1 className={pageTitle}>
-        {isOwnProfile ? "나의 Companion" : "Companion"}{" "}
-        <span className="text-gray-600">{accepted.length}명</span>
+      <h1 className={`${pageTitle} !text-black`}>
+        {isOwnProfile ? "나의 Companion" : "Companion"} <span className="text-black">{accepted.length}명</span>
       </h1>
 
       {incoming.length > 0 && (
         <section className="mt-4">
-          <h2 className="text-sm font-semibold text-gray-500">받은 신청 {incoming.length}건</h2>
-          <ul className="mt-1 flex flex-col">{incoming.map((r) => renderRow(otherId(r)))}</ul>
+          <h2 className="text-sm font-semibold text-black">받은 신청 {incoming.length}건</h2>
+          <ul className="mt-1 flex flex-col gap-1.5">{incoming.map((r) => renderRow(otherId(r)))}</ul>
         </section>
       )}
 
-      <ul className="mt-2 flex flex-col">
+      <ul className="mt-2 flex flex-col gap-1.5">
         {accepted.map((r) => renderRow(otherId(r)))}
         {accepted.length === 0 && (
-          <p className="py-10 text-center text-sm text-gray-600">아직 Companion이 없습니다</p>
+          <p className="py-10 text-center text-sm text-black">아직 Companion이 없습니다</p>
         )}
       </ul>
     </main>
