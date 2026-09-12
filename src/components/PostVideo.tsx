@@ -9,12 +9,14 @@
 // 컨트롤이 앱 톤과 안 맞는다는 지적). tone="memo"(기본값)는 예전 방식 그대로.
 import { useRef, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
+import { usePlaylistOptional } from "@/components/PlaylistContext";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
 export function PostVideo({
   postId,
   title,
   author,
+  authorId,
   videoSrc,
   posterSrc,
   tone = "memo",
@@ -22,17 +24,24 @@ export function PostVideo({
   postId: string;
   title: string;
   author: string;
+  authorId?: string;
   videoSrc: string;
   posterSrc?: string | null;
   tone?: "demo" | "memo";
 }) {
   const { track, play, pause } = useNowPlaying();
+  const playlist = usePlaylistOptional();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   function handlePlay() {
     setIsPlaying(true);
-    play({ id: postId, title, author, videoSrc });
+    // 오디오 게시물(SoundbarPlayer)처럼 영상 게시물도 재생하면 "최근 들은"에 기록되게 —
+    // 여기서 넘기는 값은 이 렌더에서 서버가 방금 내려준 것이라 이미 최신(signed URL 등)이라
+    // skipRefresh. 로그인 상태(PlaylistProvider 있음)가 아니면(게스트) 그냥 재생만 한다.
+    const trackData = { id: postId, title, author, authorId, videoSrc, posterSrc: posterSrc ?? null };
+    if (playlist) playlist.playNow(trackData, { skipRefresh: true });
+    else play(trackData);
   }
 
   function handlePause() {

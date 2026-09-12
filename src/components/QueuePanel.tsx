@@ -9,6 +9,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePlaylist, type PlaylistTrack } from "@/components/PlaylistContext";
 import { useNowPlaying } from "@/components/NowPlayingContext";
+import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { XIcon, PlayIcon, PauseIcon, HeadphonesIcon, PlusIcon, CheckIcon } from "@/components/icons";
 
 type Tab = "queue" | "recent";
@@ -79,6 +80,12 @@ function QueueRow({
             {t.title}
           </span>
         </div>
+      )}
+      {/* memo(비공개) 트랙만 노출 만료 시각이 있음 — DEMO는 영구노출이라 안 뜸. */}
+      {t.expiresAt && (
+        <span className="shrink-0 scale-[0.85]">
+          <TimeLimitBadge expiresAt={t.expiresAt} />
+        </span>
       )}
       {onToggleQueued && (
         <button

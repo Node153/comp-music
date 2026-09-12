@@ -45,6 +45,7 @@ export function SoundbarPlayer({
   trackId,
   author,
   authorId,
+  expiresAt,
 }: {
   src: string;
   title: string;
@@ -54,6 +55,8 @@ export function SoundbarPlayer({
   trackId?: string;
   author?: string;
   authorId?: string;
+  // memo 게시물의 노출 만료 시각 — 재생목록/최근들은에 그대로 실어서 남은 시간을 보여준다.
+  expiresAt?: string | null;
 }) {
   const [bars, setBars] = useState<number[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -113,6 +116,7 @@ export function SoundbarPlayer({
           authorId,
           videoSrc: src,
           posterSrc: posterSrc ?? null,
+          expiresAt,
         },
         { skipRefresh: true },
       );

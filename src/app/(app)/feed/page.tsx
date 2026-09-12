@@ -677,11 +677,18 @@ export default async function FeedPage({
           // 미체크는 DEMO와 동일하게 독립 미디어 박스 + 좋아요/댓글로 간다(사용자 요청).
           // "Companion 공개"(followers) 게시물은 피드 쿼리 단계에서 이미 Companion만
           // 걸러진 상태라(위 posts 필터) 항상 열람 가능.
-          // DEMO 탭에서 재생 가능한(오디오·영상) 게시물이면 헤더에 "플레이리스트에 담기"
-          // 버튼을 붙인다. mock 게시물은 demoVideoSrc, 실제 게시물은 signed URL(videoSrc).
+          // 재생 가능한(오디오·영상) 게시물이면 헤더에 "플레이리스트에 담기" 버튼을 붙인다 —
+          // DEMO는 전부, memo(isComplex)는 합작 게시물만 제외(사용자 요청 — 합작은 실시간
+          // 채팅용 게시물이라 배경 재생 목적의 플레이리스트 대상이 아님). mock 게시물은
+          // demoVideoSrc, 실제 게시물은 signed URL(videoSrc). memo는 노출 기한이 있어서
+          // expiresAt을 같이 담아 재생목록에서 남은 시간을 보여줄 수 있게 한다(DEMO는 영구
+          // 노출이라 expires_at이 항상 null).
           const playlistSrc = post.isMock ? post.demoVideoSrc : post.videoSrc;
           const playlistTrack =
-            !!currentUser && !isComplex && post.media_type !== "image" && playlistSrc
+            !!currentUser &&
+            (!isComplex || !post.collab_available) &&
+            post.media_type !== "image" &&
+            playlistSrc
               ? {
                   id: post.id,
                   title:
@@ -692,6 +699,7 @@ export default async function FeedPage({
                   authorId: post.user_id,
                   videoSrc: playlistSrc,
                   posterSrc: post.posterSrc ?? null,
+                  expiresAt: post.expires_at ?? null,
                 }
               : null;
 
@@ -854,11 +862,12 @@ export default async function FeedPage({
                             src={post.videoSrc}
                             title={post.caption || "음원"}
                             posterSrc={post.posterSrc}
-                            tone="demo"
+                            tone={isComplex ? "memo" : "demo"}
                             mode={currentUser ? "global" : "inline"}
                             trackId={post.id}
                             author={author?.name ?? "알 수 없음"}
                             authorId={post.user_id}
+                            expiresAt={post.expires_at}
                           />
                         </div>
                       ) : post.videoSrc ? (
@@ -870,6 +879,7 @@ export default async function FeedPage({
                             postId={post.id}
                             title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
                             author={author?.name ?? "알 수 없음"}
+                            authorId={post.user_id}
                             videoSrc={post.videoSrc}
                             posterSrc={post.posterSrc}
                             tone="demo"

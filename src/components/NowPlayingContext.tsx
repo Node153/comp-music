@@ -14,6 +14,9 @@ export type NowPlayingTrack = {
   posterSrc?: string | null;
   // 재생 목록에서 게시자 이름 클릭 시 프로필로 이동하기 위한 user id.
   authorId?: string;
+  // memo(비공개) 게시물의 노출 만료 시각 — 있으면 재생목록에 남은 시간 카운트다운을 보여준다.
+  // DEMO는 영구노출이라 항상 null/undefined.
+  expiresAt?: string | null;
 };
 
 type NowPlayingContextValue = {
