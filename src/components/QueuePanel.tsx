@@ -254,8 +254,11 @@ export function QueuePanel() {
                 onPlay={() => playNow(t)}
                 onTogglePlay={toggle}
                 onRemove={() => removeRecent(t.id)}
-                queued={has(t.id)}
-                onToggleQueued={() => (has(t.id) ? remove(t.id) : add(t))}
+                // memo(비공개) 트랙은 담기 금지(사용자 요청) — expiresAt이 있으면 memo
+                // 트랙이라는 뜻이라(DEMO는 영구노출이라 안 붙음) +/체크 토글 자체를 안 넘겨서
+                // 그 자리에 타임뱃지만 남게 한다.
+                queued={t.expiresAt ? undefined : has(t.id)}
+                onToggleQueued={t.expiresAt ? undefined : () => (has(t.id) ? remove(t.id) : add(t))}
               />
             ))
           )}

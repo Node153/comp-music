@@ -879,6 +879,7 @@ export default async function FeedPage({
                             videoSrc={post.videoSrc}
                             posterSrc={post.posterSrc}
                             tone="demo"
+                            expiresAt={post.expires_at}
                           />
                         </div>
                       ) : (

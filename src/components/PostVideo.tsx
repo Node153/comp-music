@@ -20,6 +20,7 @@ export function PostVideo({
   videoSrc,
   posterSrc,
   tone = "memo",
+  expiresAt,
 }: {
   postId: string;
   title: string;
@@ -28,6 +29,9 @@ export function PostVideo({
   videoSrc: string;
   posterSrc?: string | null;
   tone?: "demo" | "memo";
+  // memo(비공개) 영상 게시물의 노출 만료 시각 — 오디오(SoundbarPlayer)처럼 재생목록/최근들은에
+  // 그대로 실어서 남은 시간 뱃지를 보여준다. DEMO는 영구노출이라 안 넘어옴(undefined).
+  expiresAt?: string | null;
 }) {
   const { track, play, pause, videoRef: globalVideoRef } = useNowPlaying();
   const playlist = usePlaylistOptional();
@@ -64,6 +68,7 @@ export function PostVideo({
       authorId,
       videoSrc,
       posterSrc: posterSrc ?? null,
+      expiresAt,
       mediaType: "video" as const,
     };
     if (playlist) playlist.playNow(trackData, { skipRefresh: true });
