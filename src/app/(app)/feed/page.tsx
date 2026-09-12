@@ -864,10 +864,6 @@ export default async function FeedPage({
                             author={author?.name ?? "알 수 없음"}
                             authorId={post.user_id}
                             expiresAt={post.expires_at}
-                            // memo 오디오는 계속 하단 바로 재생은 되지만(페이지 이동해도
-                            // 안 끊기는 기존 동작 유지) 재생목록/최근들은엔 안 남게 —
-                            // "담기 금지" 요청과 짝을 맞춤(DEMO만 기록).
-                            recordInPlaylist={!isComplex}
                           />
                         </div>
                       ) : post.videoSrc ? (

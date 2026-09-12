@@ -46,7 +46,6 @@ export function SoundbarPlayer({
   author,
   authorId,
   expiresAt,
-  recordInPlaylist = true,
 }: {
   src: string;
   title: string;
@@ -58,9 +57,6 @@ export function SoundbarPlayer({
   authorId?: string;
   // memo 게시물의 노출 만료 시각 — 재생목록/최근들은에 그대로 실어서 남은 시간을 보여준다.
   expiresAt?: string | null;
-  // false면 하단 바로는 재생하되(mode="global") 재생목록/최근들은엔 기록하지 않는다 —
-  // memo 게시물은 담기 금지(사용자 요청)라, DEMO에서만 true로 넘긴다.
-  recordInPlaylist?: boolean;
 }) {
   const [bars, setBars] = useState<number[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -121,10 +117,10 @@ export function SoundbarPlayer({
       expiresAt,
       mediaType: "audio" as const,
     };
-    // memo는 담기 금지(recordInPlaylist=false)라 재생목록에 안 남기고 바로 재생만 시킨다 —
-    // 하단 바 공유(mode="global")는 그대로라 페이지 이동해도 안 끊기는 건 동일.
+    // memo는 "담기"(+ 버튼)만 금지고 "최근 들은" 기록은 그대로 남는다(사용자 요청) —
+    // 담기 제외는 feed/page.tsx의 playlistTrack(!isComplex 게이트)에서만 처리한다.
     // src는 이 렌더에서 서버가 방금 내려준 signed URL이라 이미 최신이라 skipRefresh.
-    if (recordInPlaylist && playlist) playlist.playNow(trackData, { skipRefresh: true });
+    if (playlist) playlist.playNow(trackData, { skipRefresh: true });
     else nowPlay(trackData);
   }
 
