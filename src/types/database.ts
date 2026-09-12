@@ -585,6 +585,14 @@ export interface Database {
         Args: Record<string, never>;
         Returns: void;
       };
+      // can_access_post_content(0012, 0017에서 companions로 갱신) — memo(비공개) 게시물의
+      // 미디어/채팅 열람 권한 판정. feed/page.tsx의 canViewMediaFor와 동일 로직을 DB 함수로
+      // 감싼 것 — /api/media/track-url이 재생목록 재생 시 signed URL을 새로 내주기 전에 이걸로
+      // 인가를 확인한다(security definer).
+      can_access_post_content: {
+        Args: { pid: string; uid: string };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

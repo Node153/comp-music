@@ -10,18 +10,21 @@ const DAY_SECONDS = 24 * 60 * 60;
 
 // 협업 게시물이 1~7일 단위로 노출되면서(0052) 남은 시간을 계속 "167:59:51"처럼 시간으로만
 // 보여주면 숫자가 너무 커져서 안 읽힌다(사용자 피드백) — 24시간 이상 남았을 땐 "D-7"처럼
-// 날짜로, 24시간 미만으로 들어오면 그때부터 기존 HH:MM:SS 초단위 카운트다운으로 바뀐다.
+// 날짜로 보여준다. 24시간 미만은 HH:MM으로 보여주되, 초 단위는 어차피 의미 없이 계속
+// 깜빡이기만 해서(사용자 피드백) 1분 미만으로 들어왔을 때만 "45초"처럼 초 단위로 바뀐다.
 function formatRemaining(ms: number): string {
   if (ms <= 0) return "마감";
   const totalSeconds = Math.floor(ms / 1000);
   if (totalSeconds >= DAY_SECONDS) {
     return `D-${Math.ceil(totalSeconds / DAY_SECONDS)}`;
   }
+  if (totalSeconds < 60) {
+    return `${totalSeconds}초`;
+  }
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  return `${pad(hours)}:${pad(minutes)}`;
 }
 
 export function TimeLimitBadge({ expiresAt }: { expiresAt: string }) {
