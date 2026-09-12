@@ -26,9 +26,12 @@ export function MockPlayOverlay({
   const isThisPlaying = isThisTrack && isPlaying;
 
   // 로그인 상태(PlaylistProvider 있음)면 "최근 들은"에 기록, 게스트면 그냥 재생만.
+  // mock 게시물의 videoSrc는 로컬 정적 파일(만료되는 R2 signed URL 아님)이라 서버에
+  // 다시 물어볼 필요가 없어 skipRefresh — 어차피 실제 posts 테이블에 없는 가짜 id라
+  // 물어봐도 404만 나고 결국 원래 값 그대로 쓰인다.
   const startPlay = () =>
     playlist
-      ? playlist.playNow({ id: postId, title, author, authorId, videoSrc })
+      ? playlist.playNow({ id: postId, title, author, authorId, videoSrc }, { skipRefresh: true })
       : play({ id: postId, title, author, authorId, videoSrc });
 
   return (

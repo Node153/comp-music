@@ -35,8 +35,10 @@ type PlaylistContextValue = {
   toggleQueue: () => void;
   /** 피드에서 바로 튼 트랙 히스토리(최신 순). "다음 트랙"(담기 큐)과 별개. */
   recentlyPlayed: PlaylistTrack[];
-  /** 지금 재생 + "최근 들은"에 기록(피드 재생버튼용) */
-  playNow: (track: PlaylistTrack) => void;
+  /** 지금 재생 + "최근 들은"에 기록(피드 재생버튼용). skipRefresh는 이미 방금 서버가
+   * 내려준 최신 데이터일 때만(피드 카드 자체 재생버튼) 써서 불필요한 API 왕복을 건너뛴다 —
+   * 재생목록/최근들은 패널에서 트는 경우는 기본값(갱신)으로 둬야 오래된 링크가 안 죽어있다. */
+  playNow: (track: PlaylistTrack, opts?: { skipRefresh?: boolean }) => void;
   removeRecent: (id: string) => void;
   clearRecent: () => void;
   /** 담기/최근들은에 같은 id가 있으면 videoSrc 등을 최신 값으로 교체(없으면 아무 일도 안 함).
@@ -120,32 +122,64 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 
   const currentIndex = track ? items.findIndex((t) => t.id === track.id) : -1;
 
+  // 재생목록/최근들은에서 실제로 재생을 누르는 순간 서버에서 최신 signed URL을 한 번 더
+  // 받아온다 — AddToPlaylistButton의 마운트 시 갱신은 그 게시물이 "지금 피드에 보일 때만"
+  // 동작해서, 최근 목록 밖으로 밀려난 옛날 게시물은 놓칠 수 있다(사용자 제보: "특정 트랙만
+  // 재생목록에서 안 됨" — 딱 이 케이스). 실패하면 갖고 있던 값 그대로 재생을 시도한다.
+  const fetchFreshTrack = useCallback(async (t: PlaylistTrack): Promise<PlaylistTrack> => {
+    try {
+      const res = await fetch(`/api/media/track-url?postId=${encodeURIComponent(t.id)}`);
+      if (!res.ok) return t;
+      const data = (await res.json()) as { videoSrc?: string; posterSrc?: string | null };
+      if (!data.videoSrc) return t;
+      return { ...t, videoSrc: data.videoSrc, posterSrc: data.posterSrc ?? t.posterSrc };
+    } catch {
+      return t;
+    }
+  }, []);
+
   const playAt = useCallback(
     (index: number) => {
       const target = items[index];
-      if (target) play(target);
+      if (!target) return;
+      void fetchFreshTrack(target).then((fresh) => {
+        play(fresh);
+        setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
+      });
     },
-    [items, play],
+    [items, play, fetchFreshTrack],
   );
 
   const playNext = useCallback(() => {
     if (currentIndex < 0 || currentIndex >= items.length - 1) return false;
-    play(items[currentIndex + 1]);
+    const target = items[currentIndex + 1];
+    void fetchFreshTrack(target).then((fresh) => {
+      play(fresh);
+      setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
+    });
     return true;
-  }, [currentIndex, items, play]);
+  }, [currentIndex, items, play, fetchFreshTrack]);
 
   const playPrev = useCallback(() => {
     if (currentIndex <= 0) return false;
-    play(items[currentIndex - 1]);
+    const target = items[currentIndex - 1];
+    void fetchFreshTrack(target).then((fresh) => {
+      play(fresh);
+      setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
+    });
     return true;
-  }, [currentIndex, items, play]);
+  }, [currentIndex, items, play, fetchFreshTrack]);
 
   const playNow = useCallback(
-    (next: PlaylistTrack) => {
-      play(next);
-      setRecentlyPlayed((prev) => [next, ...prev.filter((t) => t.id !== next.id)].slice(0, RECENT_MAX));
+    (next: PlaylistTrack, opts?: { skipRefresh?: boolean }) => {
+      const run = async () => {
+        const fresh = opts?.skipRefresh ? next : await fetchFreshTrack(next);
+        play(fresh);
+        setRecentlyPlayed((prev) => [fresh, ...prev.filter((t) => t.id !== fresh.id)].slice(0, RECENT_MAX));
+      };
+      void run();
     },
-    [play],
+    [play, fetchFreshTrack],
   );
 
   const removeRecent = useCallback((id: string) => {

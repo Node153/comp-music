@@ -54,7 +54,9 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
-      video.play();
+      // ⚠️ "음소거로 먼저 재생 후 해제" 우회를 넣었다가 되돌림 — GlobalPlayerBar와 같은 이유
+      // (비동기 unmute를 브라우저가 제스처 밖 행동으로 보고 재생을 멈추는 걸 재현·확인함).
+      video.play().catch(() => setIsPlaying(false));
       setIsPlaying(true);
     } else {
       video.pause();

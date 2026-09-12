@@ -102,15 +102,20 @@ export function SoundbarPlayer({
   const duration = isGlobal ? (isThisTrack ? globalDuration : 0) : inlineDuration;
 
   function startGlobal() {
+    // src는 이 렌더에서 서버가 방금 내려준 signed URL이라 이미 최신 — 서버에 다시 물어볼
+    // 필요 없어 skipRefresh(재생목록/최근들은에서 트는 경우와 달리 항상 신선한 값).
     if (trackId && playlist)
-      playlist.playNow({
-        id: trackId,
-        title,
-        author: author ?? "",
-        authorId,
-        videoSrc: src,
-        posterSrc: posterSrc ?? null,
-      });
+      playlist.playNow(
+        {
+          id: trackId,
+          title,
+          author: author ?? "",
+          authorId,
+          videoSrc: src,
+          posterSrc: posterSrc ?? null,
+        },
+        { skipRefresh: true },
+      );
   }
 
   function togglePlay() {
