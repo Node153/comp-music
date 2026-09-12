@@ -62,7 +62,7 @@ create table posts (
   visibility          varchar(20) not null default 'public', -- public/major/school/followers/private (Phase 0: public 고정)
   collab_available    boolean not null default false,
   collab_role_needed  varchar(200),
-  status              varchar(20) not null default 'scheduled', -- scheduled/published/expired/deleted (expired도 영구보관, deleted만 하드삭제)
+  status              varchar(20) not null default 'scheduled', -- scheduled/published/expired/deleted (expired는 만료 7일 후 크론이 하드삭제, deleted는 사용자가 즉시 하드삭제 — expire-posts 크론 참고)
   scheduled_at        timestamptz,
   published_at        timestamptz,
   expire_hours        int not null,          -- 6/12/24/48
