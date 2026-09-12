@@ -5,15 +5,19 @@
 // Messages/Notifications는 각각 Chat/Alerts로 축약 — Drop과 첫 글자가 겹치는 DM은 피했다.
 // 안읽음 뱃지는 원래 Me 아바타에 있었는데, /notifications 알림 목록 페이지가 생기면서
 // 그 전용 아이콘으로 옮김(좋아요/댓글만 1단계 — Companion 신청·Peak·공동창작 신청은 다음 단계).
+// Alerts/Chat 둘 다 페이지 이동 대신 드롭다운(ProfileMenu와 같은 클릭-토글 패턴)으로 최근
+// 알림/대화를 바로 훑어보게 하고, 전체 목록/필터·실제 대화는 각각 /notifications, /messages
+// (해당 대화방)로 넘긴다.
 // 우측 사이드바의 mock DM 위젯을 걷어내면서 메시지를 상단 메뉴 1급 항목으로 승격 — 실제
 // /messages 라우트(Realtime)로 바로 연결.
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import { NotificationsMenu } from "@/components/NotificationsMenu";
+import { MessagesMenu } from "@/components/MessagesMenu";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
-import { useNotificationCount } from "@/components/NotificationCountContext";
 import { beginThemeTransition } from "@/lib/theme";
-import { PlusIcon, ChatIcon, BellIcon, HelpIcon, SearchIcon } from "@/components/icons";
+import { PlusIcon, HelpIcon, SearchIcon } from "@/components/icons";
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
 // 특정인 초대) 두 피드 탭.
@@ -36,7 +40,6 @@ export function TopNav({
   const searchParams = useSearchParams();
   const activeFeedTab = searchParams.get("feed") ?? "completion";
   const search = useSearchOverlay();
-  const unseenNotifications = useNotificationCount();
 
   return (
     <header className="sticky top-0 z-40 hidden h-14 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-[#1c1c1e] md:flex">
@@ -103,35 +106,8 @@ export function TopNav({
         >
           <PlusIcon />
         </Link>
-        <Link
-          href="/messages"
-          title="Chat"
-          aria-label="Chat"
-          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-            pathname.startsWith("/messages")
-              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-          }`}
-        >
-          <ChatIcon />
-        </Link>
-        <Link
-          href="/notifications"
-          title="Alerts"
-          aria-label="Alerts"
-          className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
-            pathname === "/notifications"
-              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-          }`}
-        >
-          <BellIcon />
-          {unseenNotifications > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
-              {unseenNotifications}
-            </span>
-          )}
-        </Link>
+        <MessagesMenu />
+        <NotificationsMenu userId={currentUserId} />
         <Link
           href="/help"
           title="Help"

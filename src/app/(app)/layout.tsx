@@ -1,6 +1,7 @@
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
 import { MobileTopBar } from "@/components/MobileTopBar";
+import { PageCanvas } from "@/components/PageCanvas";
 import { GuestTopNav } from "@/components/GuestTopNav";
 import { GuestSignupPromptProvider } from "@/components/GuestSignupPrompt";
 import { NowPlayingProvider } from "@/components/NowPlayingContext";
@@ -30,10 +31,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <NowPlayingProvider>
       <ThemeSync />
-      {/* 캔버스는 인스타그램 참고 — 예전엔 페이스북처럼 그레이 캔버스+그림자 카드였는데,
-          인스타는 캔버스가 거의 흰색이고 카드는 그림자 없이 테두리로만 구분한다(/goal 논의). */}
-      <div className="min-h-screen bg-white transition-colors duration-300 dark:bg-[#1c1c1e] md:bg-[#fafafa] md:dark:bg-[#1c1c1e]">
-        {user ? (
+      {user ? (
+        // 캔버스는 인스타그램 참고 — 예전엔 페이스북처럼 그레이 캔버스+그림자 카드였는데,
+        // 인스타는 캔버스가 거의 흰색이고 카드는 그림자 없이 테두리로만 구분한다(/goal 논의).
+        // 이제 피드(DEMO/memo) 이외 화면은 PageCanvas가 메인 그레이 컬러 캔버스로 바꿔준다.
+        <PageCanvas>
           <PlaylistProvider>
             <NotificationCountProvider>
               <SearchOverlayProvider>
@@ -48,15 +50,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </SearchOverlayProvider>
             </NotificationCountProvider>
           </PlaylistProvider>
-        ) : (
-          // GuestTopNav와 children(익명 미리보기 피드)이 같은 GuestSignupPromptProvider
-          // 안에 있어야 좋아요/댓글 클릭 시 뜨는 가입 유도 모달 상태를 공유한다.
+        </PageCanvas>
+      ) : (
+        // GuestTopNav와 children(익명 미리보기 피드)이 같은 GuestSignupPromptProvider
+        // 안에 있어야 좋아요/댓글 클릭 시 뜨는 가입 유도 모달 상태를 공유한다.
+        <div className="min-h-screen bg-white transition-colors duration-300 dark:bg-[#1c1c1e] md:bg-[#fafafa] md:dark:bg-[#1c1c1e]">
           <GuestSignupPromptProvider>
             <GuestTopNav />
             {children}
           </GuestSignupPromptProvider>
-        )}
-      </div>
+        </div>
+      )}
     </NowPlayingProvider>
   );
 }

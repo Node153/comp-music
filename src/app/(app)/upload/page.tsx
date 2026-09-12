@@ -13,7 +13,6 @@ import { GiphyPicker } from "@/components/GiphyPicker";
 import { LockIcon } from "@/components/icons";
 import { field, label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
-import { applyTheme } from "@/lib/theme";
 import type { ExpireHours } from "@/types/database";
 
 const MIN_TAGS = 3;
@@ -253,6 +252,10 @@ export default function UploadPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  // 원래는 게시 유형(DEMO/memo)을 바꿀 때마다 피드 Complex 탭(ThemeSync.tsx)처럼 효과음과
+  // 함께 페이지 전체를 다크 테마로 전환했는데, 업로드 폼 자체를 고치는 화면에서 그럴 때마다
+  // 화면 톤·효과음이 바뀌는 게 번거롭다는 피드백으로 제거 — 이 페이지는 항상 (app)/layout.tsx의
+  // PageCanvas 그레이 배경을 그대로 유지하고, 라이트/다크 전환은 다시 /feed에서만 일어난다.
   const [uploadType, setUploadType] = useState<UploadType>("demo");
 
   // demo 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별(Complex와 동일한 방식)
@@ -307,15 +310,6 @@ export default function UploadPage() {
       cancelled = true;
     };
   }, [supabase]);
-
-  // Complex 선택 시 피드의 Complex 탭(ThemeSync.tsx)과 동일하게 다크 테마로 전환.
-  // ThemeSync는 URL(/feed?feed=complex)만 감시해서 이 페이지의 로컬 상태는 모르기 때문에
-  // 별도로 처리 — 다른 화면으로 이동하면 ThemeSync가 그 라우트 기준으로 다시 correct하게 되돌려놓는다.
-  const themeMounted = useRef(false);
-  useEffect(() => {
-    applyTheme(uploadType === "complex", { animate: themeMounted.current });
-    themeMounted.current = true;
-  }, [uploadType]);
 
   // InviteUserPicker가 검색 결과에서 본인을 제외하는 데만 씀(초대 자체는 post_access RLS가
   // user_id<>auth.uid()로 어차피 막지만, 검색 결과에서부터 안 보이는 게 자연스럽다).
