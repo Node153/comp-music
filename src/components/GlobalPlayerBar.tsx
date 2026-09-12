@@ -39,6 +39,15 @@ function demoBandColor(v: number): string {
   return "#f5d999";
 }
 
+// memo 트랙용 violet 3단계 — 골드 버전과 같은 명암 단계, 가장 밝은 단계가 플레이헤드 색
+// (#c4b5f2, 아래 playheadColor)과 같은 값이라 골드 쪽(제일 밝은 단계 = 플레이헤드 색)과
+// 동일한 패턴이다.
+function memoBandColor(v: number): string {
+  if (v < 0.35) return "#5b3fa0";
+  if (v < 0.65) return "#8b6fd9";
+  return "#c4b5f2";
+}
+
 // 실제 분석이 끝나기 전(또는 실패 시) 보여줄 프리셋 파형 — 트랙 id로 시드를 고정해 0~1 진폭 배열.
 function presetBars(seed: string): number[] {
   let h = 0;
@@ -153,8 +162,9 @@ export function GlobalPlayerBar() {
   // — 바 배경은 항상 중립 회색 고정, 파형만 memo 포인트 컬러(violet)로 바뀐다.)
   const isMemoTrack = !!track?.expiresAt;
   const barBg = "bg-[#8b8b8c]";
-  // SoundbarPlayer의 memo 톤(playedColor: "#8b6fd9", playheadColor: "#c4b5f2")과 같은 값.
-  const playedColor = (v: number) => (isMemoTrack ? "#8b6fd9" : demoBandColor(v));
+  // 골드와 마찬가지로 진폭(v)에 따라 3단계로 명암을 주되(사용자 요청 — "볼륨에 따라
+  // 색조정"), 색상 자체만 violet 계열로.
+  const playedColor = (v: number) => (isMemoTrack ? memoBandColor(v) : demoBandColor(v));
   const playheadColor = isMemoTrack ? "#c4b5f2" : "#f5d999";
 
   const pct = duration > 0 ? (progress / duration) * 100 : 0;
