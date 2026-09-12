@@ -10,6 +10,7 @@ import { Avatar } from "@/components/Avatar";
 import { ComperBadge } from "@/components/ComperBadge";
 import { getAdminIds } from "@/lib/admins";
 import { CompanionButton, type CompanionRelation } from "./CompanionButton";
+import { PostsGrid } from "./PostsGrid";
 
 // S9 프로필 (본인/타인 분기, FEED-10 프로필 피드 = 본인 게시물 그리드)
 // Phase 0: visibility가 public 고정이라 타인도 published/expired 게시물을 전부 볼 수 있음(0-2, 0-7)
@@ -175,32 +176,7 @@ export default async function ProfilePage({
         )}
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-1.5">
-        {postsWithVideo.map((post) => (
-          <div key={post.id} className="relative aspect-[9/16] overflow-hidden rounded-lg bg-gray-100">
-            {post.videoSrc && post.media_type === "image" ? (
-              <img src={post.videoSrc} alt="" className="h-full w-full object-cover" />
-            ) : post.videoSrc && post.media_type === "audio" ? (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gray-800 p-3 text-center">
-                <span className="text-2xl">🎵</span>
-                {post.caption && (
-                  <span className="line-clamp-3 text-xs text-gray-300">{post.caption}</span>
-                )}
-              </div>
-            ) : post.videoSrc ? (
-              <video src={post.videoSrc} className="h-full w-full object-cover" muted preload="metadata" />
-            ) : null}
-            {post.isExpired && (
-              <span className="absolute right-1 top-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white">
-                만료됨
-              </span>
-            )}
-          </div>
-        ))}
-        {postsWithVideo.length === 0 && (
-          <p className="col-span-3 py-10 text-center text-sm text-gray-400">게시물이 없습니다</p>
-        )}
-      </div>
+      <PostsGrid posts={postsWithVideo} />
     </main>
   );
 }
