@@ -825,7 +825,14 @@ export default async function FeedPage({
                       보이므로, 굳이 이 유형만 따로 표시할 이유가 없다(위 posts 필터 참고). */}
                   {useInlineChatLayout ? null : (
                     <div
-                      className={`relative flex w-full items-center justify-center bg-black ${
+                      className={`relative flex w-full items-center md:items-end justify-center bg-black ${
+                        // md:items-end(2026-09-14 추가, 사용자 요청): 정사각 미디어는 항상
+                        // 657px 그대로 고정하고, 남는 공간은 전부 미디어 박스 "위"(캡션과
+                        // 미디어 사이)로만 몰아서 반응줄 바로 위(미디어 하단)엔 여백이 생기지
+                        // 않게 한다 — 캡션·태그가 길어져 여유 공간이 657px보다 작아지는 극단적인
+                        // 경우에도 잘리는 쪽은 영상 위쪽일 뿐, 좋아요·댓글 줄은 항상 카드 맨
+                        // 아래에 그대로 남는다(모바일은 기존 items-center 유지 — max-md: 접두사
+                        // 없이 기본값이라 md:items-end가 데스크톱에서만 이를 덮어씀).
                         // md:flex-1로 남는 세로 공간을 미디어 박스가 직접 흡수해야, 그 여유가
                         // article의 justify-center로 밀려 올라가 헤더 위/반응줄 아래에 흰
                         // 여백으로 보이지 않는다(2026-09-14 발견·수정 — 정사각형 659px 미디어
