@@ -587,8 +587,12 @@ export default async function FeedPage({
   //     기준으로 화면 크기에 비례해서 카드가 커지고 작아졌는데, 그 반응형 특성을 없앤 것.
   //   · 미디어 박스(영상·음원+커버·이미지)도 전부 이 카드 폭(659px)에 맞춰 **정사각형(1:1)
   //     으로 통일**(예전엔 영상 4:5/음원 4:5/이미지 1:1로 타입마다 달랐음 — 2026-09-14 확정).
-  //     헤더/캡션/태그/반응줄 아래에 남는 세로 여백은 article의 justify-center가 가운데로
-  //     흡수한다(굳이 flex-1로 미디어를 늘려 여백을 억지로 채우지 않음).
+  //     미디어 박스 자체는 md:flex-1로 남는 세로 공간을 직접 흡수한다(2026-09-14 수정 —
+  //     처음엔 미디어를 딱 659px로 고정하고 article의 justify-center가 남는 공간을 카드
+  //     맨 위/아래 흰 여백으로 흡수하게 했는데, 헤더 위·반응줄 아래에 눈에 띄는 여백이
+  //     생겨서 되돌림. 지금은 정사각 미디어 자체는 그대로 659px고, 남는 공간만 미디어
+  //     박스 안에서 검은 레터박스로 흡수돼 헤더는 카드 맨 위, 반응줄은 카드 맨 아래에
+  //     딱 붙는다).
   //   · 비로그인 미리보기는 상단바/탭바 구성이 달라(GuestTopNav만) 높이 계산이 어긋나므로
   //     기존 카드 피드(자연 높이)를 그대로 둔다.
   const oneScreenFeed = !!currentUser;
@@ -596,8 +600,11 @@ export default async function FeedPage({
     ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_6.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
     : "flex flex-col gap-6";
   // 모바일: article이 정확히 스냅 프레임 높이(h-full)라 스냅이 게시물 top에 딱 맞는다.
-  // 데스크톱: 카드 659×878px 고정(위 설명 참고). memo는 채팅이 있어 원래도 고정 프레임 +
-  //   내부 스크롤(높이만 같은 878px 적용, 폭 제한은 채팅 레이아웃이 따로 관리).
+  // 데스크톱: 카드 659×878px 고정(위 설명 참고) — memo(합작 포함)도 2026-09-14부터 같은
+  //   폭 캡을 적용해 DEMO와 동일한 카드 크기 기준을 따른다(사용자 요청, "합작 게시물도
+  //   우리가 정한 게시물 크기 기준으로"). 합작 게시물의 "집중 모드"(확대, PostFocusToggle)는
+  //   position:fixed로 뷰포트 전체를 덮어써서 article의 max-width와 무관하게 커지므로,
+  //   평소엔 이 좁은 카드 안에 미디어/채팅을 절반씩 나눠 담아도 필요할 때 확대해서 볼 수 있다.
   const articleSnapClass = !oneScreenFeed
     ? ""
     : isComplex
@@ -606,7 +613,7 @@ export default async function FeedPage({
       // 예전엔 block이라 채팅 내용이 짧으면 입력칸이 그 바로 아래 뜨고 그 밑으로 빈
       // 공간이 남았다. 채팅이 프레임보다 길면(shrink-0) article의 overflow-y-auto가 그대로
       // 전체 스크롤을 맡는다(내부 이중 스크롤 없음).
-      ? "flex flex-col shrink-0 overflow-y-auto h-full md:h-[878px] max-md:snap-start max-md:snap-always"
+      ? "flex flex-col shrink-0 overflow-y-auto h-full md:h-[878px] md:mx-auto md:w-full md:max-w-[659px] max-md:snap-start max-md:snap-always"
       : "flex shrink-0 flex-col justify-center overflow-hidden h-full md:h-[878px] md:mx-auto md:w-full md:max-w-[659px] max-md:snap-start max-md:snap-always";
 
   return (
@@ -819,7 +826,13 @@ export default async function FeedPage({
                   {useInlineChatLayout ? null : (
                     <div
                       className={`relative flex w-full items-center justify-center bg-black ${
-                        oneScreenFeed ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-[659px]" : ""
+                        // md:flex-1로 남는 세로 공간을 미디어 박스가 직접 흡수해야, 그 여유가
+                        // article의 justify-center로 밀려 올라가 헤더 위/반응줄 아래에 흰
+                        // 여백으로 보이지 않는다(2026-09-14 발견·수정 — 정사각형 659px 미디어
+                        // 자체는 그대로 유지되고, 남는 공간은 이 박스 안에서 검은 레터박스로
+                        // 흡수됨). min-h-0 없이 flex-1만 쓰면 정사각 자식의 내용 높이가
+                        // flex-basis로 강제돼 줄어들 공간이 안 생기므로 같이 필요.
+                        oneScreenFeed ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:min-h-0 md:flex-1" : ""
                       }`}
                     >
                       {!isComplex && (
@@ -831,7 +844,11 @@ export default async function FeedPage({
                       {post.isMock ? (
                         <div
                           className={`relative flex w-full items-center justify-center bg-gradient-to-br ${post.gradient} ${
-                            oneScreenFeed ? "h-[40svh] md:aspect-square" : "h-[420px]"
+                            // h-[40svh]는 breakpoint 없이 항상 걸리는 값이라, md:aspect-square가
+                            // 이기려면 먼저 md:h-auto로 그 고정 높이를 지워줘야 한다(안 그러면
+                            // 높이가 이미 정해진 값이라 aspect-ratio가 무시됨 — 2026-09-14
+                            // 실제로 이 버그로 데스크톱에서 657×396으로 깨졌던 걸 발견·수정).
+                            oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "h-[420px]"
                           }`}
                         >
                           {post.demoVideoSrc && (
@@ -849,7 +866,8 @@ export default async function FeedPage({
                           src={post.videoSrc}
                           alt={post.caption ?? "이미지 게시물"}
                           className={`w-full object-cover ${
-                            oneScreenFeed ? "h-[40svh] md:aspect-square" : "aspect-[4/5]"
+                            // 위 목업과 같은 이유로 md:h-auto 필요.
+                            oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "aspect-[4/5]"
                           }`}
                         />
                       ) : post.videoSrc && post.media_type === "audio" ? (
