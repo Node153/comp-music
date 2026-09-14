@@ -131,12 +131,14 @@ const blackLabel = `${labelClass} !text-black`;
 // 폼 안의 인풋 = "박스 안에 박스"라 옅은 그레이 배경(채색된 박스라 평소엔 테두리 없음),
 // 포커스만 활성화 상태를 나타내는 테두리(짙은 그레이)로 보여준다.
 const grayField =
-  "w-full rounded-xl border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-black focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray";
+  "w-full rounded-xl border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-active-gray focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray";
 const fileInputClass =
   "text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-main-gray file:px-3 file:py-2 file:text-sm file:font-medium file:text-black hover:file:opacity-80";
 // 공유 <Button variant="primary">는 기본이 검정 배경(다른 화면들과 공유하는 토큰이라 그대로 둠) —
 // 이 화면(그레이 3단계 규칙)에서만 !important로 활성화 박스 색(demo-bg)으로 덮어쓴다.
-const primaryButtonClass = "!bg-demo-bg !text-black";
+// !important가 배경색을 고정해버려서 Button 기본 hover:bg-gray-800이 안 먹으니, 다른 버튼들과
+// 같은 hover:opacity로 눌렀을 때 짙어지는 느낌을 따로 챙겨준다.
+const primaryButtonClass = "!bg-demo-bg !text-black hover:opacity-80";
 
 // 채색(배경)이 있는 박스는 테두리를 따로 안 그린다 — 배경색만으로 구분.
 function selectableButtonClass(active: boolean, base: string) {
@@ -246,7 +248,7 @@ function UploadDropbox({
         </>
       ) : (
         <>
-          <p className="text-lg font-bold">Upload</p>
+          <p className="text-lg font-bold text-active-gray">Upload</p>
           <p className="text-xs">{formatsLabel}</p>
         </>
       )}
@@ -772,7 +774,7 @@ export default function UploadPage() {
                 <button
                   type="button"
                   onClick={() => setPreviewOpen((v) => !v)}
-                  className="hidden self-start text-xs font-medium text-black hover:underline md:inline"
+                  className="hidden self-start text-xs font-medium text-active-gray hover:underline md:inline"
                 >
                   {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
                 </button>
@@ -1001,7 +1003,11 @@ export default function UploadPage() {
                   }}
                   className={grayField}
                 />
-                <Button type="button" onClick={addCustomTag} className="shrink-0 px-4 !bg-box-gray !text-black">
+                <Button
+                  type="button"
+                  onClick={addCustomTag}
+                  className="shrink-0 px-4 !bg-box-gray !text-black hover:opacity-80"
+                >
                   추가
                 </Button>
               </div>
@@ -1112,7 +1118,7 @@ export default function UploadPage() {
 
           {error && <p className={errorText}>{error}</p>}
           <Button type="submit" disabled={loading} className={`mt-1 w-full ${primaryButtonClass}`}>
-            {loading ? "게시 중..." : <span suppressHydrationWarning>{submitPhrase}</span>}
+            {loading ? "게시 중..." : <span suppressHydrationWarning>&quot;{submitPhrase}&quot;</span>}
           </Button>
         </form>
       </main>
