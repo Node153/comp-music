@@ -172,7 +172,7 @@ export function SoundbarPlayer({
       <button
         type="button"
         onClick={togglePlay}
-        className="group relative block aspect-[4/5] w-full overflow-hidden rounded-xl"
+        className="group relative block aspect-square w-full overflow-hidden rounded-xl"
       >
         {audioEl}
         {/* eslint-disable-next-line @next/next/no-img-element */}

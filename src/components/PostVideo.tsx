@@ -87,7 +87,7 @@ export function PostVideo({
           ref={videoRef}
           src={videoSrc}
           poster={posterSrc ?? undefined}
-          className="aspect-[4/5] w-full object-cover"
+          className="aspect-square w-full object-cover"
           muted
           playsInline
           onPlay={handlePlay}

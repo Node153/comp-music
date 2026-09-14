@@ -579,8 +579,16 @@ export default async function FeedPage({
   //   · 모바일(md 미만): 릴스/쇼츠식 스냅 스크롤. 프레임 = 100svh − MobileTopBar(h-12) −
   //     BottomNav(h-14) − iOS 하단 세이프에어리어. dvh가 아니라 svh인 이유: 주소창이 보일 때
   //     (가장 작을 때) 기준으로 잡아야 좋아요/댓글 줄이 하단 탭바 뒤로 안 잘림.
-  //   · 데스크톱(md 이상): 스냅은 없이 일반 스크롤이지만 카드 높이는 똑같이 고정한다.
-  //     프레임 = 100dvh − TopNav(h-14) − 상하 여백(≈ 3.5rem) = 100dvh − 7rem.
+  //   · 데스크톱(md 이상): **완전 고정 px, 뷰포트 크기 무관**(2026-09-14 확정, 사용자 요청 —
+  //     "모니터 기준 1440×990 고정, 카드 가로·세로 고정"). 1440×990 모니터에서 TopNav(h-14)
+  //     + 상하 여백(≈3.5rem) = 7rem(112px)을 뺀 878px을 세로로 잡고, 카드 비율을 4:3 세로
+  //     (가로:세로 = 3:4)로 맞춰 가로 878×3/4 = 658.5 → 659px. 즉 카드는 항상 659×878px —
+  //     4K든 작은 노트북이든(md 이상이면) 화면 크기와 무관하게 똑같은 크기. 예전엔 100dvh
+  //     기준으로 화면 크기에 비례해서 카드가 커지고 작아졌는데, 그 반응형 특성을 없앤 것.
+  //   · 미디어 박스(영상·음원+커버·이미지)도 전부 이 카드 폭(659px)에 맞춰 **정사각형(1:1)
+  //     으로 통일**(예전엔 영상 4:5/음원 4:5/이미지 1:1로 타입마다 달랐음 — 2026-09-14 확정).
+  //     헤더/캡션/태그/반응줄 아래에 남는 세로 여백은 article의 justify-center가 가운데로
+  //     흡수한다(굳이 flex-1로 미디어를 늘려 여백을 억지로 채우지 않음).
   //   · 비로그인 미리보기는 상단바/탭바 구성이 달라(GuestTopNav만) 높이 계산이 어긋나므로
   //     기존 카드 피드(자연 높이)를 그대로 둔다.
   const oneScreenFeed = !!currentUser;
@@ -588,14 +596,8 @@ export default async function FeedPage({
     ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_6.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
     : "flex flex-col gap-6";
   // 모바일: article이 정확히 스냅 프레임 높이(h-full)라 스냅이 게시물 top에 딱 맞는다.
-  // 데스크톱: article도 다시 고정 프레임(md:h-[calc(100dvh-7rem)])으로 — 카드 하나가
-  //   모니터 크기와 무관하게 항상 화면 한 판을 채운다(사용자 요청, "한 게시물만 보이게").
-  //   미디어 박스는 flex-1로 남는 공간을 다 먹고, 그 안의 1:1 정사각 미디어는 박스의
-  //   짧은 변에 맞춰 가운데 정렬(레터박스) — 예전처럼 폭 기준 4:3 고정 박스로 하면 큰
-  //   모니터에서 박스가 남는 세로 공간을 못 채워 여백이 다시 생겼다. md:max-w-[760px]로
-  //   카드 폭도 좀 더 키움(기존 620px). memo는 채팅이 있어 원래도 고정 프레임 + 내부 스크롤.
-  // 헤더/캡션/태그/반응줄은 shrink-0, 미디어는 min-h-0으로 눌러도 되게 — 합이 프레임과
-  // 같아 안 잘리고 안 남는다.
+  // 데스크톱: 카드 659×878px 고정(위 설명 참고). memo는 채팅이 있어 원래도 고정 프레임 +
+  //   내부 스크롤(높이만 같은 878px 적용, 폭 제한은 채팅 레이아웃이 따로 관리).
   const articleSnapClass = !oneScreenFeed
     ? ""
     : isComplex
@@ -604,8 +606,8 @@ export default async function FeedPage({
       // 예전엔 block이라 채팅 내용이 짧으면 입력칸이 그 바로 아래 뜨고 그 밑으로 빈
       // 공간이 남았다. 채팅이 프레임보다 길면(shrink-0) article의 overflow-y-auto가 그대로
       // 전체 스크롤을 맡는다(내부 이중 스크롤 없음).
-      ? "flex flex-col shrink-0 overflow-y-auto h-full md:h-[calc(100dvh_-_7rem)] max-md:snap-start max-md:snap-always"
-      : "flex shrink-0 flex-col justify-center overflow-hidden h-full md:h-[calc(100dvh_-_7rem)] md:mx-auto md:w-full md:max-w-[760px] max-md:snap-start max-md:snap-always";
+      ? "flex flex-col shrink-0 overflow-y-auto h-full md:h-[878px] max-md:snap-start max-md:snap-always"
+      : "flex shrink-0 flex-col justify-center overflow-hidden h-full md:h-[878px] md:mx-auto md:w-full md:max-w-[659px] max-md:snap-start max-md:snap-always";
 
   return (
     <main
@@ -817,9 +819,7 @@ export default async function FeedPage({
                   {useInlineChatLayout ? null : (
                     <div
                       className={`relative flex w-full items-center justify-center bg-black ${
-                        oneScreenFeed
-                          ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-[760px] md:min-h-0 md:flex-1"
-                          : ""
+                        oneScreenFeed ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-[659px]" : ""
                       }`}
                     >
                       {!isComplex && (
@@ -831,7 +831,7 @@ export default async function FeedPage({
                       {post.isMock ? (
                         <div
                           className={`relative flex w-full items-center justify-center bg-gradient-to-br ${post.gradient} ${
-                            oneScreenFeed ? "h-[40svh] md:h-full md:w-auto md:aspect-square" : "h-[420px]"
+                            oneScreenFeed ? "h-[40svh] md:aspect-square" : "h-[420px]"
                           }`}
                         >
                           {post.demoVideoSrc && (
@@ -849,11 +849,15 @@ export default async function FeedPage({
                           src={post.videoSrc}
                           alt={post.caption ?? "이미지 게시물"}
                           className={`w-full object-cover ${
-                            oneScreenFeed ? "h-[40svh] md:h-full md:w-auto md:aspect-square" : "aspect-[4/5]"
+                            oneScreenFeed ? "h-[40svh] md:aspect-square" : "aspect-[4/5]"
                           }`}
                         />
                       ) : post.videoSrc && post.media_type === "audio" ? (
-                        <div className="flex w-full flex-col items-center gap-3 p-4">
+                        // 음원+커버도 영상·이미지와 같은 정사각형(1:1)으로 통일(2026-09-14
+                        // 확정) — 예전엔 카드 폭을 그대로 채우는 4:5였음. 래퍼에 패딩을 두지
+                        // 않아야 폭이 영상/이미지와 완전히 같은 659px가 된다(SoundbarPlayer
+                        // 자체 aspect-square가 정사각형을 만듦).
+                        <div className="w-full">
                           <SoundbarPlayer
                             src={post.videoSrc}
                             title={post.caption || "음원"}
@@ -869,8 +873,10 @@ export default async function FeedPage({
                       ) : post.videoSrc ? (
                         // DEMO는 SoundCloud처럼 음원+커버 이미지가 중심이라 영상은 부차적인
                         // 존재로 취급 — 실제 화질을 낮춰 인코딩하는 건 아직 없어서(추후 파이프라인
-                        // 필요), 지금은 화면에 작고 빈티지하게 보이도록 크기·필터만 낮춘 스케치.
-                        <div className="mx-auto max-w-[420px] p-4 saturate-[0.7] sepia-[0.15]">
+                        // 필요), 지금은 화면에 작고 빈티지하게 보이도록 필터만 낮춘 스케치.
+                        // 크기는 2026-09-14부터 영상만 따로 작게(420px) 누르지 않고 음원·이미지와
+                        // 같은 659px 정사각형으로 통일(PostVideo 자체 aspect-square).
+                        <div className="w-full saturate-[0.7] sepia-[0.15]">
                           <PostVideo
                             postId={post.id}
                             title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
