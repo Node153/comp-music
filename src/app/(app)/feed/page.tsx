@@ -845,10 +845,15 @@ export default async function FeedPage({
                         // 없이 항상 걸리는 값이라 md:max-h-none으로 지워줘야 flex-1이 실제로
                         // 커질 수 있다(안 그러면 40svh=396px에 눌려서 정사각 미디어가 위아래로
                         // 잘림 — 배포 직후 실측으로 발견·수정).
+                        // max-h-[40svh]는 breakpoint 없이 항상 걸리는 값이라(모바일 릴스 프레임용)
+                        // flex-1을 안 쓰는 DEMO 분기에서도 md:max-h-none으로 반드시 지워줘야
+                        // 한다 — 안 그러면 이 값(990px 기준 396px)이 657px 정사각 미디어보다
+                        // 작아서 desktop에서도 영상이 그 안에 잘려 들어간다(재배포 직후 실측
+                        // 으로 또 발견·수정 — DEMO/memo 두 분기 모두 이 override가 필요).
                         oneScreenFeed
                           ? isComplex
                             ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-none md:min-h-0 md:flex-1"
-                            : "max-md:shrink-0 overflow-hidden max-h-[40svh]"
+                            : "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-none"
                           : ""
                       }`}
                     >
