@@ -208,8 +208,8 @@ function UploadDropbox({
         setDragOver(false);
         onSelect(e.dataTransfer.files?.[0] ?? null);
       }}
-      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition ${
-        dragOver ? "border-box-gray bg-demo-bg text-black" : "border-box-gray bg-box-gray text-black hover:opacity-90"
+      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-10 text-center transition ${
+        dragOver ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-90"
       }`}
     >
       <input
@@ -1001,7 +1001,7 @@ export default function UploadPage() {
                   }}
                   className={grayField}
                 />
-                <Button type="button" onClick={addCustomTag} className={`shrink-0 px-4 ${primaryButtonClass}`}>
+                <Button type="button" onClick={addCustomTag} className="shrink-0 px-4 !bg-box-gray !text-black">
                   추가
                 </Button>
               </div>
@@ -1129,7 +1129,9 @@ export default function UploadPage() {
           <div className="flex w-[400px] shrink-0 flex-col gap-3 rounded-2xl bg-main-gray p-4">
             <span className={blackLabel}>미리보기 — 게시하면 이렇게 보여요</span>
             <div className="overflow-hidden rounded-xl border border-gray-500">
-              <div className="relative flex aspect-square items-center justify-center bg-black">
+              {/* aspect-[4/5] — 실제 피드(PostVideo.tsx tone="demo"/이미지 게시물)와 동일한
+                  비율(Instagram 참고, 세로 4:5)로 맞춰서 미리보기가 실제 크기와 똑같이 보이게 한다. */}
+              <div className="relative flex aspect-[4/5] items-center justify-center bg-black">
                 {previewVideoSrc ? (
                   <video src={previewVideoSrc} poster={previewCoverSrc ?? undefined} controls muted className="h-full w-full object-cover" />
                 ) : previewCoverSrc ? (
