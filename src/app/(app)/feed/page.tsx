@@ -831,8 +831,13 @@ export default async function FeedPage({
                         // 여백으로 보이지 않는다(2026-09-14 발견·수정 — 정사각형 659px 미디어
                         // 자체는 그대로 유지되고, 남는 공간은 이 박스 안에서 검은 레터박스로
                         // 흡수됨). min-h-0 없이 flex-1만 쓰면 정사각 자식의 내용 높이가
-                        // flex-basis로 강제돼 줄어들 공간이 안 생기므로 같이 필요.
-                        oneScreenFeed ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:min-h-0 md:flex-1" : ""
+                        // flex-basis로 강제돼 줄어들 공간이 안 생기므로 같이 필요. max-h-[40svh]도
+                        // breakpoint 없이 항상 걸리는 값이라 md:max-h-none으로 지워줘야 flex-1이
+                        // 실제로 커질 수 있다(안 그러면 40svh=396px에 눌려서 정사각 미디어가
+                        // 그 안에서 위아래로 잘림 — 배포 직후 실측으로 발견·수정).
+                        oneScreenFeed
+                          ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-none md:min-h-0 md:flex-1"
+                          : ""
                       }`}
                     >
                       {!isComplex && (
