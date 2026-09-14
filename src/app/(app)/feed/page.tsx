@@ -587,12 +587,17 @@ export default async function FeedPage({
   //     기준으로 화면 크기에 비례해서 카드가 커지고 작아졌는데, 그 반응형 특성을 없앤 것.
   //   · 미디어 박스(영상·음원+커버·이미지)도 전부 이 카드 폭(659px)에 맞춰 **정사각형(1:1)
   //     으로 통일**(예전엔 영상 4:5/음원 4:5/이미지 1:1로 타입마다 달랐음 — 2026-09-14 확정).
-  //     미디어 박스 자체는 md:flex-1로 남는 세로 공간을 직접 흡수한다(2026-09-14 수정 —
-  //     처음엔 미디어를 딱 659px로 고정하고 article의 justify-center가 남는 공간을 카드
-  //     맨 위/아래 흰 여백으로 흡수하게 했는데, 헤더 위·반응줄 아래에 눈에 띄는 여백이
-  //     생겨서 되돌림. 지금은 정사각 미디어 자체는 그대로 659px고, 남는 공간만 미디어
-  //     박스 안에서 검은 레터박스로 흡수돼 헤더는 카드 맨 위, 반응줄은 카드 맨 아래에
-  //     딱 붙는다).
+  //     DEMO(비 isComplex) 카드는 **높이를 878px로 억지로 채우지 않고 내용물(헤더+캡션+
+  //     657px 정사각 미디어+태그+반응줄) 높이 그대로**를 쓴다(2026-09-14 최종 확정 — 처음엔
+  //     미디어를 659px로 고정하고 남는 공간을 article의 justify-center가 카드 위/아래 흰
+  //     여백으로 흡수하게 했다가, 그다음엔 미디어 박스 자체가 md:flex-1로 남는 공간을 검은
+  //     레터박스로 흡수하게 바꿨는데 — 두 방법 다 "카드는 878px 고정 + 미디어는 657px 고정"을
+  //     동시에 만족시키려다 보니 그 차이가 흰 여백이든 검은 바든 반드시 어딘가에 남았다.
+  //     캡션·태그 길이가 게시물마다 달라 그 차이가 매번 다르기 때문에 둘 다 고정하면서
+  //     여백을 완전히 없앨 방법이 없다 — 그래서 카드 높이 쪽을 내용물에 맞춰 자연스럽게
+  //     줄여서(878px보다 살짝 작게, 게시물마다 조금씩 다름) 여백 자체가 생기지 않게 했다.
+  //     memo(합작 포함) 카드는 안의 채팅 목록이 스크롤 프레임으로 878px 고정이 계속
+  //     필요해서 그대로 둔다(아래 articleSnapClass).
   //   · 비로그인 미리보기는 상단바/탭바 구성이 달라(GuestTopNav만) 높이 계산이 어긋나므로
   //     기존 카드 피드(자연 높이)를 그대로 둔다.
   const oneScreenFeed = !!currentUser;
@@ -614,7 +619,8 @@ export default async function FeedPage({
       // 공간이 남았다. 채팅이 프레임보다 길면(shrink-0) article의 overflow-y-auto가 그대로
       // 전체 스크롤을 맡는다(내부 이중 스크롤 없음).
       ? "flex flex-col shrink-0 overflow-y-auto h-full md:h-[878px] md:mx-auto md:w-full md:max-w-[659px] max-md:snap-start max-md:snap-always"
-      : "flex shrink-0 flex-col justify-center overflow-hidden h-full md:h-[878px] md:mx-auto md:w-full md:max-w-[659px] max-md:snap-start max-md:snap-always";
+      // DEMO는 md:h-auto — 878px로 늘리지 않고 내용물 높이 그대로(위 설명 참고).
+      : "flex shrink-0 flex-col h-full md:h-auto md:mx-auto md:w-full md:max-w-[659px] max-md:snap-start max-md:snap-always";
 
   return (
     <main
@@ -825,25 +831,24 @@ export default async function FeedPage({
                       보이므로, 굳이 이 유형만 따로 표시할 이유가 없다(위 posts 필터 참고). */}
                   {useInlineChatLayout ? null : (
                     <div
-                      className={`relative flex w-full items-center md:items-end justify-center bg-black ${
-                        // md:items-end(2026-09-14 추가, 사용자 요청): 정사각 미디어는 항상
-                        // 657px 그대로 고정하고, 남는 공간은 전부 미디어 박스 "위"(캡션과
-                        // 미디어 사이)로만 몰아서 반응줄 바로 위(미디어 하단)엔 여백이 생기지
-                        // 않게 한다 — 캡션·태그가 길어져 여유 공간이 657px보다 작아지는 극단적인
-                        // 경우에도 잘리는 쪽은 영상 위쪽일 뿐, 좋아요·댓글 줄은 항상 카드 맨
-                        // 아래에 그대로 남는다(모바일은 기존 items-center 유지 — max-md: 접두사
-                        // 없이 기본값이라 md:items-end가 데스크톱에서만 이를 덮어씀).
-                        // md:flex-1로 남는 세로 공간을 미디어 박스가 직접 흡수해야, 그 여유가
-                        // article의 justify-center로 밀려 올라가 헤더 위/반응줄 아래에 흰
-                        // 여백으로 보이지 않는다(2026-09-14 발견·수정 — 정사각형 659px 미디어
-                        // 자체는 그대로 유지되고, 남는 공간은 이 박스 안에서 검은 레터박스로
-                        // 흡수됨). min-h-0 없이 flex-1만 쓰면 정사각 자식의 내용 높이가
-                        // flex-basis로 강제돼 줄어들 공간이 안 생기므로 같이 필요. max-h-[40svh]도
-                        // breakpoint 없이 항상 걸리는 값이라 md:max-h-none으로 지워줘야 flex-1이
-                        // 실제로 커질 수 있다(안 그러면 40svh=396px에 눌려서 정사각 미디어가
-                        // 그 안에서 위아래로 잘림 — 배포 직후 실측으로 발견·수정).
+                      className={`relative flex w-full items-center ${isComplex ? "md:items-end" : ""} justify-center bg-black ${
+                        // DEMO(!isComplex)는 article이 이제 md:h-auto(내용물 높이 그대로)라
+                        // 미디어 박스가 남는 공간을 흡수할 필요 자체가 없다 — 그냥 657px
+                        // 정사각형 그대로 두면 카드도 딱 그만큼만 높아지고 여백이 아예 안
+                        // 생긴다(2026-09-14 최종 확정, 위 feedListClass 설명 참고).
+                        // memo 비합작(isComplex && !collab)은 article이 여전히 md:h-[878px]
+                        // 고정(채팅 스크롤 프레임 때문)이라 남는 공간이 생길 수 있음 — 이
+                        // 경우만 md:flex-1로 미디어 박스가 직접 흡수하고 md:items-end로 그
+                        // 여유를 미디어 "위"에만 몰아서 반응줄 바로 위는 항상 딱 붙게 한다.
+                        // min-h-0 없이 flex-1만 쓰면 정사각 자식의 내용 높이가 flex-basis로
+                        // 강제돼 줄어들 공간이 안 생기므로 같이 필요. max-h-[40svh]도 breakpoint
+                        // 없이 항상 걸리는 값이라 md:max-h-none으로 지워줘야 flex-1이 실제로
+                        // 커질 수 있다(안 그러면 40svh=396px에 눌려서 정사각 미디어가 위아래로
+                        // 잘림 — 배포 직후 실측으로 발견·수정).
                         oneScreenFeed
-                          ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-none md:min-h-0 md:flex-1"
+                          ? isComplex
+                            ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-none md:min-h-0 md:flex-1"
+                            : "max-md:shrink-0 overflow-hidden max-h-[40svh]"
                           : ""
                       }`}
                     >
