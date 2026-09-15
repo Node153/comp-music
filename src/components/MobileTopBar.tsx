@@ -50,7 +50,9 @@ export function MobileTopBar() {
                   ? tab.value === "complex"
                     ? "bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300"
                     : "bg-demo-gold/15 text-demo-gold"
-                  : "text-gray-400"
+                  : isFeed
+                    ? "text-gray-400"
+                    : "text-black"
               }`}
             >
               <span>{tab.icon}</span>

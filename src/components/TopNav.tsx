@@ -81,7 +81,9 @@ export function TopNav({
                   ? tab.value === "complex"
                     ? "border-violet-500 text-violet-600 dark:text-violet-300"
                     : "border-demo-gold text-demo-gold"
-                  : "border-transparent text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900"
+                  : isFeed
+                    ? "border-transparent text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900"
+                    : "border-transparent text-black hover:opacity-80"
               }`}
             >
               <span className="text-base">{tab.icon}</span>
