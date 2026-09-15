@@ -9,7 +9,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { BellIcon } from "@/components/icons";
 import { useNotificationCount } from "@/components/NotificationCountContext";
-import { beginThemeTransition } from "@/lib/theme";
+import { beginThemeTransitionWithSound } from "@/lib/theme";
 import { topBarIconClass } from "@/components/ui/styles";
 
 const FEED_TABS = [
@@ -44,7 +44,7 @@ export function MobileTopBar() {
             <Link
               key={tab.value}
               href={`/feed?feed=${tab.value}`}
-              onClick={beginThemeTransition}
+              onClick={() => beginThemeTransitionWithSound(tab.value === "complex")}
               className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition ${
                 isActive
                   ? tab.value === "complex"

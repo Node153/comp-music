@@ -16,7 +16,7 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { MessagesMenu } from "@/components/MessagesMenu";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
-import { beginThemeTransition } from "@/lib/theme";
+import { beginThemeTransitionWithSound } from "@/lib/theme";
 import { PlusIcon, HelpIcon, SearchIcon } from "@/components/icons";
 import { topBarIconClass } from "@/components/ui/styles";
 
@@ -70,7 +70,7 @@ export function TopNav({
             <Link
               key={tab.value}
               href={`/feed?feed=${tab.value}`}
-              onClick={beginThemeTransition}
+              onClick={() => beginThemeTransitionWithSound(tab.value === "complex")}
               title={
                 tab.value === "completion"
                   ? "전체공개 게시물 · 노출 시간 영구"

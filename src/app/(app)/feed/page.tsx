@@ -566,9 +566,15 @@ export default async function FeedPage({
         approvedMemberCount ?? 0,
       );
 
-  const allPostsUnfiltered = [...postsWithVideo, ...mockPosts].sort(
-    (a, b) => new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime(),
-  );
+  // memo 탭은 합작(collab_available) 게시물을 최신순보다 우선해 상단에 고정한다(사용자 요청)
+  // — 같이 만들 사람을 구하는 글이라 눈에 먼저 띄어야 한다. DEMO는 그대로 최신순.
+  const allPostsUnfiltered = [...postsWithVideo, ...mockPosts].sort((a, b) => {
+    if (isComplex) {
+      const collabDiff = Number(b.collab_available) - Number(a.collab_available);
+      if (collabDiff !== 0) return collabDiff;
+    }
+    return new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime();
+  });
   // 해시태그 클릭 시 그 태그가 달린 게시물만 보기(DEMO 전용 — memo는 태그 개념이 없음).
   // 목록을 DB에서부터 다시 걸러오는 대신 이미 불러온 목록을 한 번 더 좁히는 방식 — feed가
   // 어차피 최근 20개 + mock 소량이라 성능상 문제없고, mock 게시물도 똑같이 걸러진다.

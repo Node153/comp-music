@@ -8,11 +8,19 @@ const TRANSITION_MS = 4000;
 let clearTimer: ReturnType<typeof setTimeout> | null = null;
 
 // <audio> 대신 Audio 객체를 미리 만들어 캐시 — 매번 새로 만들면 첫 재생이 로딩 때문에 늦는다.
-// 탭 클릭(사용자 제스처) 흐름에서 호출되므로 브라우저 자동재생 정책에 안 걸린다.
+// 반드시 탭 <Link>의 onClick 핸들러 안에서 "동기적으로" 호출해야 브라우저 자동재생 정책에
+// 안 걸린다 — /feed는 searchParams를 읽는 동적 서버 컴포넌트라 탭 클릭이 실제 네비게이션
+// (RSC 왕복)을 일으키고, ThemeSync의 useEffect(=applyTheme)는 그 응답이 온 "뒤"에야 실행된다.
+// 예전엔 사운드 재생을 그 이펙트 쪽(applyTheme)에서 했는데, 클릭 시점과 재생 시점 사이에
+// 네트워크 왕복만큼의 비동기 지연이 끼면서 브라우저의 user-activation이 만료돼 play()가
+// 조용히(.catch로 삼켜짐) 실패하는 경우가 있었다(사용자 제보 — "가끔씩 탭 누를 때 소리가
+// 안 남", 느린 네트워크/콜드 스타트일수록 재현). 그래서 사운드는 이제 탭 onClick에서
+// beginThemeTransitionWithSound로 동기 호출하고, applyTheme/ThemeSync는 시각적 전환(다크
+// 클래스 토글 + 그라데이션)만 담당한다.
 let dayAudio: HTMLAudioElement | null = null;
 let nightAudio: HTMLAudioElement | null = null;
 
-function playThemeSound(dark: boolean) {
+export function playThemeSound(dark: boolean) {
   if (typeof Audio === "undefined") return;
   if (!dayAudio) {
     dayAudio = new Audio("/theme-day.wav");
@@ -44,15 +52,26 @@ export function beginThemeTransition() {
   }, TRANSITION_MS);
 }
 
+// DEMO/memo 탭 <Link>의 onClick에서 쓰는 진입점 — 그라데이션 예약과 효과음 재생을 클릭
+// 시점에 동기적으로 함께 처리한다(위 playThemeSound 설명 참고). dark는 그 탭을 눌렀을 때
+// 향할 목표 테마 — 이미 그 테마라면(같은 탭 재클릭) 조용히 무시한다.
+export function beginThemeTransitionWithSound(dark: boolean) {
+  if (document.documentElement.classList.contains("dark") === dark) return;
+  beginThemeTransition();
+  playThemeSound(dark);
+}
+
 export function applyTheme(dark: boolean, { animate = true }: { animate?: boolean } = {}) {
   const root = document.documentElement;
 
-  // 이미 원하는 상태면 아무것도 안 함 — 불필요한 트랜지션 깜빡임/중복 효과음 방지.
+  // 이미 원하는 상태면 아무것도 안 함 — 불필요한 트랜지션 깜빡임 방지.
   if (root.classList.contains("dark") === dark) return;
 
+  // 효과음은 탭 onClick의 beginThemeTransitionWithSound가 이미 재생했다 — 여기서 또
+  // 재생하면 중복 재생된다. 여기(네비게이션 후 이펙트)는 .dark 클래스 토글 + 그라데이션
+  // 트랜지션 시작만 담당한다.
   if (animate) {
     beginThemeTransition();
-    playThemeSound(dark);
   }
 
   root.classList.toggle("dark", dark);
