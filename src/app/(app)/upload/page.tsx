@@ -1005,6 +1005,9 @@ export default function UploadPage() {
               placeholder="작품 제목을 입력해주세요"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              // Safari가 이 필드를 이름/연락처로 오인해 자동완성 아이콘을 얹는 걸 방지
+              // (사용자 제보 — 제목 칸에 사람 아이콘이 떴음).
+              autoComplete="off"
               className={grayField}
             />
           </div>
