@@ -225,8 +225,14 @@ function UploadDropbox({
         setDragOver(false);
         onSelect(e.dataTransfer.files?.[0] ?? null);
       }}
-      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-10 text-center text-active-gray transition ${
-        dragOver ? "bg-demo-bg" : "bg-box-gray hover:opacity-80"
+      // hover:opacity-80는 이 박스 테두리(border-active-gray)가 페이지 캔버스 배경(마찬가지로
+      // active-gray, PageCanvas.tsx)과 색이 같아서 옅어져도 거의 안 보이고, 안쪽 채움(box-gray)도
+      // 옅게 반투명해지는 정도라 박스 전체가 반응하는 느낌이 잘 안 났다(사용자 지적, 2026-09-15).
+      // 그래서 채움 자체를 명확히 다른 색(box-gray와 main-gray 사이)으로 바꿔서 점선 안 전체
+      // 표면이 눈에 띄게 짙어지게 했다 — 이전에 main-gray 통째로는 "너무 짙다"는 피드백을
+      // 받았던 적이 있어(2026-09-14) 그보다 옅은 중간 톤을 골랐다.
+      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-10 text-center text-active-gray transition-colors ${
+        dragOver ? "bg-demo-bg" : "bg-box-gray hover:bg-[#adadad]"
       }`}
     >
       <input
