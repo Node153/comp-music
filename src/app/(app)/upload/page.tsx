@@ -116,13 +116,20 @@ function formatMB(bytes: number) {
 // 어떤 비율의 이미지가 와도 가운데를 기준으로 정사각형으로 크롭해서 저장한다(2026-09-16).
 // GIF 커버(GiphyPicker로 고르는 쪽)는 File이 아니라 외부 URL 참조라 여기서 크롭할 대상 자체가
 // 없다 — 어차피 표시할 때 object-cover+aspect-square라 화면에서는 이미 정사각형으로 보인다.
-function cropImageFileToSquare(file: File): Promise<File> {
+// position(0~100%, 기본 50/50=가운데)으로 어느 부분을 크롭할지 고를 수 있다 — 업로드 화면의
+// 드래그 위치 조정 UI가 이 값을 넘긴다(2026-09-16, 사용자 요청).
+function cropImageFileToSquare(
+  file: File,
+  position: { x: number; y: number } = { x: 50, y: 50 },
+): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       const size = Math.min(img.naturalWidth, img.naturalHeight);
-      const sx = (img.naturalWidth - size) / 2;
-      const sy = (img.naturalHeight - size) / 2;
+      const maxSx = img.naturalWidth - size;
+      const maxSy = img.naturalHeight - size;
+      const sx = maxSx * (position.x / 100);
+      const sy = maxSy * (position.y / 100);
       const canvas = document.createElement("canvas");
       canvas.width = size;
       canvas.height = size;
@@ -300,6 +307,79 @@ function UploadDropbox({
   );
 }
 
+// 업로드한 커버 이미지를 드래그해서 정사각형 크롭 노출 영역을 고르는 위젯(2026-09-16,
+// 사용자 요청 — "노출영역을 조정할 수 있게끔"). 실제 크롭은 이 값을 들고 제출 시점에
+// cropImageFileToSquare가 한 번만 수행하고, 여기서는 object-position만 실시간으로
+// 바꿔서 가볍게 미리보기만 한다. 정확한 드래그 범위는 원본 이미지의 실제 여유 길이
+// (naturalWidth/Height 중 더 긴 쪽 - 짧은 쪽)를 알아야 딱 맞지만, 그러려면 이미지 로드를
+// 기다려야 해서 컨테이너 자체 크기를 기준으로 근사했다 — 사용자가 눈으로 보면서 직접
+// 맞추는 UI라 약간의 오차보다 반응 속도가 더 중요하다고 판단.
+function CoverPositionPicker({
+  src,
+  position,
+  onChange,
+  size = 160,
+}: {
+  src: string;
+  position: { x: number; y: number };
+  onChange: (next: { x: number; y: number }) => void;
+  size?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ startX: number; startY: number; startPos: { x: number; y: number } } | null>(null);
+
+  function clamp(v: number) {
+    return Math.min(100, Math.max(0, v));
+  }
+
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startPos: position };
+  }
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragRef.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const deltaX = e.clientX - dragRef.current.startX;
+    const deltaY = e.clientY - dragRef.current.startY;
+    // 컨텐츠(이미지)를 오른쪽으로 끌면 보이는 창은 왼쪽으로 이동해야(=object-position
+    // x%는 감소) 손가락을 따라 이미지가 움직이는 것처럼 느껴진다 — 그래서 부호를 반전.
+    onChange({
+      x: clamp(dragRef.current.startPos.x - (deltaX / rect.width) * 100),
+      y: clamp(dragRef.current.startPos.y - (deltaY / rect.height) * 100),
+    });
+  }
+  function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (containerRef.current?.hasPointerCapture(e.pointerId)) {
+      containerRef.current.releasePointerCapture(e.pointerId);
+    }
+    dragRef.current = null;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div
+        ref={containerRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        style={{ width: size, height: size }}
+        className="relative shrink-0 cursor-move touch-none select-none overflow-hidden rounded-lg"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt="커버 위치 조정"
+          draggable={false}
+          className="pointer-events-none h-full w-full object-cover"
+          style={{ objectPosition: `${position.x}% ${position.y}%` }}
+        />
+      </div>
+      <p className="text-[11px] text-active-gray">드래그해서 노출 영역을 조정하세요</p>
+    </div>
+  );
+}
+
 export default function UploadPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -316,10 +396,18 @@ export default function UploadPage() {
   const [mediaFileError, setMediaFileError] = useState<string | null>(null);
   // posts.thumbnail_url(원래부터 있던 컬럼, 이제야 처음 사용)에 저장돼 피드에서 영상 poster/커버로 쓰인다.
   // DEMO는 Instagram처럼 커버 이미지가 사실상 메인 비주얼이라 필수로 바꿈.
+  // coverFile은 원본(크롭 전) 파일을 그대로 들고 있는다 — 실제 정사각형 크롭은 제출 시점에
+  // coverPosition을 반영해 한 번만 수행한다(2026-09-16, 사용자 요청 — 드래그로 노출 영역을
+  // 조정할 수 있어야 해서, 선택 즉시 가운데로 확정 크롭해버리면 나중에 되돌릴 수 없었음).
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverFileError, setCoverFileError] = useState<string | null>(null);
+  // 정사각형 크롭 시 어느 부분을 보여줄지 — 0~100%, 50/50이 가운데(기존 자동 크롭과 동일).
+  // 새 파일을 고르거나 제거하면 다시 가운데로 리셋된다.
+  const [coverPosition, setCoverPosition] = useState({ x: 50, y: 50 });
   // 사진이 없는 유저를 위한 대안 — GIPHY에서 GIF를 골라 커버로 쓸 수 있다(GiphyPicker).
   // coverFile과 coverGifUrl은 동시에 하나만 유효(둘 중 하나를 고르면 다른 쪽은 비운다).
+  // GIF는 파일이 아니라 외부 URL 참조라 픽셀을 직접 크롭할 수 없어서 위치 조정 대상에서는
+  // 빠진다(사용자에게 안내, 추후 필요해지면 DB에 노출 위치를 저장하는 별도 작업 필요).
   const [coverGifUrl, setCoverGifUrl] = useState<string | null>(null);
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
 
@@ -459,6 +547,7 @@ export default function UploadPage() {
     setMediaFileError(null);
     setCoverFile(null);
     setCoverFileError(null);
+    setCoverPosition({ x: 50, y: 50 });
     setCoverGifUrl(null);
     if (file && file.size > MAX_FILE_SIZE_BYTES) {
       setMediaFile(null);
@@ -470,24 +559,23 @@ export default function UploadPage() {
     setMediaKind(file ? detectMediaKind(file) : null);
   }
 
-  async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     e.target.value = "";
     setCoverFileError(null);
-    if (!file) {
-      setCoverFile(null);
-      return;
-    }
-    // 비율 상관없이 무조건 받아서 가운데 기준 정사각형으로 자동 크롭(사용자 요청 —
-    // "이미지 비율이 안 맞다고 업로드 불가하면 안 됨").
-    setCoverFile(await cropImageFileToSquare(file));
-    setCoverGifUrl(null);
+    // 비율 상관없이 무조건 받는다(사용자 요청 — "이미지 비율이 안 맞다고 업로드 불가하면
+    // 안 됨"). 원본을 그대로 들고 있다가 드래그로 위치를 고르게 하고, 실제 정사각형 크롭은
+    // 제출 시점에(handleSubmit) coverPosition을 반영해서 한다.
+    setCoverFile(file);
+    setCoverPosition({ x: 50, y: 50 });
+    if (file) setCoverGifUrl(null);
   }
 
   function handleSelectGif(gif: { url: string; width: number; height: number }) {
     setCoverGifUrl(gif.url);
     setCoverFile(null);
     setCoverFileError(null);
+    setCoverPosition({ x: 50, y: 50 });
     setGifPickerOpen(false);
   }
 
@@ -637,7 +725,9 @@ export default function UploadPage() {
           if (coverGifUrl) {
             complexThumbnailPath = coverGifUrl;
           } else if (coverFile) {
-            complexThumbnailPath = await uploadFileToR2(coverFile);
+            // 실제 정사각형 크롭은 여기서 한 번만 — coverPosition(드래그로 고른 노출 영역)을
+            // 반영해 업로드 직전에 수행한다.
+            complexThumbnailPath = await uploadFileToR2(await cropImageFileToSquare(coverFile, coverPosition));
           }
         } catch (err) {
           setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
@@ -743,7 +833,7 @@ export default function UploadPage() {
       if (coverGifUrl) {
         thumbnailPath = coverGifUrl;
       } else if (coverFile) {
-        thumbnailPath = await uploadFileToR2(coverFile);
+        thumbnailPath = await uploadFileToR2(await cropImageFileToSquare(coverFile, coverPosition));
       }
     } catch (err) {
       setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
@@ -972,11 +1062,10 @@ export default function UploadPage() {
                       </div>
                       {coverObjectUrl && (
                         <div className="flex items-center gap-2">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <CoverPositionPicker
                             src={coverObjectUrl}
-                            alt="선택한 커버 이미지"
-                            className="h-24 w-24 rounded-lg object-cover"
+                            position={coverPosition}
+                            onChange={setCoverPosition}
                           />
                           <Button
                             type="button"
@@ -984,6 +1073,7 @@ export default function UploadPage() {
                             onClick={() => {
                               setCoverFile(null);
                               setCoverFileError(null);
+                              setCoverPosition({ x: 50, y: 50 });
                             }}
                             className="text-sm"
                           >
@@ -1077,11 +1167,10 @@ export default function UploadPage() {
                       </div>
                       {coverObjectUrl && (
                         <div className="flex items-center gap-2">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <CoverPositionPicker
                             src={coverObjectUrl}
-                            alt="선택한 커버 이미지"
-                            className="h-24 w-24 rounded-lg object-cover"
+                            position={coverPosition}
+                            onChange={setCoverPosition}
                           />
                           <Button
                             type="button"
@@ -1089,6 +1178,7 @@ export default function UploadPage() {
                             onClick={() => {
                               setCoverFile(null);
                               setCoverFileError(null);
+                              setCoverPosition({ x: 50, y: 50 });
                             }}
                             className="text-sm"
                           >
@@ -1317,6 +1407,9 @@ export default function UploadPage() {
                     src={previewCoverSrc}
                     alt="커버 미리보기"
                     className="aspect-square w-full object-cover"
+                    // GIF(coverGifUrl)는 외부 URL이라 위치 조정 대상이 아니라 가운데 고정,
+                    // 직접 올린 이미지는 CoverPositionPicker에서 고른 위치를 그대로 반영.
+                    style={coverGifUrl ? undefined : { objectPosition: `${coverPosition.x}% ${coverPosition.y}%` }}
                   />
                 ) : (
                   <div className="flex aspect-square w-full items-center justify-center">
