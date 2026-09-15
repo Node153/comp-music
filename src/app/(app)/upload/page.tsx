@@ -12,6 +12,7 @@ import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker
 import { GiphyPicker } from "@/components/GiphyPicker";
 import { LockIcon, EyeIcon, HeartIcon, CommentIcon } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
+import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
 import { tagColorClass } from "@/lib/feedConstants";
@@ -553,6 +554,17 @@ export default function UploadPage() {
   // 이제 DEMO의 메인 비주얼이라, 영상이 없어도(음원만 골랐거나 아직 아무것도 안 골랐어도)
   // 커버+캡션+해시태그만으로 미리보기를 띄운다.
   const showPostPreview = showsFeedLikePreview && (previewCoverSrc || activeFile);
+  // memo 단독 게시물 미리보기는 실제 memo 피드처럼 다크 톤 + 우상단 남은시간 뱃지가 있어야
+  // 한다(2026-09-15, 사용자 요청). 업로드 화면 자체는 dark 클래스가 안 걸려있어서(피드에서만
+  // ThemeSync가 <html>에 .dark를 붙임) dark: variant 대신 조건부로 직접 색을 고른다.
+  const previewIsMemo = uploadType === "complex";
+  // 노출 시간(expireHours)로부터 지금 게시하면 언제 만료될지 미리 계산 — TimeLimitBadge가
+  // 알아서 카운트다운하므로 값 자체는 expireHours가 바뀔 때만 다시 계산하면 된다(캡션 등
+  // 다른 입력마다 재계산해 카운트다운이 매번 리셋되는 걸 막음).
+  const previewExpiresAt = useMemo(
+    () => (previewIsMemo ? new Date(Date.now() + expireHours * 60 * 60 * 1000).toISOString() : null),
+    [previewIsMemo, expireHours],
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1248,16 +1260,31 @@ export default function UploadPage() {
                 높이(실제는 로그인 전용 oneScreenFeed 프레임 안에서 계산되지만 이 페이지는
                 그 프레임 밖이라 내용물 높이 그대로 쌓임)와, 좋아요/댓글이 아직 게시 전이라
                 숫자 대신 아이콘만 보여준다는 점(실제로 누를 수도 없어 title 속성으로 안내). */}
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+            <div
+              className={`overflow-hidden rounded-2xl border ${
+                previewIsMemo ? "border-gray-800 bg-gray-950" : "border-gray-200 bg-white"
+              }`}
+            >
               <div className="flex items-center gap-2 p-3">
                 <Avatar userId={currentUserId ?? ""} name={authorName} className="h-8 w-8 text-xs" />
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm font-medium text-gray-800">{authorName}</span>
-                  <span className="truncate text-xs text-gray-400">{authorMetaLine}</span>
+                  <span className={`truncate text-sm font-medium ${previewIsMemo ? "text-gray-200" : "text-gray-800"}`}>
+                    {authorName}
+                  </span>
+                  <span className={`truncate text-xs ${previewIsMemo ? "text-gray-500" : "text-gray-400"}`}>
+                    {authorMetaLine}
+                  </span>
                 </div>
+                {/* memo는 노출 시간이 필수라 실제 피드처럼 헤더 우측에 남은시간 뱃지가 뜬다
+                    (2026-09-15, 사용자 요청) — DEMO는 영구노출이라 안 뜬다. */}
+                {previewExpiresAt && <TimeLimitBadge expiresAt={previewExpiresAt} />}
               </div>
-              {title && <p className="px-3 pb-0.5 text-sm font-bold text-gray-900">{title}</p>}
-              <p className="px-3 pb-2 text-sm text-gray-700">
+              {title && (
+                <p className={`px-3 pb-0.5 text-sm font-bold ${previewIsMemo ? "text-gray-100" : "text-gray-900"}`}>
+                  {title}
+                </p>
+              )}
+              <p className={`px-3 pb-2 text-sm ${previewIsMemo ? "text-gray-300" : "text-gray-700"}`}>
                 {caption || <span className="text-gray-400">캡션이 여기 보여요</span>}
               </p>
               <div className="relative flex w-full items-center justify-center bg-black">
@@ -1292,7 +1319,9 @@ export default function UploadPage() {
                 </div>
               )}
               <div
-                className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600"
+                className={`flex items-center gap-6 border-t px-4 py-3.5 text-base font-semibold ${
+                  previewIsMemo ? "border-gray-800 text-gray-300" : "border-gray-100 text-gray-600"
+                }`}
                 title="미리보기라 실제로 누를 수는 없어요"
               >
                 <HeartIcon className="h-5 w-5" />
