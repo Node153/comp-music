@@ -781,7 +781,10 @@ export default function UploadPage() {
               그대로 아래쪽 원래 위치에 남겨둔다(값 자체는 여기서 이미 정해짐, complexVisibility
               상태 공유). */}
           {uploadType === "complex" && (
-            <div className="grid grid-cols-2 gap-4">
+            // gap-x-4(칼럼 사이)와 gap-y-1.5(버튼 줄 <-> 설명글) 분리 — 하나의 gap-4였을 때
+            // 설명글 위 여백만 다른 섹션(gap-1.5)보다 훨씬 크게 떠 보였다(사용자 지적,
+            // 2026-09-15).
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
               <div className="flex flex-col gap-1.5">
                 <span className={blackLabel}>게시 형태</span>
                 <div className="grid grid-cols-2 gap-2">
