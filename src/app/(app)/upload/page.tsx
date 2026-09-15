@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
-import { LockIcon } from "@/components/icons";
+import { LockIcon, HeartIcon, CommentIcon } from "@/components/icons";
+import { Avatar } from "@/components/Avatar";
 import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
+import { tagColorClass } from "@/lib/feedConstants";
 import type { ExpireHours } from "@/types/database";
 
 const MIN_TAGS = 3;
@@ -210,8 +212,8 @@ function UploadDropbox({
         setDragOver(false);
         onSelect(e.dataTransfer.files?.[0] ?? null);
       }}
-      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-10 text-center transition ${
-        dragOver ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-90"
+      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-10 text-center text-active-gray transition ${
+        dragOver ? "bg-demo-bg" : "bg-box-gray hover:opacity-80"
       }`}
     >
       <input
@@ -284,6 +286,8 @@ export default function UploadPage() {
   const [complexKind, setComplexKind] = useState<DetectedMediaKind | null>(null);
   const [complexFileError, setComplexFileError] = useState<string | null>(null);
 
+  // 작품 제목 — caption(부가 설명, 선택)과 분리된 필수 입력(0052, 2026-09-15 사용자 요청).
+  const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearch, setTagSearch] = useState("");
@@ -325,6 +329,28 @@ export default function UploadPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, [supabase]);
+
+  // 미리보기 헤더(작성자 이름·학교/포지션)용 — feed/page.tsx의 headerMetaLine과 같은 조합.
+  // "게시하면 이렇게 보여요"라 실제 카드와 똑같이 상단에 내 이름이 들어가야 한다(사용자 요청).
+  const [authorName, setAuthorName] = useState("나");
+  const [authorMetaLine, setAuthorMetaLine] = useState("");
+  useEffect(() => {
+    if (!currentUserId) return;
+    (async () => {
+      const [{ data: display }, { data: profile }] = await Promise.all([
+        supabase.from("user_display").select("display_name").eq("id", currentUserId).single(),
+        supabase
+          .from("profiles")
+          .select("school, school_public, instruments")
+          .eq("user_id", currentUserId)
+          .single(),
+      ]);
+      if (display?.display_name) setAuthorName(display.display_name);
+      const visibleSchool = profile?.school_public ? profile.school : null;
+      const schoolPositions = [visibleSchool, ...(profile?.instruments ?? [])].filter(Boolean).join(" · ");
+      setAuthorMetaLine(schoolPositions ? `${schoolPositions} · 방금` : "방금");
+    })();
+  }, [currentUserId, supabase]);
 
   // 실제 업로드된 게시물에서 커스텀 태그(고정 목록 ALL_GENRES에 없는 것)가 얼마나 반복
   // 사용됐는지 집계해서 "인기 사용자 태그"로 노출 — 자유 입력 태그가 2회 이상 쓰이면
@@ -504,6 +530,11 @@ export default function UploadPage() {
     e.preventDefault();
     setError(null);
 
+    if (!title.trim()) {
+      setError("제목을 입력해주세요.");
+      return;
+    }
+
     if (uploadType === "complex") {
       if (!complexFile || !complexKind) {
         setError(collabAvailable ? "음원(mp3/wav) 파일을 업로드해주세요." : "영상 또는 음원 파일을 업로드해주세요.");
@@ -570,6 +601,7 @@ export default function UploadPage() {
           image_url: null,
           audio_url: complexKind === "audio" ? complexMediaPath : null,
           thumbnail_url: complexThumbnailPath,
+          title: title.trim(),
           caption: caption || null,
           visibility: complexVisibility === "specific" ? "invite_only" : "followers",
           collab_available: collabAvailable,
@@ -674,6 +706,7 @@ export default function UploadPage() {
         image_url: null,
         audio_url: mediaKind === "audio" ? mediaPath : null,
         thumbnail_url: thumbnailPath,
+        title: title.trim(),
         caption: caption || null,
         instrument_tags: selectedTags,
         status: "published",
@@ -695,7 +728,11 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 md:flex-row md:items-start md:justify-center">
+    // max-w는 폼(pageCard, 최대 600px) + gap-6(24px) + 미리보기 카드(659px, 실제 피드 카드와
+    // 같은 폭)가 나란히 들어갈 수 있도록 넉넉히 잡음(2026-09-15, 미리보기 실제 크기화 참고).
+    // md:flex-wrap: 폼(600)+미리보기(659)가 1360px 뷰포트 미만(노트북 등 흔한 화면)에서는
+    // 다 못 들어가니, 가로 스크롤 대신 미리보기가 아래로 줄바꿈되게 한다.
+    <div className="mx-auto flex max-w-[1360px] flex-col gap-6 px-4 md:flex-row md:flex-wrap md:items-start md:justify-center">
       <main className={`${wideCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -719,8 +756,8 @@ export default function UploadPage() {
             </div>
             <p className="text-xs text-active-gray">
               {uploadType === "complex"
-                ? "Companion공개 또는 특정인초대 · 노출 시간 지나면 자동 삭제"
-                : "전체공개 · 노출 시간 제한 없음"}
+                ? "Companion공개 또는 특정인초대로 함께 볼 사람을 정할 수 있으며, 시간이 지나면 자동으로 숨김 및 보관 처리돼요."
+                : "누구나 볼 수 있는 전체공개 게시물로, 시간 제한 없이 계속 유지돼요."}
             </p>
           </div>
 
@@ -756,8 +793,10 @@ export default function UploadPage() {
           )}
 
           {uploadType === "demo" ? (
-            <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
+            // 캡션·해시태그처럼 라벨을 박스 바깥으로(2026-09-15, 사용자 요청 — 통일성).
+            <div className="flex flex-col gap-1.5">
               <span className={blackLabel}>업로드</span>
+              <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
               <UploadDropbox
                 file={mediaFile}
                 onSelect={handleFileChange}
@@ -856,10 +895,13 @@ export default function UploadPage() {
                   {coverFileError && <p className={errorText}>{coverFileError}</p>}
                 </>
               )}
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
+            // 위 demo 분기와 동일하게 라벨을 박스 바깥으로.
+            <div className="flex flex-col gap-1.5">
               <span className={blackLabel}>업로드</span>
+              <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
               <UploadDropbox
                 file={complexFile}
                 onSelect={handleComplexFileChange}
@@ -950,8 +992,22 @@ export default function UploadPage() {
                   {coverFileError && <p className={errorText}>{coverFileError}</p>}
                 </>
               )}
+              </div>
             </div>
           )}
+
+          {/* 제목 — 캡션(부가 설명, 선택)과 분리된 필수 입력(2026-09-15, 사용자 요청 —
+              "캡션칸에 작품제목을 적는 란을 구분해줘"). */}
+          <div className="flex flex-col gap-1.5">
+            <span className={blackLabel}>제목</span>
+            <input
+              type="text"
+              placeholder="작품 제목을 입력해주세요"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={grayField}
+            />
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <span className={blackLabel}>캡션</span>
@@ -1126,43 +1182,69 @@ export default function UploadPage() {
       {showPostPreview && (
         <aside
           className={`hidden shrink-0 overflow-hidden transition-all duration-300 ease-in-out md:sticky md:top-20 md:flex ${
-            previewOpen ? "md:w-[400px] md:opacity-100" : "md:w-0 md:opacity-0"
+            previewOpen ? "md:w-[659px] md:opacity-100" : "md:w-0 md:opacity-0"
           }`}
         >
-          {/* 아래 목업(검정 미디어 박스·흰 캡션 카드·회색 태그칩)은 실제 피드 게시물이 어떻게
-              보일지 그대로 흉내낸 것 — 피드는 이 그레이 3단계 규칙에서 제외라 목업 내부 색은
-              건드리지 않는다. 이 패널 자체(바깥 프레임)만 업로드 화면 UI라 그레이 규칙을 따른다. */}
-          <div className="flex w-[400px] shrink-0 flex-col gap-3 rounded-2xl bg-main-gray p-4">
+          <div className="flex w-[659px] shrink-0 flex-col gap-2">
             <span className={blackLabel}>미리보기 — 게시하면 이렇게 보여요</span>
-            <div className="overflow-hidden rounded-xl border border-gray-500">
-              {/* aspect-[4/5] — 실제 피드(PostVideo.tsx tone="demo"/이미지 게시물)와 동일한
-                  비율(Instagram 참고, 세로 4:5)로 맞춰서 미리보기가 실제 크기와 똑같이 보이게 한다. */}
-              <div className="relative flex aspect-[4/5] items-center justify-center bg-black">
+            {/* 실제 DEMO 피드 카드(feed/page.tsx)를 그대로 축소 없이 재현한다(2026-09-15,
+                사용자 요청 — "실제 게시물 크기 및 상단 하단에 게시자 이름과 캡션, 좋아요
+                댓글 칸들이 그대로 들어가야함"). 카드 폭 659px·미디어 정사각형(1:1)은
+                feed/page.tsx에서 확정된 DEMO 카드 크기와 동일값을 그대로 씀 — 헤더(아바타
+                +이름+메타)와 좋아요·댓글 아이콘 줄까지 실제 카드와 같은 구조로 넣어서
+                "이렇게 보여요"가 문자 그대로 맞게 했다. 실제 카드와의 유일한 차이는 세로
+                높이(실제는 로그인 전용 oneScreenFeed 프레임 안에서 계산되지만 이 페이지는
+                그 프레임 밖이라 내용물 높이 그대로 쌓임)와, 좋아요/댓글이 아직 게시 전이라
+                숫자 대신 아이콘만 보여준다는 점(실제로 누를 수도 없어 title 속성으로 안내). */}
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <div className="flex items-center gap-2 p-3">
+                <Avatar userId={currentUserId ?? ""} name={authorName} className="h-8 w-8 text-xs" />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium text-gray-800">{authorName}</span>
+                  <span className="truncate text-xs text-gray-400">{authorMetaLine}</span>
+                </div>
+              </div>
+              {title && <p className="px-3 pb-0.5 text-sm font-bold text-gray-900">{title}</p>}
+              <p className="px-3 pb-2 text-sm text-gray-700">
+                {caption || <span className="text-gray-400">캡션이 여기 보여요</span>}
+              </p>
+              <div className="relative flex w-full items-center justify-center bg-black">
                 {previewVideoSrc ? (
-                  <video src={previewVideoSrc} poster={previewCoverSrc ?? undefined} controls muted className="h-full w-full object-cover" />
+                  <video
+                    src={previewVideoSrc}
+                    poster={previewCoverSrc ?? undefined}
+                    controls
+                    muted
+                    className="aspect-square w-full object-cover"
+                  />
                 ) : previewCoverSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={previewCoverSrc} alt="커버 미리보기" className="h-full w-full object-cover" />
+                  <img
+                    src={previewCoverSrc}
+                    alt="커버 미리보기"
+                    className="aspect-square w-full object-cover"
+                  />
                 ) : (
-                  <p className="p-6 text-center text-sm text-gray-500">커버 이미지를 올리면 여기에 보여요</p>
-                )}
-              </div>
-              <div className="flex flex-col gap-2 p-3">
-                <p className="text-sm text-gray-700">
-                  {caption || <span className="text-gray-600">캡션이 여기 보여요</span>}
-                </p>
-                {selectedTags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedTags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-gray-300 px-2 py-0.5 text-xs text-gray-600"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
+                  <div className="flex aspect-square w-full items-center justify-center">
+                    <p className="p-6 text-center text-sm text-gray-400">커버 이미지를 올리면 여기에 보여요</p>
                   </div>
                 )}
+              </div>
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 px-3 py-2">
+                  {selectedTags.map((tag) => (
+                    <span key={tag} className={`rounded-full px-2 py-1 text-xs font-medium ${tagColorClass(tag)}`}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div
+                className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600"
+                title="미리보기라 실제로 누를 수는 없어요"
+              >
+                <HeartIcon className="h-5 w-5" />
+                <CommentIcon className="h-5 w-5" />
               </div>
             </div>
           </div>

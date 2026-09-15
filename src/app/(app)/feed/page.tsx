@@ -51,6 +51,8 @@ type MockSample = {
   name: string;
   school: string;
   positions: string[];
+  // 작품 제목 — caption(부가 설명)과 분리(0052, 2026-09-15).
+  title: string;
   caption: string;
   contentType: ContentType;
   tags: string[];
@@ -76,6 +78,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     name: "정하늘",
     school: "서울대",
     positions: ["작곡"],
+    title: "첫 발라드 싱글",
     caption: "드디어 완성한 첫 발라드 싱글, 앨범 커버까지 다 뽑았어요!",
     contentType: "composition",
     tags: ["피아노", "발라드"],
@@ -93,6 +96,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     name: "오세준",
     school: "한예종",
     positions: ["기타"],
+    title: "합주 최종본",
     caption: "6개월 준비한 합주 영상 최종본 공개합니다",
     contentType: "ensemble",
     tags: ["기타", "밴드"],
@@ -110,6 +114,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     name: "한지민",
     school: "활동자",
     positions: ["보컬"],
+    title: "보컬 커버",
     caption: "제 보컬 커버 정식 업로드했어요, 많이 들어주세요!",
     contentType: "performance",
     tags: ["보컬"],
@@ -130,6 +135,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     name: "이서연",
     school: "한예종",
     positions: ["보컬"],
+    title: "첫 라이브 클립",
     caption: "첫 라이브 클립 편집 완료! 떨렸지만 재밌었어요",
     contentType: "performance",
     tags: ["보컬", "라이브"],
@@ -147,6 +153,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     name: "박지훈",
     school: "활동자",
     positions: ["드럼"],
+    title: "드럼 커버",
     caption: "드럼 커버 영상 새로 올려요, 이번엔 좀 빠른 곡으로",
     contentType: "performance",
     tags: ["드럼"],
@@ -164,6 +171,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     name: "최민아",
     school: "경희대",
     positions: ["피아노/건반"],
+    title: "쇼팽 녹턴",
     caption: "쇼팽 녹턴 연주 영상입니다, 편안하게 들어주세요",
     contentType: "performance",
     tags: ["피아노", "클래식"],
@@ -181,6 +189,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     name: "김도윤",
     school: "서울대",
     positions: ["작곡"],
+    title: "영화음악 샘플",
     caption: "영화음악 샘플 트랙 공개합니다, 피드백 환영해요",
     contentType: "composition",
     tags: ["작곡", "필름스코어"],
@@ -198,6 +207,7 @@ const DEMO_MOCK_SAMPLES: MockSample[] = [
     name: "강태오",
     school: "활동자",
     positions: ["베이스"],
+    title: "베이스 솔로 챌린지",
     caption: "베이스 솔로 챌린지 영상, 다들 한번 도전해보세요!",
     contentType: "improv",
     tags: ["베이스", "챌린지"],
@@ -242,6 +252,7 @@ function buildDemoMockPosts(
       id: m.postId,
       user_id: m.userId,
       video_url: "",
+      title: m.title,
       caption: m.caption,
       content_type: m.contentType,
       instrument_tags: m.tags,
@@ -307,7 +318,7 @@ export default async function FeedPage({
   const currentUserName = me?.name || "나";
 
   const postsSelect =
-    "id, user_id, video_url, image_url, audio_url, media_type, thumbnail_url, caption, content_type, instrument_tags, visibility, collab_available, collab_role_needed, published_at, expires_at";
+    "id, user_id, video_url, image_url, audio_url, media_type, thumbnail_url, title, caption, content_type, instrument_tags, visibility, collab_available, collab_role_needed, published_at, expires_at";
   const postsQuery = supabase
     .from("posts")
     .select(postsSelect)
@@ -702,6 +713,7 @@ export default async function FeedPage({
               ? {
                   id: post.id,
                   title:
+                    post.title ||
                     post.caption ||
                     (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) ||
                     "음원",
@@ -718,17 +730,17 @@ export default async function FeedPage({
           const inlineMediaEl =
             useInlineChatLayout && post.videoSrc ? (
               post.media_type === "audio" ? (
-                <SoundbarPlayer src={post.videoSrc} title={post.caption || "음원"} posterSrc={post.posterSrc} />
+                <SoundbarPlayer src={post.videoSrc} title={post.title || post.caption || "음원"} posterSrc={post.posterSrc} />
               ) : post.media_type === "image" ? (
                 <img
                   src={post.videoSrc}
-                  alt={post.caption ?? "이미지 게시물"}
+                  alt={post.title || post.caption || "이미지 게시물"}
                   className="max-h-[420px] w-auto max-w-full rounded-xl object-contain"
                 />
               ) : (
                 <PostVideo
                   postId={post.id}
-                  title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
+                  title={post.title || post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
                   author={author?.name ?? "알 수 없음"}
                   videoSrc={post.videoSrc}
                   posterSrc={post.posterSrc}
@@ -762,6 +774,7 @@ export default async function FeedPage({
                     <PostOptionsMenu
                       postId={post.id}
                       mediaPath={post.image_url ?? post.audio_url ?? post.video_url ?? ""}
+                      initialTitle={post.title}
                       initialCaption={post.caption}
                       initialTags={post.instrument_tags ?? []}
                     />
@@ -771,6 +784,13 @@ export default async function FeedPage({
                   playlistTrack ? <AddToPlaylistButton track={playlistTrack} /> : undefined
                 }
               >
+              {/* 작품 제목 — caption(부가 설명)과 분리(0052, 2026-09-15 사용자 요청). 옛 게시물은
+                  title이 없어(null) 자연히 안 보이고 caption만 뜬다(하위호환). */}
+              {post.title && (
+                <p className="px-3 pb-0.5 text-sm font-bold text-gray-900 shrink-0 dark:text-gray-100">
+                  {post.title}
+                </p>
+              )}
               {post.caption && (
                 <p
                   className={`px-3 pb-2 text-sm text-gray-700 dark:text-gray-300 ${
@@ -876,7 +896,7 @@ export default async function FeedPage({
                           {post.demoVideoSrc && (
                             <MockPlayOverlay
                               postId={post.id}
-                              title={post.caption}
+                              title={post.title || post.caption}
                               author={author?.name ?? "알 수 없음"}
                               authorId={post.user_id}
                               videoSrc={post.demoVideoSrc}
@@ -886,7 +906,7 @@ export default async function FeedPage({
                       ) : post.videoSrc && post.media_type === "image" ? (
                         <img
                           src={post.videoSrc}
-                          alt={post.caption ?? "이미지 게시물"}
+                          alt={post.title || post.caption || "이미지 게시물"}
                           className={`w-full object-cover ${
                             // 위 목업과 같은 이유로 md:h-auto 필요.
                             oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "aspect-[4/5]"
@@ -900,7 +920,7 @@ export default async function FeedPage({
                         <div className="w-full">
                           <SoundbarPlayer
                             src={post.videoSrc}
-                            title={post.caption || "음원"}
+                            title={post.title || post.caption || "음원"}
                             posterSrc={post.posterSrc}
                             tone={isComplex ? "memo" : "demo"}
                             mode={currentUser ? "global" : "inline"}
@@ -919,7 +939,7 @@ export default async function FeedPage({
                         <div className="w-full saturate-[0.7] sepia-[0.15]">
                           <PostVideo
                             postId={post.id}
-                            title={post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
+                            title={post.title || post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "영상"}
                             author={author?.name ?? "알 수 없음"}
                             authorId={post.user_id}
                             videoSrc={post.videoSrc}

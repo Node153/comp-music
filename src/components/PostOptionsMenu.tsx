@@ -22,11 +22,13 @@ function chipClass(active: boolean) {
 export function PostOptionsMenu({
   postId,
   mediaPath,
+  initialTitle,
   initialCaption,
   initialTags,
 }: {
   postId: string;
   mediaPath: string;
+  initialTitle: string | null;
   initialCaption: string | null;
   initialTags: string[];
 }) {
@@ -35,6 +37,7 @@ export function PostOptionsMenu({
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [title, setTitle] = useState(initialTitle ?? "");
   const [caption, setCaption] = useState(initialCaption ?? "");
   const [tags, setTags] = useState<string[]>(initialTags);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +56,7 @@ export function PostOptionsMenu({
     setError(null);
     const { error: updateError } = await supabase
       .from("posts")
-      .update({ caption: caption.trim() || null, instrument_tags: tags })
+      .update({ title: title.trim() || null, caption: caption.trim() || null, instrument_tags: tags })
       .eq("id", postId);
     setSaving(false);
     if (updateError) {
@@ -136,6 +139,13 @@ export function PostOptionsMenu({
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">게시물 수정</h2>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="제목"
+              className={field}
+            />
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}

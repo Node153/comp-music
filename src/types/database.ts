@@ -226,6 +226,8 @@ export interface Database {
           audio_url: string | null;
           media_type: MediaType;
           thumbnail_url: string | null;
+          // 작품 제목 — caption(부가 설명, 선택)과 분리된 필드(0052, 2026-09-15).
+          title: string | null;
           caption: string | null;
           content_type: ContentType | null;
           instrument_tags: string[] | null;
@@ -247,6 +249,7 @@ export interface Database {
           audio_url?: string | null;
           media_type?: MediaType;
           thumbnail_url?: string | null;
+          title?: string | null;
           caption?: string | null;
           content_type?: ContentType | null;
           instrument_tags?: string[] | null;
