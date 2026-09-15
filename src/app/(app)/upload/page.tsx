@@ -539,11 +539,20 @@ export default function UploadPage() {
   );
 
   // 영상 미리보기 aside는 DEMO 전용 — memo는 이제 음원(mp3/wav)만 올릴 수 있어서 해당 없음.
-  const previewVideoSrc = uploadType === "demo" && mediaKind === "video" ? mediaObjectUrl : null;
+  // DEMO와 memo 단독(공동창작 미체크)은 업로드 폼 자체가 구조적으로 동일(영상/음원+커버,
+  // 위 "공동창작 미체크 = DEMO와 동일한 형태" 주석 참고) — 그런데 미리보기는 DEMO 전용
+  // 조건으로만 걸려있어서, memo에서 영상을 올려도 미리보기가 아예 안 뜨는 문제가 있었다
+  // (사용자 제보, 2026-09-15). 협업(collabAvailable)은 채팅 중심의 다른 화면이라 제외하고
+  // 둘 다 같은 미리보기를 보여주게 통합.
+  const showsFeedLikePreview = uploadType === "demo" || (uploadType === "complex" && !collabAvailable);
+  const activeFile = uploadType === "demo" ? mediaFile : complexFile;
+  const activeKind = uploadType === "demo" ? mediaKind : complexKind;
+  const activeObjectUrl = uploadType === "demo" ? mediaObjectUrl : complexObjectUrl;
+  const previewVideoSrc = showsFeedLikePreview && activeKind === "video" ? activeObjectUrl : null;
   // 인스타그램처럼 "게시하면 이렇게 보여요"를 실시간으로 보여주는 미리보기 — 커버 이미지가
   // 이제 DEMO의 메인 비주얼이라, 영상이 없어도(음원만 골랐거나 아직 아무것도 안 골랐어도)
   // 커버+캡션+해시태그만으로 미리보기를 띄운다.
-  const showPostPreview = uploadType === "demo" && (previewCoverSrc || mediaFile);
+  const showPostPreview = showsFeedLikePreview && (previewCoverSrc || activeFile);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -980,6 +989,15 @@ export default function UploadPage() {
                 </p>
               )}
               {complexFileError && <p className={errorText}>{complexFileError}</p>}
+              {showPostPreview && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen((v) => !v)}
+                  className="hidden self-start text-xs font-medium text-active-gray hover:underline md:inline"
+                >
+                  {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
+                </button>
+              )}
               {complexFile && complexKind === "audio" && complexObjectUrl && (
                 <SoundbarPreview
                   key={`${complexFile.name}-${complexFile.size}-${complexFile.lastModified}`}
