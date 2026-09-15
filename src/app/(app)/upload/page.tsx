@@ -800,11 +800,6 @@ export default function UploadPage() {
                     </button>
                   ))}
                 </div>
-                <p className="px-1 text-xs text-active-gray">
-                  {collabAvailable
-                    ? "Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요 — 음원(mp3/wav)만 올릴 수 있어요."
-                    : "DEMO처럼 영상·음원 업로드 + 커버 이미지 + 좋아요·댓글·조회자 목록으로 게시돼요."}
-                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className={blackLabel}>공개 범위</span>
@@ -828,6 +823,13 @@ export default function UploadPage() {
                   ))}
                 </div>
               </div>
+              {/* 게시 형태 설명글 — 반 폭 컬럼 안에 있으면 줄바꿈이 잦아서 2열 그리드 밖,
+                  카드 전체 폭으로 빼 한 줄에 들어가게 했다(2026-09-15, 사용자 요청). */}
+              <p className="col-span-2 px-1 text-xs text-active-gray">
+                {collabAvailable
+                  ? "Companion과 음원을 스택으로 쌓아 함께 곡을 만들 수 있어요. 음원 파일(mp3/wav)만 올려주세요."
+                  : "DEMO처럼 영상·음원에 커버 이미지를 더해 올리고, 좋아요·댓글·조회자 목록을 확인할 수 있어요."}
+              </p>
             </div>
           )}
 
