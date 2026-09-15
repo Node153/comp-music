@@ -29,8 +29,14 @@ export const card = "rounded-2xl border border-gray-200 bg-white p-4";
 // 하단 여백은 화면 맨 아래 고정된 GlobalPlayerBar(로그인 시 전 페이지 상주, h-16=64px) 기준으로
 // 잡는다(2026-09-15, 사용자 요청 — "화면 기준을 사운드바 위 기준으로 잡아야 함") — 재생 중인
 // 트랙·대기열이 없어도 바 자체는 항상 떠 있어서, 안 잡으면 폼 맨 아래 버튼 등이 바에 가려진다.
-//   · 모바일: 바가 BottomNav(h-14=56px) 바로 위(bottom-14)에 뜨므로 56+64=120px 필요 → pb-32(128px).
-//   · md 이상: BottomNav 없이 바가 바로 바닥(bottom-0)에 붙으므로 64px만 필요 → md:pb-24(96px, 여유
-//     32px 포함, GlobalPlayerBar.tsx:209 h-16/md:bottom-0 참고).
+// 처음엔 pb(패딩)로 줬는데, 그러면 카드 자체(bg-main-gray)가 그만큼 더 길어져서 버튼 아래에
+// 카드 배경색 그대로인 빈 공간이 위 여백과 안 맞게 훅 늘어나 보였다(사용자 지적) — margin으로
+// 바꿔서 그 여유 공간이 카드 "밖"(PageCanvas의 더 짙은 배경)에 생기게 해, 카드 안쪽 상하 패딩은
+// p-6로 대칭 유지하면서 카드 자체는 짧게, 카드와 바 사이만 벌어지게 했다.
+//   · 모바일: 바가 BottomNav(h-14=56px) 바로 위(bottom-14)에 뜨므로 56+64=120px 필요 → mb-32(128px).
+//   · md 이상: BottomNav 없이 바가 바로 바닥(bottom-0)에 붙으므로 64px만 필요 → md:mb-24(96px, 여유
+//     32px 포함, GlobalPlayerBar.tsx:209 h-16/md:bottom-0 참고). md:mt-6로 상단 여백은 그대로.
+// 폭은 피드 DEMO 카드(feed/page.tsx에서 확정된 659px 고정폭)와 동일하게 맞춤(2026-09-15,
+// 사용자 요청) — 예전 600px에서 살짝 넓어짐.
 export const pageCard =
-  "mx-auto max-w-[600px] bg-main-gray p-6 pb-32 md:my-6 md:rounded-lg md:pb-24";
+  "mx-auto max-w-[659px] bg-main-gray p-6 mb-32 md:mt-6 md:mb-24 md:rounded-lg";

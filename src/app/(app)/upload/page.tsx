@@ -728,11 +728,11 @@ export default function UploadPage() {
   }
 
   return (
-    // max-w는 폼(pageCard, 최대 600px) + gap-6(24px) + 미리보기 카드(659px, 실제 피드 카드와
-    // 같은 폭)가 나란히 들어갈 수 있도록 넉넉히 잡음(2026-09-15, 미리보기 실제 크기화 참고).
-    // md:flex-wrap: 폼(600)+미리보기(659)가 1360px 뷰포트 미만(노트북 등 흔한 화면)에서는
-    // 다 못 들어가니, 가로 스크롤 대신 미리보기가 아래로 줄바꿈되게 한다.
-    <div className="mx-auto flex max-w-[1360px] flex-col gap-6 px-4 md:flex-row md:flex-wrap md:items-start md:justify-center">
+    // max-w는 폼(pageCard, 이제 피드 카드와 같은 659px) + gap-6(24px) + 미리보기 카드(659px)가
+    // 나란히 들어갈 수 있도록 넉넉히 잡음(2026-09-15, 미리보기·폼 실제 크기화 참고).
+    // md:flex-wrap: 폼(659)+미리보기(659)가 뷰포트에 다 못 들어가면(노트북 등 흔한 화면) 가로
+    // 스크롤 대신 미리보기가 아래로 줄바꿈되게 한다.
+    <div className="mx-auto flex max-w-[1420px] flex-col gap-6 px-4 md:flex-row md:flex-wrap md:items-start md:justify-center">
       <main className={`${wideCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
