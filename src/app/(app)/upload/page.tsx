@@ -110,19 +110,41 @@ function formatMB(bytes: number) {
   return `${Math.round(bytes / (1024 * 1024))}MB`;
 }
 
-// DEMO 커버 이미지 비율 — Instagram 피드 게시물과 동일한 범위(세로 4:5 ~ 가로 1.91:1)로
-// 제한해서 레이아웃이 깨지지 않게 한다.
-const MIN_COVER_ASPECT_RATIO = 4 / 5;
-const MAX_COVER_ASPECT_RATIO = 1.91;
-
-function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+// 커버 이미지는 피드/미리보기 어디서든 1:1 정사각형(2026-09-14 확정, feed/page.tsx의
+// DEMO 카드 통일)으로만 보여지므로, 예전처럼 특정 비율 범위(세로 4:5~가로 1.91:1)를 벗어나면
+// 업로드 자체를 막는 건 더 이상 맞지 않다(사용자 지적 — "업로드 불가하면 안 됨"). 대신
+// 어떤 비율의 이미지가 와도 가운데를 기준으로 정사각형으로 크롭해서 저장한다(2026-09-16).
+// GIF 커버(GiphyPicker로 고르는 쪽)는 File이 아니라 외부 URL 참조라 여기서 크롭할 대상 자체가
+// 없다 — 어차피 표시할 때 object-cover+aspect-square라 화면에서는 이미 정사각형으로 보인다.
+function cropImageFileToSquare(file: File): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
+      const size = Math.min(img.naturalWidth, img.naturalHeight);
+      const sx = (img.naturalWidth - size) / 2;
+      const sy = (img.naturalHeight - size) / 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
       URL.revokeObjectURL(img.src);
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      if (!ctx) {
+        // 크롭 실패해도 업로드 자체를 막진 않는다 — 원본 그대로 폴백(화면에선 어차피
+        // object-cover가 정사각형으로 잘라 보여준다).
+        resolve(file);
+        return;
+      }
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+      // 투명 배경(PNG)은 png로, 그 외엔 jpeg로 — canvas 기본 포맷은 png라 사진(jpeg 원본)까지
+      // png로 내보내면 용량이 불필요하게 커진다.
+      const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], file.name, { type: outputType }) : file),
+        outputType,
+        0.92,
+      );
     };
-    img.onerror = () => resolve({ width: 1, height: 1 });
+    img.onerror = () => resolve(file);
     img.src = URL.createObjectURL(file);
   });
 }
@@ -456,14 +478,9 @@ export default function UploadPage() {
       setCoverFile(null);
       return;
     }
-    const { width, height } = await readImageDimensions(file);
-    const ratio = width / height;
-    if (ratio < MIN_COVER_ASPECT_RATIO || ratio > MAX_COVER_ASPECT_RATIO) {
-      setCoverFile(null);
-      setCoverFileError("커버 이미지 비율이 적절하지 않아요. 세로 4:5 ~ 가로 1.91:1 사이 비율을 사용해주세요.");
-      return;
-    }
-    setCoverFile(file);
+    // 비율 상관없이 무조건 받아서 가운데 기준 정사각형으로 자동 크롭(사용자 요청 —
+    // "이미지 비율이 안 맞다고 업로드 불가하면 안 됨").
+    setCoverFile(await cropImageFileToSquare(file));
     setCoverGifUrl(null);
   }
 
@@ -915,9 +932,8 @@ export default function UploadPage() {
                   (사용자 요청: "없어도 되는 게 아니라 없어야 해"). 평소(파일 선택 전)에도 숨김. */}
               {mediaKind === "audio" && (
                 <>
-                  <div className="flex items-center justify-between border-t border-box-gray pt-3">
+                  <div className="border-t border-box-gray pt-3">
                     <span className={blackLabel}>커버 이미지 (필수)</span>
-                    <span className="text-xs text-active-gray">세로 4:5~가로 1.91:1</span>
                   </div>
                   {coverGifUrl ? (
                     <div className="flex items-center gap-2">
@@ -1021,9 +1037,8 @@ export default function UploadPage() {
                   버튼을 보여준다 — 영상은 그 자체가 화면이라 버튼 자체를 숨긴다. */}
               {!collabAvailable && complexKind === "audio" && (
                 <>
-                  <div className="flex items-center justify-between border-t border-box-gray pt-3">
+                  <div className="border-t border-box-gray pt-3">
                     <span className={blackLabel}>커버 이미지 (필수)</span>
-                    <span className="text-xs text-active-gray">세로 4:5~가로 1.91:1</span>
                   </div>
                   {coverGifUrl ? (
                     <div className="flex items-center gap-2">
