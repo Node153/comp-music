@@ -84,7 +84,11 @@ export function SoundbarPreview({
   const playedBarCount = bars ? Math.round(playedRatio * bars.length) : 0;
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl bg-neutral-900 p-2.5">
+    // 업로드 화면의 그레이 컬러 시스템에 맞춰 배경·재생버튼은 그레이로(2026-09-16, 사용자
+    // 요청 — "사운드파형 제외하고 그레이로") — 파형(재생된 구간 색·플레이헤드)만 기존 tone
+    // 색(DEMO 골드/memo 보라)을 그대로 유지한다. bg-neutral-900(검정)이었던 배경은
+    // active-gray, style.playBg/playText였던 재생 버튼은 box-gray+검정으로.
+    <div className="flex flex-col gap-2 rounded-xl bg-active-gray p-2.5">
       <audio
         ref={audioRef}
         src={src}
@@ -98,7 +102,7 @@ export function SoundbarPreview({
         <button
           type="button"
           onClick={togglePlay}
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition hover:brightness-110 ${style.playBg} ${style.playText}`}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-box-gray text-black transition hover:opacity-80"
         >
           {isPlaying ? <PauseIcon className="h-3 w-3" /> : <PlayIcon className="h-3 w-3" />}
         </button>
