@@ -15,9 +15,11 @@ export function ThemeSync() {
 
   useEffect(() => {
     // 첫 마운트(새로고침·첫 진입)에는 페이드 없이 즉시 맞춘다 — 로드하자마자 색이 번지면 어색.
-    applyTheme(isComplex, { animate: mounted.current });
+    // 효과음/페이드는 /feed 안에서 실제로 탭을 전환할 때만 — 다크(memo)에서 업로드 등 다른
+    // 화면(+ 버튼 등)으로 "나갈" 때는 화면이 원래 항상 라이트라 조용히 즉시 전환한다.
+    applyTheme(isComplex, { animate: mounted.current && pathname === "/feed" });
     mounted.current = true;
-  }, [isComplex]);
+  }, [isComplex, pathname]);
 
   return null;
 }
