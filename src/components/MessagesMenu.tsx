@@ -11,9 +11,10 @@ import { Avatar } from "@/components/Avatar";
 import { ChatIcon, EditIcon, MailIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
+import { topBarIconClass } from "@/components/ui/styles";
 import type { ConversationItem } from "@/lib/conversationList";
 
-export function MessagesMenu() {
+export function MessagesMenu({ isFeed }: { isFeed: boolean }) {
   const search = useSearchOverlay();
   const [open, setOpen] = useState(false);
   // null = 이번에 열고 나서 아직 못 받아옴(로딩 중) — 열 때마다 toggleOpen에서 초기화해서 매번 새로 불러온다.
@@ -54,11 +55,7 @@ export function MessagesMenu() {
         onClick={toggleOpen}
         title="Chat"
         aria-label="Chat"
-        className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-          open
-            ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-        }`}
+        className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${topBarIconClass(open, isFeed)}`}
       >
         <ChatIcon />
       </button>

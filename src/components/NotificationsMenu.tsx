@@ -11,9 +11,10 @@ import { Avatar } from "@/components/Avatar";
 import { BellIcon, FlameIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
+import { topBarIconClass } from "@/components/ui/styles";
 import type { NotificationItem } from "@/lib/notificationList";
 
-export function NotificationsMenu({ userId }: { userId: string }) {
+export function NotificationsMenu({ userId, isFeed }: { userId: string; isFeed: boolean }) {
   const unseenNotifications = useNotificationCount();
   const markSeen = useMarkNotificationsSeen();
   const [open, setOpen] = useState(false);
@@ -56,11 +57,7 @@ export function NotificationsMenu({ userId }: { userId: string }) {
         onClick={toggleOpen}
         title="Alerts"
         aria-label="Alerts"
-        className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
-          open
-            ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-        }`}
+        className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${topBarIconClass(open, isFeed)}`}
       >
         <BellIcon />
         {unseenNotifications > 0 && (

@@ -10,6 +10,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { BellIcon } from "@/components/icons";
 import { useNotificationCount } from "@/components/NotificationCountContext";
 import { beginThemeTransition } from "@/lib/theme";
+import { topBarIconClass } from "@/components/ui/styles";
 
 const FEED_TABS = [
   { value: "completion", label: "DEMO", icon: "☀" },
@@ -21,9 +22,17 @@ export function MobileTopBar() {
   const searchParams = useSearchParams();
   const activeFeedTab = searchParams.get("feed") ?? "completion";
   const unseenNotifications = useNotificationCount();
+  // TopNav와 같은 이유 — 피드 밖 화면은 캔버스가 active-gray라 흰 상단바 대신 main-gray를 쓴다.
+  const isFeed = pathname === "/feed" || pathname?.startsWith("/feed/");
 
   return (
-    <header className="sticky top-0 z-40 flex h-12 items-center gap-2 border-b border-gray-200 bg-white px-3 dark:border-gray-800 dark:bg-[#1c1c1e] md:hidden">
+    <header
+      className={`sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 md:hidden ${
+        isFeed
+          ? "border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1c1c1e]"
+          : "border-box-gray bg-main-gray"
+      }`}
+    >
       <Link href="/feed" className="shrink-0 text-sm font-bold text-gray-900 dark:text-gray-100">
         Comp
       </Link>
@@ -54,11 +63,7 @@ export function MobileTopBar() {
       <Link
         href="/notifications"
         aria-label="알림"
-        className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-          pathname === "/notifications"
-            ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-            : "text-gray-500 dark:text-gray-400"
-        }`}
+        className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition ${topBarIconClass(pathname === "/notifications", isFeed)}`}
       >
         <BellIcon className="h-5 w-5" />
         {unseenNotifications > 0 && (

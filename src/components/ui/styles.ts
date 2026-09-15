@@ -40,3 +40,15 @@ export const card = "rounded-2xl border border-gray-200 bg-white p-4";
 // 사용자 요청) — 예전 600px에서 살짝 넓어짐.
 export const pageCard =
   "mx-auto max-w-[659px] bg-main-gray p-6 mb-32 md:mt-6 md:mb-24 md:rounded-lg";
+
+// 상단바(TopNav/MobileTopBar) 아이콘 버튼 색 — 피드(흰 상단바)는 기존 gray-100/200 톤 그대로,
+// 그 외 화면(main-gray 상단바 위)은 근처가 거의 흰색이라 붕 떠 보였던 걸 그레이 컬러 시스템의
+// 옅은 톤(box-gray)·활성화 박스 톤(demo-bg)으로 맞춘다(2026-09-16, 사용자 요청).
+export function topBarIconClass(active: boolean, isFeed: boolean) {
+  if (isFeed) {
+    return active
+      ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+      : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800";
+  }
+  return active ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-80";
+}

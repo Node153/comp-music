@@ -18,6 +18,7 @@ import { MessagesMenu } from "@/components/MessagesMenu";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { beginThemeTransition } from "@/lib/theme";
 import { PlusIcon, HelpIcon, SearchIcon } from "@/components/icons";
+import { topBarIconClass } from "@/components/ui/styles";
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
 // 특정인 초대) 두 피드 탭.
@@ -40,9 +41,19 @@ export function TopNav({
   const searchParams = useSearchParams();
   const activeFeedTab = searchParams.get("feed") ?? "completion";
   const search = useSearchOverlay();
+  // 피드(/feed)는 캔버스가 흰색(PageCanvas)이라 흰 상단바가 자연스럽지만, 그 외 화면(업로드·
+  // 프로필 등)은 캔버스가 짙은 active-gray라 흰 상단바만 붕 떠 보였다(사용자 제보). 캔버스 위
+  // 최상위 박스는 main-gray를 쓴다는 그레이 컬러 시스템 규칙(globals.css)을 상단바에도 맞춘다.
+  const isFeed = pathname === "/feed" || pathname?.startsWith("/feed/");
 
   return (
-    <header className="sticky top-0 z-40 hidden h-14 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-[#1c1c1e] md:flex">
+    <header
+      className={`sticky top-0 z-40 hidden h-14 items-center gap-2 border-b px-4 md:flex ${
+        isFeed
+          ? "border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1c1c1e]"
+          : "border-box-gray bg-main-gray"
+      }`}
+    >
       <div className="flex flex-1 items-center gap-2">
         <Link href="/feed" className="flex shrink-0 items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-xs font-bold text-white dark:bg-white dark:text-black">
@@ -86,11 +97,7 @@ export function TopNav({
           onClick={search.open}
           title="검색"
           aria-label="검색"
-          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-            search.isOpen
-              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-          }`}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${topBarIconClass(search.isOpen, isFeed)}`}
         >
           <SearchIcon />
         </button>
@@ -98,25 +105,17 @@ export function TopNav({
           href="/upload"
           title="Drop"
           aria-label="Drop"
-          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-            pathname === "/upload"
-              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-          }`}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${topBarIconClass(pathname === "/upload", isFeed)}`}
         >
           <PlusIcon />
         </Link>
-        <MessagesMenu />
-        <NotificationsMenu userId={currentUserId} />
+        <MessagesMenu isFeed={isFeed} />
+        <NotificationsMenu userId={currentUserId} isFeed={isFeed} />
         <Link
           href="/help"
           title="Help"
           aria-label="Help"
-          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-            pathname === "/help"
-              ? "bg-gray-200 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
-          }`}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${topBarIconClass(pathname === "/help", isFeed)}`}
         >
           <HelpIcon />
         </Link>
