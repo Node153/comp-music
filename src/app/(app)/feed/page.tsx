@@ -24,7 +24,7 @@ import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO, formatCompactCount } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
-import { HeartIcon, CommentIcon, UsersIcon, MailIcon, PlayIcon, PinIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, UsersIcon, MailIcon, PlayIcon } from "@/components/icons";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -394,15 +394,17 @@ export default async function FeedPage({
       ? supabase.from("comments").select("post_id").in("post_id", postIds)
       : { data: [] as { post_id: string }[] },
     supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
-    // memo 합작 게시물 수동 고정(post_pins, 0054) — 본인이 고정해둔 게시물 id만.
+    // memo 합작 게시물 고정 오버라이드(post_pins, 0054/0055) — 행이 있으면 그 pinned 값이
+    // 아래 isAutoPinnedCollab 자동 규칙을 덮어쓴다(양방향: 자동 고정 해제도, 그 외 글을
+    // 고정하는 것도 같은 테이블).
     currentUser && isComplex && postIds.length > 0
-      ? supabase.from("post_pins").select("post_id").eq("user_id", currentUser.id).in("post_id", postIds)
-      : { data: [] as { post_id: string }[] },
+      ? supabase.from("post_pins").select("post_id, pinned").eq("user_id", currentUser.id).in("post_id", postIds)
+      : { data: [] as { post_id: string; pinned: boolean }[] },
   ]);
 
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
-  const manuallyPinnedIds = new Set((pinRows ?? []).map((r) => r.post_id));
+  const pinOverrides = new Map((pinRows ?? []).map((r) => [r.post_id, r.pinned]));
   const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
   const adminIds = await getAdminIds();
   const weekStartISO = currentWeekStartISO();
@@ -480,6 +482,15 @@ export default async function FeedPage({
       );
     }
     return false;
+  }
+
+  // 실제 고정 여부 — post_pins에 오버라이드 행이 있으면 그 값을 그대로 따르고, 없으면
+  // 자동 규칙을 쓴다. PinButton이 이 값을 뒤집어 upsert하므로 자동 고정도 해제할 수 있다
+  // (사용자 요청 — 처음엔 자동 고정을 끌 수 없게 했다가 "고정/고정 해제 둘 다 되게 해달라"
+  // 는 요청을 받고 양방향으로 열었다).
+  function isPinned(post: { id: string; user_id: string; visibility: string; collab_available: boolean }) {
+    const override = pinOverrides.get(post.id);
+    return override ?? isAutoPinnedCollab(post);
   }
 
   // 노크 UI 참여자 요약(0020) — 방장 본인이 아닌 뷰어에게 "OO, XX...에게 공개" 문구.
@@ -591,10 +602,8 @@ export default async function FeedPage({
         approvedMemberCount ?? 0,
       );
 
-  // memo 탭은 고정된(자동: 본인 글·초대받은 글 / 수동: PinButton) 합작 게시물을 최신순보다
-  // 우선해 상단에 둔다(사용자 요청). DEMO는 그대로 최신순.
-  const isPinned = (post: { id: string; user_id: string; visibility: string; collab_available: boolean }) =>
-    manuallyPinnedIds.has(post.id) || isAutoPinnedCollab(post);
+  // memo 탭은 고정된(위 isPinned — 자동 규칙 또는 PinButton 오버라이드) 합작 게시물을
+  // 최신순보다 우선해 상단에 둔다(사용자 요청). DEMO는 그대로 최신순.
   const allPostsUnfiltered = [...postsWithVideo, ...mockPosts].sort((a, b) => {
     if (isComplex) {
       const pinDiff = Number(isPinned(b)) - Number(isPinned(a));
@@ -783,21 +792,11 @@ export default async function FeedPage({
               )
             ) : null;
 
-          // memo 합작 게시물 헤더의 고정 아이콘 — 자동 고정(본인 글·초대받은 글)이면 끌 수
-          // 없는 표시만, 그 외 합작 게시물이면 직접 켜고 끌 수 있는 PinButton을 보여준다.
-          const autoPinned = isAutoPinnedCollab(post);
+          // memo 합작 게시물 헤더의 고정 아이콘 — 자동/수동 구분 없이 항상 켜고 끌 수 있는
+          // PinButton 하나로 통일(사용자 요청, 0055).
           const pinButtonEl =
             isComplex && post.collab_available && currentUser ? (
-              autoPinned ? (
-                <span
-                  title="자동 고정됨 — 내 글이거나 초대받은 합작 게시물"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center text-violet-600 dark:text-violet-300"
-                >
-                  <PinIcon className="h-4 w-4" filled />
-                </span>
-              ) : (
-                <PinButton postId={post.id} userId={currentUser.id} initialPinned={manuallyPinnedIds.has(post.id)} />
-              )
+              <PinButton postId={post.id} userId={currentUser.id} initialPinned={isPinned(post)} />
             ) : undefined;
 
           return (

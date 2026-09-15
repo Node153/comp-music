@@ -1,10 +1,10 @@
 "use client";
 
-// memo 탭 합작 게시물 수동 고정(사용자 요청) — 본인 글이거나 invite_only로 초대된 글은
-// feed/page.tsx가 자동으로 상단 고정하지만, 그 외 합작 게시물(예: Companion 공개로 그냥
-// 보이는 남의 합작 글)은 보는 사람이 원할 때만 이 버튼으로 직접 고정한다. like처럼 다른
-// 사람에게도 보이는 공개 행동이 아니라 본인 화면에만 영향을 주는 개인화 설정(post_pins,
-// 0054)이라 카운트 표시가 없다.
+// memo 탭 합작 게시물 고정(사용자 요청) — 본인 글이거나 invite_only로 초대된 글은
+// feed/page.tsx가 기본으로 상단 고정하지만, 이 버튼으로 그 자동 고정을 포함해 아무 합작
+// 게시물이나 직접 켜고 끌 수 있다(0055 — post_pins.pinned가 행이 있으면 자동 규칙을
+// 덮어쓴다). like처럼 다른 사람에게도 보이는 공개 행동이 아니라 본인 화면에만 영향을
+// 주는 개인화 설정이라 카운트 표시가 없다.
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -31,9 +31,11 @@ export function PinButton({
     const nextPinned = !pinned;
     setPinned(nextPinned);
 
-    const { error } = nextPinned
-      ? await supabase.from("post_pins").insert({ post_id: postId, user_id: userId })
-      : await supabase.from("post_pins").delete().eq("post_id", postId).eq("user_id", userId);
+    // 항상 upsert — 자동 고정된 글(행 없음)을 해제하는 것도, 이미 있는 오버라이드 행을
+    // 다시 뒤집는 것도 같은 한 번의 쓰기로 처리한다.
+    const { error } = await supabase
+      .from("post_pins")
+      .upsert({ post_id: postId, user_id: userId, pinned: nextPinned }, { onConflict: "post_id,user_id" });
 
     if (error) {
       setPinned(!nextPinned);

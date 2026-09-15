@@ -301,16 +301,19 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["post_views"]["Insert"]>;
         Relationships: [];
       };
-      // memo 합작 게시물 수동 상단 고정(0054) — 본인만 보는 개인화 표시.
+      // memo 합작 게시물 상단 고정 오버라이드(0054/0055) — 본인만 보는 개인화 표시.
+      // 행이 없으면 자동 규칙(본인 글·초대받은 글)을 따르고, 있으면 pinned 값이 덮어쓴다.
       post_pins: {
         Row: {
           post_id: string;
           user_id: string;
+          pinned: boolean;
           created_at: string;
         };
         Insert: {
           post_id: string;
           user_id: string;
+          pinned?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["post_pins"]["Insert"]>;
