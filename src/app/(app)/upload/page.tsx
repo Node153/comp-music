@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
-import { LockIcon, EyeIcon, HeartIcon, CommentIcon } from "@/components/icons";
+import { LockIcon, EyeIcon, HeartIcon, CommentIcon, SearchIcon } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
@@ -168,8 +168,58 @@ const blackLabel = `${labelClass} !text-black`;
 // 포커스만 활성화 상태를 나타내는 테두리(짙은 그레이)로 보여준다.
 const grayField =
   "w-full rounded-xl border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-active-gray focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray";
-const fileInputClass =
-  "text-sm text-black file:mr-3 file:rounded-lg file:border-0 file:bg-main-gray file:px-3 file:py-2 file:text-sm file:font-medium file:text-black hover:file:opacity-80";
+// 네이티브 <input type="file">를 그대로 쓰면 브라우저 기본 버튼("Choose File" 등)이 file:
+// 유사요소로만 살짝 꾸며져서 다른 화면 요소들과 톤이 안 맞고 허접해 보였다(사용자 지적,
+// 2026-09-16) — UploadDropbox와 같은 패턴(숨긴 input + 직접 만든 버튼)으로 바꿈.
+// 위 CoverFileButton(가로로 긴 작은 버튼+파일명 텍스트 한 줄) 시도가 오히려 더 허접해
+// 보인다는 피드백(2026-09-16) — 위 메인 업로드 박스(UploadDropbox)와 같은 점선 정사각형
+// 언어로 통일해서, 파일 고르기 전/후 모두 CoverPositionPicker와 같은 자리·같은 크기(160px
+// 정사각형)의 요소가 서로 바뀌어 끼워지는 느낌으로 만든다 — 더 정돈되고 일관돼 보인다.
+function CoverFileButton({ onChange }: { onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      {/* input은 button 밖 형제로 — <button> 안에 <input>은 유효하지 않은 마크업. */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        onChange={onChange}
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        style={{ width: 160, height: 160 }}
+        className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-[#adadad]"
+      >
+        <span className="text-2xl" aria-hidden>
+          ⬆
+        </span>
+        <span className="text-sm font-bold">이미지 선택</span>
+        <span className="text-[11px]">PNG · JPG · WEBP</span>
+      </button>
+    </>
+  );
+}
+
+// CoverFileButton과 같은 자리에 나란히 두는 두 번째 선택지 — "GIF로 만들기"가 텍스트
+// 버튼 하나뿐이라 선택하고 싶게 안 생겼다는 피드백(2026-09-16) — 같은 정사각형 점선
+// 언어로 맞춰서 둘이 진짜 "둘 중 하나 고르는" 카드처럼 보이게 했다.
+function GifPickerButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ width: 160, height: 160 }}
+      className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-[#adadad]"
+    >
+      <SearchIcon className="h-6 w-6" />
+      <span className="text-sm font-bold">GIF 검색</span>
+      <span className="text-[11px]">GIPHY에서 찾기</span>
+    </button>
+  );
+}
 // 공유 <Button variant="primary">는 기본이 검정 배경(다른 화면들과 공유하는 토큰이라 그대로 둠) —
 // 이 화면(그레이 3단계 규칙)에서만 !important로 활성화 박스 색(demo-bg)으로 덮어쓴다.
 // !important가 배경색을 고정해버려서 Button 기본 hover:bg-gray-800이 안 먹으니, 다른 버튼들과
@@ -1026,61 +1076,57 @@ export default function UploadPage() {
                     <span className={blackLabel}>커버 이미지 (필수)</span>
                   </div>
                   {coverGifUrl ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-start gap-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={coverGifUrl}
                         alt="선택한 GIF"
-                        className="h-16 w-16 rounded-lg object-cover"
+                        style={{ width: 160, height: 160 }}
+                        className="shrink-0 rounded-xl object-cover"
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setCoverGifUrl(null)}
-                        className="text-sm"
-                      >
-                        GIF 제거
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          onChange={handleCoverChange}
-                          className={fileInputClass}
-                        />
+                      <div className="flex flex-col items-start gap-2 pt-1">
                         <Button
                           type="button"
                           variant="ghost"
-                          onClick={() => setGifPickerOpen(true)}
-                          className="shrink-0 text-sm"
+                          onClick={() => setCoverGifUrl(null)}
+                          className="text-sm"
                         >
-                          GIF로 만들기
+                          GIF 제거
                         </Button>
                       </div>
-                      {coverObjectUrl && (
-                        <div className="flex items-center gap-2">
-                          <CoverPositionPicker
-                            src={coverObjectUrl}
-                            position={coverPosition}
-                            onChange={setCoverPosition}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => {
-                              setCoverFile(null);
-                              setCoverFileError(null);
-                              setCoverPosition({ x: 50, y: 50 });
-                            }}
-                            className="text-sm"
-                          >
-                            이미지 제거
-                          </Button>
-                        </div>
-                      )}
+                    </div>
+                  ) : coverObjectUrl ? (
+                    // 위 메인 업로드 박스와 같은 정사각형 점선 자리에 CoverPositionPicker가
+                    // 들어간다(2026-09-16, 사용자 지적 — 가로로 긴 버튼+파일명 한 줄은 허접해
+                    // 보임). "이미지 제거"는 그 옆 세로 버튼 자리로.
+                    <div className="flex items-start gap-3">
+                      <CoverPositionPicker
+                        src={coverObjectUrl}
+                        position={coverPosition}
+                        onChange={setCoverPosition}
+                      />
+                      <div className="flex flex-col items-start gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setCoverFile(null);
+                            setCoverFileError(null);
+                            setCoverPosition({ x: 50, y: 50 });
+                          }}
+                          className="text-sm"
+                        >
+                          이미지 제거
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    // 아직 아무것도 안 골랐을 때 — 이미지/GIF 둘 중 하나를 고르는 선택지를
+                    // 같은 정사각형 점선 카드 두 개로 나란히(2026-09-16, 사용자 요청 — GIF
+                    // 쪽도 "고르고 싶게" 디자인).
+                    <div className="flex items-start gap-3">
+                      <CoverFileButton onChange={handleCoverChange} />
+                      <GifPickerButton onClick={() => setGifPickerOpen(true)} />
                     </div>
                   )}
                   {coverFileError && <p className={errorText}>{coverFileError}</p>}
@@ -1131,61 +1177,57 @@ export default function UploadPage() {
                     <span className={blackLabel}>커버 이미지 (필수)</span>
                   </div>
                   {coverGifUrl ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-start gap-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={coverGifUrl}
                         alt="선택한 GIF"
-                        className="h-16 w-16 rounded-lg object-cover"
+                        style={{ width: 160, height: 160 }}
+                        className="shrink-0 rounded-xl object-cover"
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setCoverGifUrl(null)}
-                        className="text-sm"
-                      >
-                        GIF 제거
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          onChange={handleCoverChange}
-                          className={fileInputClass}
-                        />
+                      <div className="flex flex-col items-start gap-2 pt-1">
                         <Button
                           type="button"
                           variant="ghost"
-                          onClick={() => setGifPickerOpen(true)}
-                          className="shrink-0 text-sm"
+                          onClick={() => setCoverGifUrl(null)}
+                          className="text-sm"
                         >
-                          GIF로 만들기
+                          GIF 제거
                         </Button>
                       </div>
-                      {coverObjectUrl && (
-                        <div className="flex items-center gap-2">
-                          <CoverPositionPicker
-                            src={coverObjectUrl}
-                            position={coverPosition}
-                            onChange={setCoverPosition}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => {
-                              setCoverFile(null);
-                              setCoverFileError(null);
-                              setCoverPosition({ x: 50, y: 50 });
-                            }}
-                            className="text-sm"
-                          >
-                            이미지 제거
-                          </Button>
-                        </div>
-                      )}
+                    </div>
+                  ) : coverObjectUrl ? (
+                    // 위 메인 업로드 박스와 같은 정사각형 점선 자리에 CoverPositionPicker가
+                    // 들어간다(2026-09-16, 사용자 지적 — 가로로 긴 버튼+파일명 한 줄은 허접해
+                    // 보임). "이미지 제거"는 그 옆 세로 버튼 자리로.
+                    <div className="flex items-start gap-3">
+                      <CoverPositionPicker
+                        src={coverObjectUrl}
+                        position={coverPosition}
+                        onChange={setCoverPosition}
+                      />
+                      <div className="flex flex-col items-start gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setCoverFile(null);
+                            setCoverFileError(null);
+                            setCoverPosition({ x: 50, y: 50 });
+                          }}
+                          className="text-sm"
+                        >
+                          이미지 제거
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    // 아직 아무것도 안 골랐을 때 — 이미지/GIF 둘 중 하나를 고르는 선택지를
+                    // 같은 정사각형 점선 카드 두 개로 나란히(2026-09-16, 사용자 요청 — GIF
+                    // 쪽도 "고르고 싶게" 디자인).
+                    <div className="flex items-start gap-3">
+                      <CoverFileButton onChange={handleCoverChange} />
+                      <GifPickerButton onClick={() => setGifPickerOpen(true)} />
                     </div>
                   )}
                   {coverFileError && <p className={errorText}>{coverFileError}</p>}
