@@ -83,7 +83,7 @@ export function TopNav({
                     : "border-demo-gold text-demo-gold"
                   : isFeed
                     ? "border-transparent text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900"
-                    : "border-transparent text-black hover:opacity-80"
+                    : "border-transparent text-black hover:bg-box-gray/40"
               }`}
             >
               <span className="text-base">{tab.icon}</span>
