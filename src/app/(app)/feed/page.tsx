@@ -18,12 +18,13 @@ import { FeedHero } from "@/components/FeedHero";
 import { PostOptionsMenu } from "@/components/PostOptionsMenu";
 import { PostViewedBy } from "@/components/PostViewedBy";
 import { LikeButton } from "./LikeButton";
+import { PinButton } from "./PinButton";
 import { CommentPanel } from "./CommentPanel";
 import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO, formatCompactCount } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
-import { HeartIcon, CommentIcon, UsersIcon, MailIcon, PlayIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, UsersIcon, MailIcon, PlayIcon, PinIcon } from "@/components/icons";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -376,6 +377,7 @@ export default async function FeedPage({
     { data: likeRows },
     { data: commentRows },
     { count: approvedMemberCount },
+    { data: pinRows },
   ] = await Promise.all([
     userIds.length > 0
       ? currentUser
@@ -392,10 +394,15 @@ export default async function FeedPage({
       ? supabase.from("comments").select("post_id").in("post_id", postIds)
       : { data: [] as { post_id: string }[] },
     supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
+    // memo 합작 게시물 수동 고정(post_pins, 0054) — 본인이 고정해둔 게시물 id만.
+    currentUser && isComplex && postIds.length > 0
+      ? supabase.from("post_pins").select("post_id").eq("user_id", currentUser.id).in("post_id", postIds)
+      : { data: [] as { post_id: string }[] },
   ]);
 
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+  const manuallyPinnedIds = new Set((pinRows ?? []).map((r) => r.post_id));
   const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
   const adminIds = await getAdminIds();
   const weekStartISO = currentWeekStartISO();
@@ -446,6 +453,24 @@ export default async function FeedPage({
     if (!currentUser) return false;
     if (post.user_id === currentUser.id) return true;
     if (post.visibility === "followers") return myCompanionIds.has(post.user_id);
+    if (post.visibility === "invite_only") {
+      return accessRows.some(
+        (r) =>
+          r.post_id === post.id &&
+          r.user_id === currentUser.id &&
+          (r.status === "invited" || r.status === "accepted"),
+      );
+    }
+    return false;
+  }
+
+  // memo 상단 자동 고정 대상(사용자 요청) — 합작 게시물 중 "내 글이거나 특정인으로서
+  // 초대된 글"만. 처음엔 합작 게시물 전부를 고정했는데, Companion 공개(followers)로
+  // 그냥 보이는 남의 합작 글까지 전부 고정되는 건 과하다는 지적을 받고 범위를 좁혔다 —
+  // 그 외 합작 게시물은 보는 사람이 원하면 PinButton(post_pins, 0054)으로 직접 고정한다.
+  function isAutoPinnedCollab(post: { id: string; user_id: string; visibility: string; collab_available: boolean }) {
+    if (!isComplex || !post.collab_available || !currentUser) return false;
+    if (post.user_id === currentUser.id) return true;
     if (post.visibility === "invite_only") {
       return accessRows.some(
         (r) =>
@@ -566,12 +591,14 @@ export default async function FeedPage({
         approvedMemberCount ?? 0,
       );
 
-  // memo 탭은 합작(collab_available) 게시물을 최신순보다 우선해 상단에 고정한다(사용자 요청)
-  // — 같이 만들 사람을 구하는 글이라 눈에 먼저 띄어야 한다. DEMO는 그대로 최신순.
+  // memo 탭은 고정된(자동: 본인 글·초대받은 글 / 수동: PinButton) 합작 게시물을 최신순보다
+  // 우선해 상단에 둔다(사용자 요청). DEMO는 그대로 최신순.
+  const isPinned = (post: { id: string; user_id: string; visibility: string; collab_available: boolean }) =>
+    manuallyPinnedIds.has(post.id) || isAutoPinnedCollab(post);
   const allPostsUnfiltered = [...postsWithVideo, ...mockPosts].sort((a, b) => {
     if (isComplex) {
-      const collabDiff = Number(b.collab_available) - Number(a.collab_available);
-      if (collabDiff !== 0) return collabDiff;
+      const pinDiff = Number(isPinned(b)) - Number(isPinned(a));
+      if (pinDiff !== 0) return pinDiff;
     }
     return new Date(b.published_at ?? 0).getTime() - new Date(a.published_at ?? 0).getTime();
   });
@@ -756,6 +783,23 @@ export default async function FeedPage({
               )
             ) : null;
 
+          // memo 합작 게시물 헤더의 고정 아이콘 — 자동 고정(본인 글·초대받은 글)이면 끌 수
+          // 없는 표시만, 그 외 합작 게시물이면 직접 켜고 끌 수 있는 PinButton을 보여준다.
+          const autoPinned = isAutoPinnedCollab(post);
+          const pinButtonEl =
+            isComplex && post.collab_available && currentUser ? (
+              autoPinned ? (
+                <span
+                  title="자동 고정됨 — 내 글이거나 초대받은 합작 게시물"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center text-violet-600 dark:text-violet-300"
+                >
+                  <PinIcon className="h-4 w-4" filled />
+                </span>
+              ) : (
+                <PinButton postId={post.id} userId={currentUser.id} initialPinned={manuallyPinnedIds.has(post.id)} />
+              )
+            ) : undefined;
+
           return (
             <article
               key={post.id}
@@ -788,6 +832,7 @@ export default async function FeedPage({
                     />
                   ) : undefined
                 }
+                pinButton={pinButtonEl}
                 addToPlaylistButton={
                   playlistTrack ? <AddToPlaylistButton track={playlistTrack} /> : undefined
                 }

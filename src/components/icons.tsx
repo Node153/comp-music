@@ -307,6 +307,15 @@ export function SkipForwardIcon({ className }: IconProps) {
   );
 }
 
+export function PinIcon({ className, filled = false }: IconProps & { filled?: boolean }) {
+  return (
+    <svg {...base} fill={filled ? "currentColor" : "none"} className={className} aria-hidden="true">
+      <path d="M12 17v5" strokeLinecap="round" />
+      <path d="M9 3h6l-1 6 3.5 3.5a1 1 0 0 1-.7 1.7H6.2a1 1 0 0 1-.7-1.7L9 9z" />
+    </svg>
+  );
+}
+
 export function VolumeIcon({ className, muted = false }: IconProps & { muted?: boolean }) {
   return (
     <svg {...base} className={className} aria-hidden="true">

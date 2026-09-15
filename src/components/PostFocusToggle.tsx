@@ -22,6 +22,7 @@ export function PostFocusToggle({
   isComplex,
   optionsMenu,
   addToPlaylistButton,
+  pinButton,
   children,
 }: {
   authorId: string;
@@ -34,6 +35,8 @@ export function PostFocusToggle({
   optionsMenu?: React.ReactNode;
   // DEMO 게시물이고 재생 가능한 미디어면 부모가 <AddToPlaylistButton>을 넘겨준다.
   addToPlaylistButton?: React.ReactNode;
+  // memo 합작 게시물이면 부모가 자동 고정 표시 또는 <PinButton>을 넘겨준다.
+  pinButton?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [focused, setFocused] = useState(false);
@@ -70,6 +73,7 @@ export function PostFocusToggle({
             {focused ? <XIcon className="h-4 w-4" /> : <ExpandIcon className="h-4 w-4" />}
           </button>
         )}
+        {pinButton}
         {optionsMenu}
       </div>
       {/* ComplexPostChat이 focused 값을 보고 레이아웃을 바꾼다(사용자 요청 — 집중 모드일

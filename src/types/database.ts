@@ -301,6 +301,21 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["post_views"]["Insert"]>;
         Relationships: [];
       };
+      // memo 합작 게시물 수동 상단 고정(0054) — 본인만 보는 개인화 표시.
+      post_pins: {
+        Row: {
+          post_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          post_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_pins"]["Insert"]>;
+        Relationships: [];
+      };
       comments: {
         Row: {
           id: string;
