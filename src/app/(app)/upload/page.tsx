@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
-import { LockIcon, HeartIcon, CommentIcon } from "@/components/icons";
+import { LockIcon, EyeIcon, HeartIcon, CommentIcon } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
 import { ALL_GENRES } from "@/lib/genres";
@@ -68,15 +68,19 @@ const UPLOAD_TYPE_OPTIONS: { value: UploadType; label: string; icon: string }[] 
 type ComplexVisibility = "followers" | "specific";
 const COMPLEX_VISIBILITY_OPTIONS: { value: ComplexVisibility; label: string; icon: string }[] = [
   // "followers" 저장값은 0012 그대로 두고 의미만 Companion 공개로 재정의(0017_companions).
-  { value: "followers", label: "Companion 공개", icon: "👥" },
-  { value: "specific", label: "초대한 사람만", icon: "🔒" },
+  // 아이콘은 이모지 대신 EyeIcon(memo 게시물의 "조회자" 기능과 같은 아이콘, 2026-09-15
+  // 사용자 요청)을 JSX에서 직접 렌더 — 이 배열의 icon 필드는 이제 specific("🔒")에만 쓰인다.
+  { value: "followers", label: "Companion 공개", icon: "" },
+  { value: "specific", label: "특정인 공개", icon: "🔒" },
 ];
 // memo 게시 형태 — 화면 표시·선택용 값이고 실제로는 posts.collab_available(boolean)에
 // 저장된다(정책 변경, 사용자 요청 — 체크박스 대신 단독/협업 중 하나를 고르는 선택형 버튼).
 type ComplexPostMode = "solo" | "collab";
 const COMPLEX_POST_MODE_OPTIONS: { value: ComplexPostMode; label: string; icon: string }[] = [
-  { value: "solo", label: "단독 게시물", icon: "🎵" },
-  { value: "collab", label: "협업 게시물", icon: "🤝" },
+  // 2026-09-15 사용자 요청으로 이름·아이콘 변경(단독->솔로, 협업->콜라보) — 아이콘은
+  // 정사각형 버튼 안에 큼직하게 들어가는 이니셜 한 글자(S/C)로.
+  { value: "solo", label: "솔로게시물", icon: "S" },
+  { value: "collab", label: "콜라보게시물", icon: "C" },
 ];
 // posts.expire_hours는 not null 컬럼이라 demo(영구노출)에도 값이 필요하지만,
 // 영구노출 여부는 expires_at(null)로만 판단하므로(feed/page.tsx 쿼리 참고) 이 값 자체는 화면에 노출되지 않는다.
@@ -146,6 +150,15 @@ const primaryButtonClass = "!bg-demo-bg !text-black hover:opacity-80";
 function selectableButtonClass(active: boolean, base: string) {
   const colors = active ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-80";
   return `${base} ${colors}`;
+}
+
+// 게시 형태(단독/협업)·공개 범위(Companion/초대) 버튼 전용 — 정사각형 아이콘 버튼으로
+// 디자인(2026-09-15, 사용자 요청). aspect-square라 grid-cols-2 안에서 폭에 맞춰 항상
+// 정사각형을 유지 — 큰 아이콘(이모지 또는 S/C 이니셜)이 위, 작은 라벨이 아래.
+function squareOptionButtonClass(active: boolean) {
+  return `flex aspect-square flex-col items-center justify-center gap-1 rounded-xl text-sm font-medium transition ${
+    active ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-80"
+  }`;
 }
 
 // 게시 유형 토글 전용 — DEMO(메인 화이트/포인트 골드) vs complex(메인 짙은 그레이/포인트 퍼플)를
@@ -761,34 +774,74 @@ export default function UploadPage() {
             </p>
           </div>
 
-          {/* 공동창작 여부가 memo 업로드 형태 자체를 가른다(정책 변경, 사용자 요청) — 파일
-              종류·커버 이미지 필요 여부가 여기 값에 따라 바뀌므로 업로드 칸보다 먼저 보여준다.
-              체크박스 대신 단독/협업 둘 중 하나를 고르는 선택형 버튼으로(사용자 요청) —
-              공개범위(COMPLEX_VISIBILITY_OPTIONS)와 같은 패턴. */}
+          {/* 공동창작 여부(게시 형태)·공개 범위 — 둘 다 memo 게시 전반의 성격을 정하는 상위
+              설정이라 게시 유형 바로 밑, 같은 줄에 나란히 둔다(2026-09-15, 사용자 요청 —
+              "게시 유형 밑에 동일선상으로 표시"). 버튼은 정사각형 아이콘 버튼으로(사용자 요청) —
+              squareOptionButtonClass 참고. 공개 범위에 딸린 "초대할 사람"·"노출 시간/기간"은
+              그대로 아래쪽 원래 위치에 남겨둔다(값 자체는 여기서 이미 정해짐, complexVisibility
+              상태 공유). */}
           {uploadType === "complex" && (
-            <div className="flex flex-col gap-1.5">
-              <span className={blackLabel}>게시 형태</span>
-              <div className="grid grid-cols-2 gap-2">
-                {COMPLEX_POST_MODE_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleCollabAvailableChange(option.value === "collab")}
-                    className={selectableButtonClass(
-                      collabAvailable === (option.value === "collab"),
-                      "flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                    )}
-                  >
-                    <span className="text-base">{option.icon}</span>
-                    {option.label}
-                  </button>
-                ))}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <span className={blackLabel}>게시 형태</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {COMPLEX_POST_MODE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleCollabAvailableChange(option.value === "collab")}
+                      className={squareOptionButtonClass(collabAvailable === (option.value === "collab"))}
+                    >
+                      {/* 이니셜 한 글자(S/C)에 네모 테두리를 둘러 배지처럼(2026-09-15 사용자 요청). */}
+                      <span className="flex h-5 w-5 items-center justify-center rounded border border-black text-xs font-black">
+                        {option.icon}
+                      </span>
+                      <span className="text-xs">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="px-1 text-xs text-active-gray">
+                  {collabAvailable
+                    ? "Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요 — 음원(mp3/wav)만 올릴 수 있어요."
+                    : "DEMO처럼 영상·음원 업로드 + 커버 이미지 + 좋아요·댓글·조회자 목록으로 게시돼요."}
+                </p>
               </div>
-              <p className="px-1 text-xs text-active-gray">
-                {collabAvailable
-                  ? "Companion이 음원을 스택처럼 이어 쌓으며 함께 곡을 만들 수 있어요 — 음원(mp3/wav)만 올릴 수 있어요."
-                  : "DEMO처럼 영상·음원 업로드 + 커버 이미지 + 좋아요·댓글·조회자 목록으로 게시돼요."}
-              </p>
+              <div className="flex flex-col gap-1.5">
+                <span className={blackLabel}>공개 범위</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {COMPLEX_VISIBILITY_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setComplexVisibility(option.value)}
+                      className={squareOptionButtonClass(complexVisibility === option.value)}
+                    >
+                      {option.value === "specific" ? (
+                        <LockIcon className="h-6 w-6" />
+                      ) : (
+                        // memo 게시물의 "조회자" 기능과 같은 EyeIcon(2026-09-15 사용자 요청 —
+                        // 예전엔 👥 이모지였음).
+                        <EyeIcon className="h-6 w-6" />
+                      )}
+                      <span className="text-xs">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* "초대할 사람"은 업로드 바로 위로(2026-09-15, 사용자 요청) — 특정인 공개를
+              고르자마자 업로드 전에 누구를 초대할지부터 정하게. */}
+          {uploadType === "complex" && complexVisibility === "specific" && (
+            <div className="flex flex-col gap-1.5">
+              <span className={blackLabel}>초대할 사람</span>
+              <InviteUserPicker
+                currentUserId={currentUserId ?? ""}
+                value={inviteUsers}
+                onChange={setInviteUsers}
+                inputClassName={grayField}
+              />
             </div>
           )}
 
@@ -1116,44 +1169,11 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* DEMO 안내는 게시 유형 바로 아래 설명글로 통합 — 여기는 memo 전용 설정만 남김. */}
+          {/* DEMO 안내는 게시 유형 바로 아래 설명글로 통합 — 여기는 memo 전용 설정만 남김.
+              공개 범위 선택 버튼과 "초대할 사람"은 위(게시 형태 옆·업로드 위)로 옮겨졌고,
+              여기는 노출 시간/기간만 남는다. */}
           {uploadType === "complex" && (
             <>
-              <div className="flex flex-col gap-1.5">
-                <span className={blackLabel}>공개 범위</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {COMPLEX_VISIBILITY_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setComplexVisibility(option.value)}
-                      className={selectableButtonClass(
-                        complexVisibility === option.value,
-                        "flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                      )}
-                    >
-                      {option.value === "specific" ? (
-                        <LockIcon className="h-4 w-4" />
-                      ) : (
-                        <span className="text-base">{option.icon}</span>
-                      )}
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {complexVisibility === "specific" && (
-                <div className="flex flex-col gap-1.5">
-                  <span className={blackLabel}>초대할 사람</span>
-                  <InviteUserPicker
-                    currentUserId={currentUserId ?? ""}
-                    value={inviteUsers}
-                    onChange={setInviteUsers}
-                  />
-                </div>
-              )}
-
               <div className="flex flex-col gap-1.5">
                 <span className={blackLabel}>{collabAvailable ? "노출 기간" : "노출 시간"}</span>
                 <div className="grid grid-cols-4 gap-2">

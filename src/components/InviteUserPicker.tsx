@@ -10,14 +10,22 @@ import { createClient } from "@/lib/supabase/client";
 
 export type PickedUser = { id: string; name: string };
 
+const DEFAULT_INPUT_CLASS =
+  "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-white dark:focus:ring-white";
+
 export function InviteUserPicker({
   currentUserId,
   value,
   onChange,
+  // 업로드 화면의 그레이 컬러 시스템처럼 이 컴포넌트를 쓰는 화면마다 톤이 다를 수 있어서
+  // (SearchPanel은 기본 흰 배경 유지) 입력창 클래스만 선택적으로 덮어쓸 수 있게 한다
+  // (2026-09-15, 사용자 요청 — 업로드 화면 "초대할 사람" 칸을 그레이로).
+  inputClassName,
 }: {
   currentUserId: string;
   value: PickedUser[];
   onChange: (next: PickedUser[]) => void;
+  inputClassName?: string;
 }) {
   const supabase = createClient();
   // null = 아직 로딩 중, [] = 로딩 끝났는데 Companion이 없음.
@@ -101,7 +109,7 @@ export function InviteUserPicker({
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         placeholder="Companion 검색해서 초대"
-        className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-white dark:focus:ring-white"
+        className={inputClassName ?? DEFAULT_INPUT_CLASS}
       />
       {open && (
         <div className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-xl border border-gray-200 p-2 dark:border-gray-700">
