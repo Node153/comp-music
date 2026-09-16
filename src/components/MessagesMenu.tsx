@@ -16,7 +16,15 @@ import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { navRowClass, navLabelClass } from "@/components/ui/styles";
 import type { ConversationItem } from "@/lib/conversationList";
 
-export function MessagesMenu({ isFeed }: { isFeed: boolean }) {
+export function MessagesMenu({
+  isFeed,
+  expanded,
+  onOpenChange,
+}: {
+  isFeed: boolean;
+  expanded: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const search = useSearchOverlay();
   const [open, setOpen] = useState(false);
   // null = 이번에 열고 나서 아직 못 받아옴(로딩 중) — 열 때마다 toggleOpen에서 초기화해서 매번 새로 불러온다.
@@ -25,14 +33,17 @@ export function MessagesMenu({ isFeed }: { isFeed: boolean }) {
 
   function close() {
     setOpen(false);
+    onOpenChange?.(false);
   }
 
   function toggleOpen() {
-    setOpen((v) => {
-      const next = !v;
-      if (next) setConversations(null);
-      return next;
-    });
+    // onOpenChange(부모 NavSidebar의 setState)를 setOpen 업데이터 함수 안에서 부르면 "다른
+    // 컴포넌트를 렌더링 중 업데이트" 경고가 뜬다(React가 업데이터를 렌더 단계에서 실행할 수
+    // 있어서) — 이벤트 핸들러 최상위에서 순서대로 호출하도록 뺐다(2026-09-16).
+    const next = !open;
+    setOpen(next);
+    if (next) setConversations(null);
+    onOpenChange?.(next);
   }
 
   useEffect(() => {
@@ -53,9 +64,9 @@ export function MessagesMenu({ isFeed }: { isFeed: boolean }) {
 
   return (
     <div className="relative">
-      <button onClick={toggleOpen} title="Chat" aria-label="Chat" className={navRowClass(open, isFeed)}>
+      <button onClick={toggleOpen} title="Chat" aria-label="Chat" className={navRowClass(open, isFeed, expanded)}>
         <ChatIcon className="h-6 w-6 shrink-0" />
-        <span className={navLabelClass}>메시지</span>
+        <span className={navLabelClass(expanded)}>메시지</span>
       </button>
 
       {open && (

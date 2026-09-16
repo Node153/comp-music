@@ -66,10 +66,14 @@ export function NotificationsMenu({
   userId,
   isFeed,
   compact = false,
+  expanded = false,
+  onOpenChange,
 }: {
   userId: string;
   isFeed: boolean;
   compact?: boolean;
+  expanded?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const unseenNotifications = useNotificationCount();
   const markSeen = useMarkNotificationsSeen();
@@ -81,14 +85,17 @@ export function NotificationsMenu({
 
   function close() {
     setOpen(false);
+    onOpenChange?.(false);
   }
 
   function toggleOpen() {
-    setOpen((v) => {
-      const next = !v;
-      if (next) setItems(null);
-      return next;
-    });
+    // onOpenChange(부모 NavSidebar의 setState)를 setOpen 업데이터 함수 안에서 부르면 "다른
+    // 컴포넌트를 렌더링 중 업데이트" 경고가 뜬다 — 이벤트 핸들러 최상위에서 순서대로 호출
+    // (2026-09-16).
+    const next = !open;
+    setOpen(next);
+    if (next) setItems(null);
+    onOpenChange?.(next);
   }
 
   useEffect(() => {
@@ -131,7 +138,7 @@ export function NotificationsMenu({
       ) : (
         // 뱃지를 아이콘 모서리에 고정(행 끝이 아니라)해서, 사이드바가 접혀 라벨이 사라진
         // 상태에서도(navLabelClass) 뱃지 위치가 안 바뀌고 계속 보인다.
-        <button onClick={toggleOpen} title="Alerts" aria-label="Alerts" className={navRowClass(open, isFeed)}>
+        <button onClick={toggleOpen} title="Alerts" aria-label="Alerts" className={navRowClass(open, isFeed, expanded)}>
           <span className="relative shrink-0">
             <BellIcon className="h-6 w-6" />
             {unseenNotifications > 0 && (
@@ -140,7 +147,7 @@ export function NotificationsMenu({
               </span>
             )}
           </span>
-          <span className={navLabelClass}>알림</span>
+          <span className={navLabelClass(expanded)}>알림</span>
         </button>
       )}
 

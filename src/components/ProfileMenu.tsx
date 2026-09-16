@@ -17,11 +17,15 @@ export function ProfileMenu({
   userName,
   isAdmin = false,
   isFeed,
+  expanded,
+  onOpenChange,
 }: {
   userId: string;
   userName: string;
   isAdmin?: boolean;
   isFeed: boolean;
+  expanded: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -31,6 +35,7 @@ export function ProfileMenu({
   function close() {
     setOpen(false);
     setAdminOpen(false);
+    onOpenChange?.(false);
   }
 
   async function handleLogout() {
@@ -41,9 +46,18 @@ export function ProfileMenu({
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((v) => !v)} title="Me" aria-label="Me" className={navRowClass(open, isFeed)}>
+      <button
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          onOpenChange?.(next);
+        }}
+        title="Me"
+        aria-label="Me"
+        className={navRowClass(open, isFeed, expanded)}
+      >
         <Avatar userId={userId} name={userName} className="h-7 w-7 shrink-0 text-xs" />
-        <span className={`truncate ${navLabelClass}`}>{userName}</span>
+        <span className={`truncate ${navLabelClass(expanded)}`}>{userName}</span>
       </button>
 
       {open && (
