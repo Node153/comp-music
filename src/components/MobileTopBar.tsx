@@ -22,7 +22,7 @@ export function MobileTopBar() {
   const searchParams = useSearchParams();
   const activeFeedTab = searchParams.get("feed") ?? "completion";
   const unseenNotifications = useNotificationCount();
-  // TopNav와 같은 이유 — 피드 밖 화면은 캔버스가 active-gray라 흰 상단바 대신 main-gray를 쓴다.
+  // TopNav와 같은 이유 — 피드 밖 화면은 캔버스가 canvas-gray라 흰 상단바 대신 main-gray를 쓴다.
   const isFeed = pathname === "/feed" || pathname?.startsWith("/feed/");
 
   return (

@@ -156,8 +156,9 @@ function cropImageFileToSquare(
   });
 }
 
-// 그레이는 옅은(box-gray)/중간(main-gray)/짙은(active-gray) + 활성화 박스 전용 demo-bg(#fafafa,
-// DEMO 탭 배경색) 4가지만 쓴다(globals.css 참고, 2번째 수정 — 활성화 박스는 이제 데모탭 배경색).
+// 그레이는 배경 4단계(box-gray/main-gray/canvas-gray + 활성화 박스 전용 demo-bg, #fafafa
+// DEMO 탭 배경색)와 텍스트/보더 전용 active-gray만 쓴다(globals.css 참고, 2026-09-16 재조정
+// — 배경 4단계는 전부 데모탭 기준 살짝 어두운 밝은 톤, active-gray는 글씨·테두리용으로 유지).
 // 이 페이지 밖(예: /profile/manage)에도 재사용되는 공유 스타일(pageCard/labelClass/errorText)은
 // 건드리지 않고, 여기서만 색만 이 4가지+검정 글씨로 덮어써(grayField는 아예 새로 정의) 확장한다.
 // w-full: pageCard는 max-w만 있어서 카드 폭이 내용물 고유 너비를 따라간다 — 해시태그 검색으로
@@ -191,7 +192,7 @@ function CoverFileButton({ onChange }: { onChange: (e: React.ChangeEvent<HTMLInp
         type="button"
         onClick={() => inputRef.current?.click()}
         style={{ width: 160, height: 160 }}
-        className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-[#adadad]"
+        className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-canvas-gray"
       >
         <span className="text-2xl" aria-hidden>
           ⬆
@@ -212,7 +213,7 @@ function GifPickerButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       style={{ width: 160, height: 160 }}
-      className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-[#adadad]"
+      className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-canvas-gray"
     >
       <SearchIcon className="h-6 w-6" />
       <span className="text-sm font-bold">GIF 검색</span>
@@ -305,14 +306,14 @@ function UploadDropbox({
         setDragOver(false);
         onSelect(e.dataTransfer.files?.[0] ?? null);
       }}
-      // hover:opacity-80는 이 박스 테두리(border-active-gray)가 페이지 캔버스 배경(마찬가지로
-      // active-gray, PageCanvas.tsx)과 색이 같아서 옅어져도 거의 안 보이고, 안쪽 채움(box-gray)도
-      // 옅게 반투명해지는 정도라 박스 전체가 반응하는 느낌이 잘 안 났다(사용자 지적, 2026-09-15).
-      // 그래서 채움 자체를 명확히 다른 색(box-gray와 main-gray 사이)으로 바꿔서 점선 안 전체
-      // 표면이 눈에 띄게 짙어지게 했다 — 이전에 main-gray 통째로는 "너무 짙다"는 피드백을
-      // 받았던 적이 있어(2026-09-14) 그보다 옅은 중간 톤을 골랐다.
+      // hover:opacity-80는 이 박스 테두리(border-active-gray)가 페이지 캔버스 배경(예전엔
+      // 마찬가지로 active-gray, PageCanvas.tsx)과 색이 같아서 옅어져도 거의 안 보이고, 안쪽
+      // 채움(box-gray)도 옅게 반투명해지는 정도라 박스 전체가 반응하는 느낌이 잘 안 났다
+      // (사용자 지적, 2026-09-15). 그래서 채움 자체를 명확히 다른 색으로 바꿔서 점선 안 전체
+      // 표면이 눈에 띄게 짙어지게 했다 — hover 색은 그레이 4단계 중 가장 짙은 canvas-gray를
+      // 재사용(2026-09-16, 팔레트를 전체적으로 밝게 재조정하며 하드코딩된 #adadad를 정리).
       className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-10 text-center text-active-gray transition-colors ${
-        dragOver ? "bg-demo-bg" : "bg-box-gray hover:bg-[#adadad]"
+        dragOver ? "bg-demo-bg" : "bg-box-gray hover:bg-canvas-gray"
       }`}
     >
       <input

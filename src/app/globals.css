@@ -23,21 +23,31 @@
      작업 중 나온 "매트 브라스(놋쇠)" 톤이 더 낫다고 판단돼 이걸로 통일(memo의 violet과
      짝을 맞추는 DEMO 쪽 색). bg-demo-gold/text-demo-gold/border-demo-gold로 쓴다. */
   --color-demo-gold: #c9a668;
-  /* 그레이 3단계 — DEMO 탭 배경(#fafafa)과 memo 탭 배경(#1c1c1e) 사이를 4등분한 옅은/중간/짙은
-     톤(사용자 지정) + DEMO 탭 배경색 자체. 피드 DEMO/memo 탭 제외한 화면(상단 메뉴바 아이콘으로
-     이동하는 화면)의 그레이는 이 4가지만 쓴다 — 검정/흰색은 글씨(기본 검정)에만 남긴다.
-     역할 배정(2번째 수정, 사용자 지정):
-     - active-gray(짙은, #545455): 큰 배경(캔버스).
-     - main-gray(중간, #8b8b8c): 최상위 박스(카드) 배경.
-     - box-gray(옅은, #c3c3c3): 박스 안에 있는 중첩 박스 배경 · 테두리 라인.
-     - demo-bg(#fafafa, DEMO 탭 배경색): 중요 박스·활성화 박스(버튼, 선택된 탭, "나" 말풍선 등)
-       배경 — 밝은 색이라 이 안의 글씨도 검정.
-     글씨는 기본 검정, 덜 중요한(타임스탬프 등) 글씨는 active-gray(짙은) 톤을 텍스트 컬러로 쓴다.
-     bg-main-gray/bg-box-gray/bg-active-gray/bg-demo-bg, border-box-gray 등으로 쓴다. */
-  --color-main-gray: #8b8b8c;
-  --color-box-gray: #c3c3c3;
+  /* 그레이 컬러 시스템 — 피드 DEMO/memo 탭 제외한 화면(상단 메뉴바 아이콘으로 이동하는 화면)의
+     배경/텍스트는 이 5가지만 쓴다 — 검정/흰색은 글씨(기본 검정)에만 남긴다.
+
+     [배경 4단계 — 전부 DEMO 탭 배경(demo-bg, #fafafa)을 기준으로 살짝씩만 어두운 옅은
+     톤으로 통일(2026-09-16, "너무 어둡다" 피드백 반영 — 이전엔 canvas가 #545455까지
+     짙어서 화면 전체가 어두워 보였다). 4단계 전부 밝은 그레이 띠 안에서만 미세하게
+     갈라지고, 역할 배정(순서 유지)은 그대로다:
+     - canvas-gray(#c6c6c7): 큰 배경(캔버스, PageCanvas).
+     - main-gray(#d6d6d7): 최상위 박스(카드) 배경.
+     - box-gray(#e6e6e7): 박스 안에 있는 중첩 박스 배경 · 테두리 라인 · 비활성 아이콘 버튼.
+     - demo-bg(#fafafa, DEMO 탭 배경색 그대로): 중요 박스·활성화 박스(버튼, 선택된 탭,
+       "나" 말풍선 등) 배경 — 가장 밝은 톤이라 이 안의 글씨도 검정.
+
+     [텍스트/보더 1단계 — active-gray, #545455, 배경 재조정 전 값 그대로 유지]
+     배경이 다 밝아졌다고 같이 밝히면 위 텍스트가 안 읽히므로 건드리지 않는다. 덜 중요한
+     (타임스탬프 등) 글씨 색, input 포커스 보더/링, 드롭존 점선 테두리에 쓰고, 의도적으로
+     "어두운 칩" 룩인 두 곳(업로드 화면 합작 타입 선택 버튼의 border-violet-500 배경,
+     SoundbarPreview 미리듣기 바 배경 — 둘 다 밝은/보라 텍스트가 위에 얹힘)도 이 색을
+     그대로 쓴다. bg-main-gray/bg-box-gray/bg-canvas-gray/bg-demo-bg, border-box-gray,
+     text-active-gray 등으로 쓴다. */
+  --color-main-gray: #d6d6d7;
+  --color-box-gray: #e6e6e7;
   --color-active-gray: #545455;
   --color-demo-bg: #fafafa;
+  --color-canvas-gray: #c6c6c7;
 }
 
 /* 기본은 라이트 테마 고정(시스템 다크모드 설정과 무관) — Complex 탭에서만 .dark 클래스로 명시적 전환 */

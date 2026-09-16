@@ -42,7 +42,7 @@ export function TopNav({
   const activeFeedTab = searchParams.get("feed") ?? "completion";
   const search = useSearchOverlay();
   // 피드(/feed)는 캔버스가 흰색(PageCanvas)이라 흰 상단바가 자연스럽지만, 그 외 화면(업로드·
-  // 프로필 등)은 캔버스가 짙은 active-gray라 흰 상단바만 붕 떠 보였다(사용자 제보). 캔버스 위
+  // 프로필 등)은 캔버스가 그레이(canvas-gray)라 흰 상단바만 붕 떠 보였다(사용자 제보). 캔버스 위
   // 최상위 박스는 main-gray를 쓴다는 그레이 컬러 시스템 규칙(globals.css)을 상단바에도 맞춘다.
   const isFeed = pathname === "/feed" || pathname?.startsWith("/feed/");
 
