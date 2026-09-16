@@ -17,14 +17,15 @@ import { MemoGuideCards } from "@/components/MemoGuideCards";
 import { FeedHero } from "@/components/FeedHero";
 import { PostOptionsMenu } from "@/components/PostOptionsMenu";
 import { PostViewedBy } from "@/components/PostViewedBy";
+import { PostViewCount } from "@/components/PostViewCount";
 import { LikeButton } from "./LikeButton";
 import { PinButton } from "./PinButton";
 import { CommentPanel } from "./CommentPanel";
 import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
-import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO, formatCompactCount } from "@/lib/feedConstants";
+import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
-import { HeartIcon, CommentIcon, UsersIcon, MailIcon, PlayIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, UsersIcon, MailIcon } from "@/components/icons";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -809,6 +810,7 @@ export default async function FeedPage({
                 initialLikeCount={likeCount}
                 initialCommentCount={commentCount}
                 initialWeeklyLikeCount={weeklyLikeCount}
+                initialViewCount={post.view_count}
                 peakThreshold={peakThreshold}
               >
               <PostFocusToggle
@@ -1030,13 +1032,10 @@ export default async function FeedPage({
                         <UsersIcon className="h-3.5 w-3.5" /> 합작게시물{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
                       </span>
                     )}
-                    {/* 조회수(0052) — DEMO 전용, 아직 PEAK 기준에는 안 씀(데이터만 우선 쌓는 중,
-                        /goal 논의). 0이면 아직 아무도 안 봤다는 뜻이라 굳이 안 보여준다. */}
-                    {!isComplex && post.view_count > 0 && (
-                      <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-                        <PlayIcon className="h-3 w-3" /> {formatCompactCount(post.view_count)}
-                      </span>
-                    )}
+                    {/* 조회수(0053) — DEMO 전용, 아직 PEAK 기준에는 안 씀(데이터만 우선 쌓는 중,
+                        /goal 논의). PostViewCount가 0이면 스스로 아무것도 안 그린다. 컨텍스트에서
+                        값을 읽어야 재생 시 새로고침 없이 바로 반영된다(PostVideo/SoundbarPlayer 참고). */}
+                    {!isComplex && <PostViewCount />}
                   </div>
 
                   {isComplex && post.collab_available ? (

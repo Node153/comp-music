@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylistOptional } from "@/components/PlaylistContext";
+import { usePostEngagement } from "@/components/PostEngagementContext";
 import { createClient } from "@/lib/supabase/client";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
@@ -36,6 +37,7 @@ export function PostVideo({
 }) {
   const { track, play, pause, videoRef: globalVideoRef } = useNowPlaying();
   const playlist = usePlaylistOptional();
+  const { setViewCount } = usePostEngagement();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -74,9 +76,12 @@ export function PostVideo({
     };
     if (playlist) playlist.playNow(trackData, { skipRefresh: true });
     else play(trackData);
-    // DEMO 조회수(0052) — 재생이 시작될 때마다 카운트(유튜브처럼 중복 재생도 매번 센다,
-    // 사용자 요청). memo는 아직 조회수 개념이 없어서 tone="demo"일 때만 기록한다.
+    // DEMO 조회수(0053) — 재생이 시작될 때마다 카운트(유튜브처럼 중복 재생도 매번 센다,
+    // 사용자 요청). memo는 아직 조회수 개념이 없어서 tone="demo"일 때만 기록한다. 화면에도
+    // 새로고침 없이 바로 반영되게 컨텍스트를 낙관적으로 먼저 올려두고, 서버 RPC로 실제 값도 올린다
+    // (사용자 제보: "조회수 표시 안 되는 것 같다" — DB엔 잘 쌓이는데 화면이 그때까지 안 바뀌던 문제).
     if (tone === "demo") {
+      setViewCount((c) => c + 1);
       void createClient().rpc("increment_post_view", { pid: postId });
     }
   }

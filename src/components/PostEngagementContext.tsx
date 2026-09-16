@@ -12,9 +12,13 @@ type PostEngagementContextValue = {
   weeklyLikeCount: number;
   // 회원 수 비례 PEAK 기준치 — 페이지 로드 시 서버에서 계산해 내려온 값(게시물마다 동일), 정적.
   peakThreshold: number;
+  // DEMO 조회수(0053) — PostVideo/SoundbarPlayer가 재생 시작 시 낙관적으로 올려서, 새로고침
+  // 없이도 바로 화면에 반영되게 한다(서버 RPC도 같이 호출해 실제 값도 올림).
+  viewCount: number;
   setLikeCount: Dispatch<SetStateAction<number>>;
   setCommentCount: Dispatch<SetStateAction<number>>;
   setWeeklyLikeCount: Dispatch<SetStateAction<number>>;
+  setViewCount: Dispatch<SetStateAction<number>>;
 };
 
 const PostEngagementContext = createContext<PostEngagementContextValue | null>(null);
@@ -23,22 +27,35 @@ export function PostEngagementProvider({
   initialLikeCount,
   initialCommentCount,
   initialWeeklyLikeCount,
+  initialViewCount,
   peakThreshold,
   children,
 }: {
   initialLikeCount: number;
   initialCommentCount: number;
   initialWeeklyLikeCount: number;
+  initialViewCount?: number;
   peakThreshold: number;
   children: React.ReactNode;
 }) {
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [commentCount, setCommentCount] = useState(initialCommentCount);
   const [weeklyLikeCount, setWeeklyLikeCount] = useState(initialWeeklyLikeCount);
+  const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
 
   return (
     <PostEngagementContext.Provider
-      value={{ likeCount, commentCount, weeklyLikeCount, peakThreshold, setLikeCount, setCommentCount, setWeeklyLikeCount }}
+      value={{
+        likeCount,
+        commentCount,
+        weeklyLikeCount,
+        peakThreshold,
+        viewCount,
+        setLikeCount,
+        setCommentCount,
+        setWeeklyLikeCount,
+        setViewCount,
+      }}
     >
       {children}
     </PostEngagementContext.Provider>
