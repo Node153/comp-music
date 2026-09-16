@@ -17,11 +17,10 @@ export function PostViewCount({
   iconClassName?: string;
 }) {
   const { viewCount } = usePostEngagement();
-  if (viewCount <= 0) return null;
 
   return (
     <span className={className}>
-      <PlayIcon className={iconClassName} /> {formatCompactCount(viewCount)}
+      <PlayIcon className={iconClassName} /> {viewCount > 0 ? formatCompactCount(viewCount) : ""}
     </span>
   );
 }
