@@ -1032,10 +1032,6 @@ export default async function FeedPage({
                         <UsersIcon className="h-3.5 w-3.5" /> 합작게시물{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
                       </span>
                     )}
-                    {/* 조회수(0053) — DEMO 전용, 아직 PEAK 기준에는 안 씀(데이터만 우선 쌓는 중,
-                        /goal 논의). PostViewCount가 0이면 스스로 아무것도 안 그린다. 컨텍스트에서
-                        값을 읽어야 재생 시 새로고침 없이 바로 반영된다(PostVideo/SoundbarPlayer 참고). */}
-                    {!isComplex && <PostViewCount />}
                   </div>
 
                   {isComplex && post.collab_available ? (
@@ -1049,18 +1045,29 @@ export default async function FeedPage({
                       mediaSlot={inlineMediaEl}
                     />
                   ) : !currentUser ? (
-                    <GuestEngagementRow likeCount={likeCount} commentCount={commentCount} />
+                    <GuestEngagementRow
+                      showViewCount={!isComplex}
+                      likeCount={likeCount}
+                      commentCount={commentCount}
+                    />
                   ) : post.isMock ? (
                     <div
                       className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 shrink-0 dark:border-gray-800 dark:text-gray-300"
                       title="샘플 게시물이라 실제로 누를 수는 없어요"
                     >
+                      {!isComplex && <PostViewCount className="inline-flex items-center gap-1" iconClassName="h-5 w-5" />}
                       <span className="inline-flex items-center gap-1"><HeartIcon className="h-5 w-5" /> {likeCount > 0 ? likeCount : ""}</span>
                       <span className="inline-flex items-center gap-1"><CommentIcon className="h-5 w-5" /> {commentCount > 0 ? commentCount : ""}</span>
                     </div>
                   ) : (
                 currentUser && (
-                  <div className="flex flex-wrap border-t border-gray-100 shrink-0">
+                  <div className="flex flex-wrap items-center border-t border-gray-100 shrink-0">
+                    {!isComplex && (
+                      <PostViewCount
+                        className="inline-flex items-center gap-1 px-4 py-3.5 text-base font-semibold text-gray-400 dark:text-gray-500"
+                        iconClassName="h-5 w-5"
+                      />
+                    )}
                     <LikeButton
                       postId={post.id}
                       userId={currentUser.id}

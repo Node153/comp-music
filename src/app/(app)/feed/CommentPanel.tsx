@@ -9,7 +9,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
 import { Avatar } from "@/components/Avatar";
-import { CommentIcon } from "@/components/icons";
+import { CommentIcon, XIcon } from "@/components/icons";
 
 type CommentRow = {
   id: string;
@@ -195,53 +195,76 @@ export function CommentPanel({
         {commentCount > 0 ? commentCount : ""}
       </button>
 
+      {/* 페이스북처럼 팝업으로 열어야 댓글이 많이 쌓여도 그 안에서만 스크롤된다(사용자 요청,
+          배경 블러는 불필요 — 어둡게만). 인라인으로 카드 안에 펼치면 피드 전체가 밀려 내려가고
+          한 화면 스냅 레이아웃과도 안 맞았다. */}
       {open && (
-        <div className="basis-full border-t border-gray-100 p-3">
-          {topLevel.length === 0 && (
-            <p className="py-3 text-center text-sm text-gray-400">첫 댓글을 남겨보세요</p>
-          )}
-          <div className="flex flex-col gap-3">
-            {topLevel.map((c) => (
-              <div key={c.id} className="flex gap-2">
-                <Avatar userId={c.user_id} name={c.authorName} className="h-8 w-8 text-xs" />
-                <div className="flex flex-col gap-1">
-                  {renderBubble(c)}
-                  {(repliesByParent.get(c.id) ?? []).map((r) => (
-                    <div key={r.id} className="ml-4 flex gap-2">
-                      <Avatar userId={r.user_id} name={r.authorName} className="h-7 w-7 text-xs" />
-                      <div className="flex flex-col gap-1">{renderBubble(r)}</div>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 md:items-center md:p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="flex h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl md:h-auto md:max-h-[80vh] md:rounded-2xl dark:bg-gray-950"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">댓글</p>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="닫기"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3">
+              {topLevel.length === 0 && (
+                <p className="py-3 text-center text-sm text-gray-400">첫 댓글을 남겨보세요</p>
+              )}
+              <div className="flex flex-col gap-3">
+                {topLevel.map((c) => (
+                  <div key={c.id} className="flex gap-2">
+                    <Avatar userId={c.user_id} name={c.authorName} className="h-8 w-8 text-xs" />
+                    <div className="flex flex-col gap-1">
+                      {renderBubble(c)}
+                      {(repliesByParent.get(c.id) ?? []).map((r) => (
+                        <div key={r.id} className="ml-4 flex gap-2">
+                          <Avatar userId={r.user_id} name={r.authorName} className="h-7 w-7 text-xs" />
+                          <div className="flex flex-col gap-1">{renderBubble(r)}</div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
 
-          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-
-          <div className="mt-3">
-            {replyTo && (
-              <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
-                <span>{replyTo.authorName}님에게 답글</span>
-                <button onClick={() => setReplyTo(null)} className="hover:underline">
-                  취소
+            <div className="shrink-0 border-t border-gray-100 p-3 dark:border-gray-800">
+              {error && <p className="mb-2 text-xs text-red-600">{error}</p>}
+              {replyTo && (
+                <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+                  <span>{replyTo.authorName}님에게 답글</span>
+                  <button onClick={() => setReplyTo(null)} className="hover:underline">
+                    취소
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="댓글 달기..."
+                  className="flex-1 rounded-full border border-gray-300 px-3.5 py-2 text-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+                />
+                <button
+                  onClick={submitComment}
+                  disabled={submitting}
+                  className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
+                >
+                  게시
                 </button>
               </div>
-            )}
-            <div className="flex gap-2">
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="댓글 달기..."
-                className="flex-1 rounded-full border border-gray-300 px-3.5 py-2 text-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-              />
-              <button
-                onClick={submitComment}
-                disabled={submitting}
-                className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
-              >
-                게시
-              </button>
             </div>
           </div>
         </div>

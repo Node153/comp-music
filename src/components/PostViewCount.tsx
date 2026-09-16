@@ -9,13 +9,19 @@ import { usePostEngagement } from "@/components/PostEngagementContext";
 import { formatCompactCount } from "@/lib/feedConstants";
 import { PlayIcon } from "@/components/icons";
 
-export function PostViewCount() {
+export function PostViewCount({
+  className = "inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500",
+  iconClassName = "h-3 w-3",
+}: {
+  className?: string;
+  iconClassName?: string;
+}) {
   const { viewCount } = usePostEngagement();
   if (viewCount <= 0) return null;
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-      <PlayIcon className="h-3 w-3" /> {formatCompactCount(viewCount)}
+    <span className={className}>
+      <PlayIcon className={iconClassName} /> {formatCompactCount(viewCount)}
     </span>
   );
 }

@@ -29,13 +29,13 @@ export function PostCaption({
       >
         {text}
       </p>
-      {!expanded && overflowing && (
+      {overflowing && (
         <button
           type="button"
-          onClick={() => setExpanded(true)}
+          onClick={() => setExpanded((v) => !v)}
           className="mt-0.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
-          더보기
+          {expanded ? "접기" : "더보기"}
         </button>
       )}
     </div>
