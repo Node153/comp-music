@@ -17,6 +17,7 @@ import { MemoGuideCards } from "@/components/MemoGuideCards";
 import { FeedHero } from "@/components/FeedHero";
 import { PostOptionsMenu } from "@/components/PostOptionsMenu";
 import { PostViewedBy } from "@/components/PostViewedBy";
+import { PostCaption } from "@/components/PostCaption";
 import { PostViewCount } from "@/components/PostViewCount";
 import { LikeButton } from "./LikeButton";
 import { PinButton } from "./PinButton";
@@ -846,13 +847,12 @@ export default async function FeedPage({
                 </p>
               )}
               {post.caption && (
-                <p
+                <PostCaption
+                  text={post.caption}
                   className={`px-3 pb-2 text-sm text-gray-700 dark:text-gray-300 ${
-                    oneScreenFeed ? (isComplex ? "shrink-0" : "line-clamp-3 shrink-0") : ""
+                    oneScreenFeed ? "shrink-0" : ""
                   }`}
-                >
-                  {post.caption}
-                </p>
+                />
               )}
 
               {isComplex && post.visibility === "invite_only" ? (
