@@ -1070,7 +1070,7 @@ export default async function FeedPage({
                   <div className="flex flex-wrap items-center gap-6 border-t border-gray-100 px-4 py-3.5 shrink-0">
                     {!isComplex && (
                       <PostViewCount
-                        className="inline-flex items-center gap-1 text-base font-semibold text-gray-400 dark:text-gray-500"
+                        className="inline-flex items-center gap-1 text-base font-semibold text-gray-600 dark:text-gray-300"
                         iconClassName="h-5 w-5"
                       />
                     )}
