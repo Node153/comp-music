@@ -12,7 +12,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
-import { PEAK_VIEW_THRESHOLD, formatCompactCount } from "@/lib/feedConstants";
+import { PEAK_VIEW_THRESHOLD, peakScore, formatCompactCount } from "@/lib/feedConstants";
 import { presenceStatus, type PresenceStatus } from "@/lib/presence";
 import { Avatar } from "@/components/Avatar";
 import { MessageButton } from "@/components/MessageButton";
@@ -32,17 +32,21 @@ const ONLINE_VISIBLE_LIMIT = 3;
 // 남아있지 않게 한다.
 const ONLINE_REFRESH_INTERVAL_MS = 30_000;
 
-// PEAK 게시물 = 조회수(view_count)가 PEAK_VIEW_THRESHOLD 이상인 게시물, 조회수 많은 순으로
-// 최대 3개만 노출(2026-09-17 변경, 사용자 요청 — "이번 주" 랭킹 개념은 우선 제거하고 단순
-// 노출만. PEAK 게시물이 충분히 쌓이면 추후 주간 로테이션 형식으로 다시 바꿀 예정).
+// PEAK 게시물 = peakScore(조회수 + 좋아요×10)가 PEAK_VIEW_THRESHOLD 이상인 게시물, 점수
+// 많은 순으로 최대 3개만 노출(2026-09-17 변경, 사용자 요청 — "이번 주" 랭킹 개념은 우선
+// 제거하고 단순 노출만. PEAK 게시물이 충분히 쌓이면 추후 주간 로테이션 형식으로 다시 바꿀 예정).
 const PEAK_POSTS_VISIBLE_LIMIT = 3;
+// PEAK 후보를 뽑을 게시물 풀 — 좋아요가 점수에 섞여서 view_count만으로 DB에서 걸러낼 수
+// 없어(조회수는 낮아도 좋아요가 많으면 넘을 수 있음) 조회수 순으로 넉넉히 잡아온 뒤
+// 클라이언트에서 좋아요를 더해 점수를 계산한다.
+const PEAK_CANDIDATE_POOL_LIMIT = 50;
 
 type PeakPost = {
   postId: string;
   authorName: string;
   caption: string | null;
   publishedAt: string;
-  viewCount: number;
+  score: number;
 };
 
 type KnockablePost = {
@@ -196,15 +200,17 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
     const supabase = createClient();
 
     (async () => {
+      // 좋아요가 점수에 섞이는 순간(peakScore) DB에서 view_count만으로는 필터링을 못 한다 —
+      // 조회수가 낮아도 좋아요가 많으면 넘을 수 있어서, 일단 넉넉한 후보 풀을 조회수 순으로
+      // 가져온 뒤 좋아요 수를 더해 점수를 계산한다(카드 쪽 EngagementMeter와 동일한 공식).
       const { data: rawPosts } = await supabase
         .from("posts")
         .select("id, user_id, caption, published_at, view_count")
         .eq("visibility", "public")
         .eq("status", "published")
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .gte("view_count", PEAK_VIEW_THRESHOLD)
         .order("view_count", { ascending: false })
-        .limit(PEAK_POSTS_VISIBLE_LIMIT);
+        .limit(PEAK_CANDIDATE_POOL_LIMIT);
 
       const posts = rawPosts ?? [];
       if (posts.length === 0) {
@@ -212,19 +218,37 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
         return;
       }
 
-      const authorIds = [...new Set(posts.map((p) => p.user_id))];
+      const postIds = posts.map((p) => p.id);
+      const { data: likeRows } = await supabase.from("likes").select("post_id").in("post_id", postIds);
+      const likeCountMap = new Map<string, number>();
+      for (const row of likeRows ?? []) {
+        likeCountMap.set(row.post_id, (likeCountMap.get(row.post_id) ?? 0) + 1);
+      }
+
+      const peakCandidates = posts
+        .map((p) => ({ ...p, score: peakScore(p.view_count, likeCountMap.get(p.id) ?? 0) }))
+        .filter((p) => p.score >= PEAK_VIEW_THRESHOLD)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, PEAK_POSTS_VISIBLE_LIMIT);
+
+      if (peakCandidates.length === 0) {
+        if (!cancelled) setPeakPosts([]);
+        return;
+      }
+
+      const authorIds = [...new Set(peakCandidates.map((p) => p.user_id))];
       const { data: authors } = await supabase
         .from("user_display")
         .select("id, display_name")
         .in("id", authorIds);
       const authorMap = new Map((authors ?? []).map((u) => [u.id, u.display_name]));
 
-      const result: PeakPost[] = posts.map((p) => ({
+      const result: PeakPost[] = peakCandidates.map((p) => ({
         postId: p.id,
         authorName: authorMap.get(p.user_id) ?? "알 수 없음",
         caption: p.caption,
         publishedAt: p.published_at ?? new Date().toISOString(),
-        viewCount: p.view_count,
+        score: p.score,
       }));
 
       if (!cancelled) setPeakPosts(result);
@@ -391,7 +415,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                       <FlameIcon className="h-2.5 w-2.5" /> 1위
                     </span>
                     <span className="inline-flex shrink-0 items-center gap-1 text-base font-bold text-red-600 dark:text-red-400">
-                      <FlameIcon className="h-4 w-4" /> {formatCompactCount(post.viewCount)}
+                      <FlameIcon className="h-4 w-4" /> {formatCompactCount(post.score)}
                     </span>
                   </div>
                   <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
@@ -416,7 +440,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                     <div className="flex items-center gap-1.5">
                       <span className="truncate text-sm text-gray-700 dark:text-gray-200">{post.authorName}</span>
                       <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-red-500">
-                        <FlameIcon className="h-2.5 w-2.5" /> {formatCompactCount(post.viewCount)}
+                        <FlameIcon className="h-2.5 w-2.5" /> {formatCompactCount(post.score)}
                       </span>
                     </div>
                     <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">

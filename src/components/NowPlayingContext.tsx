@@ -67,10 +67,14 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
     setTrack(next);
     setIsPlaying(true);
     setDuration(0);
-    // 일시정지 후 재개(toggle)는 play()를 다시 안 타서 누적이 계속 이어지고, 트랙을
-    // "새로" 고를 때만(재생 버튼을 다시 누르거나 다른 곡 선택) 30초를 처음부터 다시 채워야
-    // 카운트되게 세션을 리셋한다(사용자 확인 — 유튜브처럼 같은 트랙 재재생도 다시 카운트
-    // 하되, 이번엔 30초 게이트를 새로 넘겨야 함).
+    // 같은 트랙이 다시 play()로 들어오면(예: 영상 미리보기가 버퍼링으로 잠깐 멈췄다 브라우저가
+    // 자동으로 다시 발화하는 네이티브 onPlay, 혹은 일시정지 후 재개) 세션을 리셋하지 않고
+    // 누적을 그대로 이어간다 — 트랙 id가 바뀔 때만 새로 잰다. 예전엔 play()가 불릴 때마다
+    // 무조건 리셋해서, PostVideo의 재생/일시정지 버튼이 재생 중 버퍼링 등으로 onPlay를 다시
+    // 쏠 때마다 30초 누적이 매번 0으로 끊겨 조회수가 사실상 절대 안 올라가고 있었다(사용자
+    // 제보: "새로고침하면 조회수가 초기화되는데" — 실제로는 초기화가 아니라 애초에 DB에
+    // 반영된 적이 없었던 것).
+    if (viewSessionRef.current.trackId === next.id) return;
     viewSessionRef.current = {
       trackId: next.expiresAt ? null : next.id,
       watchedMs: 0,

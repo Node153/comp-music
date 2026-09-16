@@ -5,6 +5,15 @@
 // 전체적으로 다시 조정된다.
 export const PEAK_VIEW_THRESHOLD = 1000;
 
+// 좋아요 1개 = 조회수 10으로 환산해서 PEAK 점수에 반영(2026-09-17, 사용자 요청) — 좋아요가
+// 그냥 보는 것보다 무거운 행동이라 가중치를 준다. 카드 레벨 막대(EngagementMeter)와 우측
+// 사이드바 PEAK 목록(RightSidebar)이 이 점수를 똑같이 써야 두 곳의 PEAK 판정이 어긋나지 않는다.
+export const PEAK_LIKE_WEIGHT = 10;
+
+export function peakScore(viewCount: number, likeCount: number): number {
+  return viewCount + likeCount * PEAK_LIKE_WEIGHT;
+}
+
 // 알림/이메일 크론(주간 좋아요 PEAK) 전용 — 게시물 카드/사이드바의 PEAK 기준은 위
 // PEAK_VIEW_THRESHOLD(조회수)로 바뀌었고, 이 함수는 아직 조회수 기준으로 안 옮긴 알림
 // 로직에서만 쓰인다.
