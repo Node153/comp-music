@@ -93,7 +93,12 @@ export function NavSidebar({
           <SearchIcon className="h-6 w-6 shrink-0" />
           <span className={navLabelClass(expanded)}>검색</span>
         </button>
-        <MessagesMenu isFeed={isFeed} expanded={expanded} onOpenChange={setMessagesOpen} />
+        <MessagesMenu
+          currentUserId={currentUserId}
+          isFeed={isFeed}
+          expanded={expanded}
+          onOpenChange={setMessagesOpen}
+        />
         <NotificationsMenu
           userId={currentUserId}
           isFeed={isFeed}
