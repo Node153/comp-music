@@ -1,6 +1,6 @@
 "use client";
 
-// 게시물 본문 — 3줄 넘으면 "더보기"로 펼치고(인스타식, 사용자 요청), 영어처럼
+// 게시물 본문 — 1줄 넘으면 "더보기"로 펼치고(사용자 요청), 영어처럼
 // 공백 없는 긴 글자열도 break-words로 줄바꿈되게 한다.
 import { useRef, useState, useLayoutEffect } from "react";
 
@@ -25,7 +25,7 @@ export function PostCaption({
     <div className={className}>
       <p
         ref={ref}
-        className={`whitespace-pre-wrap break-words ${expanded ? "" : "line-clamp-3"}`}
+        className={`whitespace-pre-wrap break-words ${expanded ? "" : "line-clamp-1"}`}
       >
         {text}
       </p>
