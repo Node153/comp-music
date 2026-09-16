@@ -56,7 +56,18 @@ export function topBarIconClass(active: boolean, isFeed: boolean) {
 
 // NavSidebar 항목(아이콘+라벨 한 줄) 공통 스타일 — 위 topBarIconClass의 색 규칙을 그대로 쓰되
 // 사이드바 행 레이아웃(전체 폭·좌측 정렬)에 맞춘다(2026-09-16, 인스타그램 참고 — 메뉴들을
-// 상단바에서 좌측 사이드바로 이동).
+// 상단바에서 좌측 사이드바로 이동). justify-center/group-hover:justify-start는 NavSidebar가
+// 평소엔 아이콘만 보이는 좁은 레일이다가 마우스를 올리면 넓어지는 인스타그램 방식(아래
+// navLabelClass 참고, 2026-09-16 추가 요청)에서 접혀있을 때 아이콘이 가운데 오게 한다.
 export function navRowClass(active: boolean, isFeed: boolean) {
-  return `flex w-full items-center gap-4 rounded-xl px-3 py-2.5 text-[15px] font-medium transition ${topBarIconClass(active, isFeed)}`;
+  // 접혔을 때(gap-0)는 라벨이 max-w-0이라도 gap이 있으면 그만큼 빈 공간이 남아 아이콘이
+  // 정중앙에서 살짝 벗어나 보인다 — 펼쳐질 때만(group-hover:gap-4) 라벨과의 간격을 준다.
+  return `flex w-full items-center justify-center gap-0 rounded-xl px-3 py-2.5 text-[15px] font-medium transition group-hover:justify-start group-hover:gap-4 ${topBarIconClass(active, isFeed)}`;
 }
+
+// NavSidebar 행의 라벨 텍스트 — 접힌 상태(w-[72px])에선 안 보이다가, 사이드바에 마우스를
+// 올려 펼쳐지면(NavSidebar의 hover:w-60, group 클래스) 같이 페이드인된다. max-width로 접고
+// 펴는 이유: opacity만으로는 접혔을 때도 텍스트가 자리(레이아웃 너비)를 차지해서 아이콘이
+// 가운데로 안 온다 — max-w-0→[160px] 트랜지션으로 너비 자체를 접는다.
+export const navLabelClass =
+  "flex-1 overflow-hidden whitespace-nowrap text-left opacity-0 max-w-0 transition-all duration-200 group-hover:opacity-100 group-hover:max-w-[160px]";

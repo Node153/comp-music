@@ -11,8 +11,8 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { MessagesMenu } from "@/components/MessagesMenu";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
-import { HomeIcon, PlusIcon, HelpIcon, SearchIcon } from "@/components/icons";
-import { navRowClass } from "@/components/ui/styles";
+import { PlusIcon, HelpIcon, SearchIcon } from "@/components/icons";
+import { navRowClass, navLabelClass } from "@/components/ui/styles";
 
 export function NavSidebar({
   currentUserId,
@@ -34,39 +34,40 @@ export function NavSidebar({
       // — 브라우저가 계산값 자체를 덮어씀) 메시지/알림 드롭다운(left-full로 오른쪽에 펼쳐짐)이
       // 그대로 잘려 안 보이는 문제가 있었다(2026-09-16 발견). 항목 7개+로고+프로필이 어떤
       // 화면에서도 넘칠 일이 없어서 overflow 자체를 아예 빼는 걸로 해결.
-      className={`fixed inset-y-0 left-0 z-40 hidden w-60 flex-col gap-1 border-r px-3 py-4 md:flex ${
+      // 평소엔 아이콘만 보이는 좁은 레일(w-[72px])이다가 마우스를 올리면 라벨까지 보이는
+      // 넓은 폭(hover:w-60)으로 펼쳐진다(2026-09-16, 사용자 요청 — 인스타그램 좌측 메뉴 참고).
+      // position:fixed라 넓어져도 옆 콘텐츠를 밀어내지 않고 그 위에 겹쳐 뜬다 — 본문 오프셋
+      // ((app)/layout.tsx의 md:pl-[72px])은 항상 접힌 폭 기준으로 고정.
+      className={`group fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col gap-1 border-r px-3 py-4 transition-[width] duration-200 ease-in-out hover:w-60 md:flex ${
         isFeed
           ? "border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1c1c1e]"
           : "border-box-gray bg-main-gray"
       }`}
     >
-      <Link href="/feed" className="mb-3 flex items-center gap-2 px-3 py-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-xs font-bold text-white dark:bg-white dark:text-black">
+      <Link
+        href="/feed"
+        className="mb-3 flex items-center justify-center gap-0 px-3 py-2 group-hover:justify-start group-hover:gap-2"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-xs font-bold text-white dark:bg-white dark:text-black">
           Comp
         </span>
-        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Comp</span>
+        <span className={`text-lg font-bold text-gray-900 dark:text-gray-100 ${navLabelClass}`}>Comp</span>
       </Link>
 
-      <Link href="/feed" className={navRowClass(isFeed, isFeed)}>
-        <HomeIcon className="h-6 w-6" />홈
-      </Link>
       <button type="button" onClick={search.open} className={navRowClass(search.isOpen, isFeed)}>
-        <SearchIcon className="h-6 w-6" />
-        검색
+        <SearchIcon className="h-6 w-6 shrink-0" />
+        <span className={navLabelClass}>검색</span>
       </button>
       <MessagesMenu isFeed={isFeed} />
       <NotificationsMenu userId={currentUserId} isFeed={isFeed} />
       <Link href="/upload" className={navRowClass(pathname === "/upload", isFeed)}>
-        <PlusIcon className="h-6 w-6" />
-        만들기
+        <PlusIcon className="h-6 w-6 shrink-0" />
+        <span className={navLabelClass}>만들기</span>
       </Link>
       <Link href="/help" className={navRowClass(pathname === "/help", isFeed)}>
-        <HelpIcon className="h-6 w-6" />
-        Help
+        <HelpIcon className="h-6 w-6 shrink-0" />
+        <span className={navLabelClass}>Help</span>
       </Link>
-
-      <div className="flex-1" />
-
       <ProfileMenu userId={currentUserId} userName={userName} isAdmin={isAdmin} isFeed={isFeed} />
     </aside>
   );

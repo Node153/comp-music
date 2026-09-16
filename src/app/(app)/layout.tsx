@@ -43,10 +43,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <SearchOverlayProvider>
                 <PresenceHeartbeat userId={user.id} />
                 <NavSidebar currentUserId={user.id} userName={userName} isAdmin={isAdmin} />
-                {/* md 이상에서는 NavSidebar(w-60, fixed)가 왼쪽을 차지하므로 나머지 화면을
-                    그만큼 밀어낸다 — GlobalPlayerBar/QueuePanel은 fixed라 이 패딩 영향을
-                    안 받아서 각자 파일에서 md:left-60으로 따로 맞춘다. */}
-                <div className="md:pl-60">
+                {/* md 이상에서는 NavSidebar(접힌 기본폭 w-[72px], fixed, 호버 시 w-60으로만
+                    넓어짐)가 왼쪽을 차지하므로 나머지 화면을 접힌 폭만큼 밀어낸다 — 호버 확장은
+                    콘텐츠를 안 밀고 그 위에 겹쳐 뜨는 오버레이라 오프셋은 항상 접힌 폭 기준.
+                    GlobalPlayerBar/QueuePanel은 fixed라 이 패딩 영향을 안 받아서 각자 파일에서
+                    md:left-[72px]로 따로 맞춘다. */}
+                <div className="md:pl-[72px]">
                   <TopNav />
                   <MobileTopBar currentUserId={user.id} />
                   {children}

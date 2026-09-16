@@ -15,7 +15,7 @@ import { Avatar } from "@/components/Avatar";
 import { BellIcon, FlameIcon, XIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
-import { navRowClass, topBarIconClass } from "@/components/ui/styles";
+import { navRowClass, navLabelClass, topBarIconClass } from "@/components/ui/styles";
 import type { NotificationItem } from "@/lib/notificationList";
 
 // 옛 /notifications 페이지의 카테고리 필터 그대로(2026-09-16 이전엔 URL ?type=으로 했지만,
@@ -129,24 +129,29 @@ export function NotificationsMenu({
           )}
         </button>
       ) : (
+        // 뱃지를 아이콘 모서리에 고정(행 끝이 아니라)해서, 사이드바가 접혀 라벨이 사라진
+        // 상태에서도(navLabelClass) 뱃지 위치가 안 바뀌고 계속 보인다.
         <button onClick={toggleOpen} title="Alerts" aria-label="Alerts" className={navRowClass(open, isFeed)}>
-          <BellIcon className="h-6 w-6" />
-          <span className="flex-1 text-left">알림</span>
-          {unseenNotifications > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
-              {unseenNotifications}
-            </span>
-          )}
+          <span className="relative shrink-0">
+            <BellIcon className="h-6 w-6" />
+            {unseenNotifications > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+                {unseenNotifications}
+              </span>
+            )}
+          </span>
+          <span className={navLabelClass}>알림</span>
         </button>
       )}
 
       {open && (
         <>
           <button aria-label="알림 닫기" onClick={close} className="fixed inset-0 z-40 cursor-default" />
-          {/* 데스크톱: 사이드바 오른쪽에 딱 붙어 화면 전체 높이로 펼쳐진다(left-60은 NavSidebar
-              고정 폭과 같은 값). 모바일: 화면 전체를 덮는 풀스크린 패널(md 미만엔 사이드바가
-              없어서 도킹시킬 기준점이 없다). */}
-          <div className="fixed inset-0 z-50 flex w-full flex-col bg-white md:inset-y-0 md:left-60 md:right-auto md:w-[420px] md:max-w-[calc(100vw-15rem)] md:border-r md:border-gray-200 md:shadow-xl dark:bg-gray-950 md:dark:border-gray-800">
+          {/* 데스크톱: 사이드바 오른쪽에 딱 붙어 화면 전체 높이로 펼쳐진다(left-[72px]는
+              NavSidebar의 접힌 기본 폭 — 사이드바는 호버로만 넓어지고 본문/이 패널은 항상
+              접힌 폭 기준으로 고정돼 있다). 모바일: 화면 전체를 덮는 풀스크린 패널(md 미만엔
+              사이드바가 없어서 도킹시킬 기준점이 없다). */}
+          <div className="fixed inset-0 z-50 flex w-full flex-col bg-white md:inset-y-0 md:left-[72px] md:right-auto md:w-[420px] md:max-w-[calc(100vw-72px)] md:border-r md:border-gray-200 md:shadow-xl dark:bg-gray-950 md:dark:border-gray-800">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100">알림</span>
               <div className="flex items-center gap-3">

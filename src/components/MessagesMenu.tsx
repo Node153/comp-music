@@ -13,7 +13,7 @@ import { Avatar } from "@/components/Avatar";
 import { ChatIcon, EditIcon, MailIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
-import { navRowClass } from "@/components/ui/styles";
+import { navRowClass, navLabelClass } from "@/components/ui/styles";
 import type { ConversationItem } from "@/lib/conversationList";
 
 export function MessagesMenu({ isFeed }: { isFeed: boolean }) {
@@ -54,8 +54,8 @@ export function MessagesMenu({ isFeed }: { isFeed: boolean }) {
   return (
     <div className="relative">
       <button onClick={toggleOpen} title="Chat" aria-label="Chat" className={navRowClass(open, isFeed)}>
-        <ChatIcon className="h-6 w-6" />
-        메시지
+        <ChatIcon className="h-6 w-6 shrink-0" />
+        <span className={navLabelClass}>메시지</span>
       </button>
 
       {open && (
