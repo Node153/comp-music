@@ -1,16 +1,18 @@
 "use client";
 
-// NavSidebar 메시지 드롭다운(NotificationsMenu와 동일한 클릭-토글+바깥클릭-닫기 패턴 재사용) — Chat
-// 아이콘을 눌러 곧장 /messages로 이동하던 걸, 최근 대화 몇 개를 바로 훑어보다가 특정 대화를
-// 클릭했을 때만 그 대화방(/messages/[id])으로 이동하는 드롭다운으로 바꿨다.
-// 열릴 때마다 /api/messages/list를 불러온다(알림 드롭다운과 같은 지연-로드 원칙). 안읽음
-// 처리는 여전히 대화방 진입 시 MarkMessagesRead가 담당 — 여기서는 건드리지 않는다.
-// 사이드바 항목이라 버튼은 아이콘+라벨 한 줄이고(2026-09-16, 인스타그램 참고), 드롭다운은
-// 아래가 아니라 사이드바 오른쪽으로 펼쳐진다(left-full).
+// NavSidebar 메시지 패널(NotificationsMenu와 동일한 클릭-토글+바깥클릭-닫기 패턴, 2026-09-16
+// 기준 알림 패널과 완전히 같은 구성으로 통일 — 사용자 요청 "메시지 탭도 알림탭과 같은
+// 방식으로") — Chat 아이콘을 눌러 곧장 /messages로 이동하던 걸, 최근 대화 몇 개를 바로
+// 훑어보다가 특정 대화를 클릭했을 때만 그 대화방(/messages/[id])으로 이동하는 패널로 바꿨다.
+// 열릴 때마다 /api/messages/list를 불러온다(알림 패널과 같은 지연-로드 원칙). 안읽음 처리는
+// 여전히 대화방 진입 시 MarkMessagesRead가 담당 — 여기서는 건드리지 않는다.
+// 작은 드롭다운이 아니라 화면 높이(사운드바 위까지)를 채우는 도킹 패널이고, 사이드바
+// 오른쪽에 그림자 없이 딱 붙어서 "사이드바 자체가 메시지탭으로 바뀐" 것처럼 보인다 —
+// NotificationsMenu.tsx의 상세 주석 참고(같은 이유로 md:left-[72px]/md:bottom-16 사용).
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { ChatIcon, EditIcon, MailIcon } from "@/components/icons";
+import { ChatIcon, EditIcon, MailIcon, XIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { navRowClass, navLabelClass } from "@/components/ui/styles";
@@ -72,23 +74,36 @@ export function MessagesMenu({
       {open && (
         <>
           <button aria-label="메시지 닫기" onClick={close} className="fixed inset-0 z-40 cursor-default" />
-          <div className="absolute left-full top-0 z-50 ml-2 flex max-h-[28rem] w-80 flex-col rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-950">
-            <div className="flex items-center justify-between px-2 py-1.5">
-              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">메시지</span>
-              <button
-                onClick={() => {
-                  close();
-                  search.open();
-                }}
-                title="새 대화 시작"
-                aria-label="새 대화 시작"
-                className="flex h-6 w-6 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-900"
-              >
-                <EditIcon className="h-4 w-4" />
-              </button>
+          {/* NotificationsMenu.tsx의 패널과 완전히 동일한 위치/크기 규칙(md:left-[72px]/
+              md:bottom-16/그림자 없음) — 데스크톱은 사이드바 오른쪽에 그림자 없이 이어붙는
+              도킹 패널, 모바일은 없음(모바일은 BottomNav "메시지" 탭이 /messages로 바로 이동
+              — 이 패널은 데스크톱 NavSidebar 전용이라 compact 모드가 필요 없다). */}
+          <div className="fixed inset-0 z-50 flex w-full flex-col bg-white md:inset-y-auto md:top-0 md:bottom-16 md:left-[72px] md:right-auto md:w-[420px] md:max-w-[calc(100vw-72px)] md:border-r md:border-gray-200 dark:bg-gray-950 md:dark:border-gray-800">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">메시지</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    close();
+                    search.open();
+                  }}
+                  title="새 대화 시작"
+                  aria-label="새 대화 시작"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900"
+                >
+                  <EditIcon className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={close}
+                  aria-label="메시지 패널 닫기"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto px-2 py-2">
               {loading ? (
                 <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
               ) : !conversations || conversations.length === 0 ? (
@@ -137,7 +152,7 @@ export function MessagesMenu({
               )}
             </div>
 
-            <div className="mt-1 border-t border-gray-100 pt-1 dark:border-gray-800">
+            <div className="border-t border-gray-100 px-2 py-2 dark:border-gray-800">
               <Link
                 href="/messages"
                 onClick={close}
