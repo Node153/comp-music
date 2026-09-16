@@ -12,10 +12,9 @@
 // 작은 드롭다운이 아니라 화면 높이(사운드바 위까지)를 채우는 도킹 패널이고, 사이드바
 // 오른쪽에 그림자 없이 딱 붙어서 "사이드바 자체가 메시지탭으로 바뀐" 것처럼 보인다 —
 // NotificationsMenu.tsx의 상세 주석 참고(같은 이유로 md:left-[72px]/md:bottom-16 사용).
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/Avatar";
-import { ChatIcon, EditIcon, MailIcon, XIcon, BackArrowIcon } from "@/components/icons";
+import { ChatIcon, EditIcon, MailIcon, XIcon, BackArrowIcon, SearchIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { navRowClass, navLabelClass } from "@/components/ui/styles";
@@ -47,6 +46,15 @@ export function MessagesMenu({
   // null = 이번에 열고 나서 아직 못 받아옴(로딩 중) — 열 때마다 toggleOpen에서 초기화해서 매번 새로 불러온다.
   const [conversations, setConversations] = useState<ConversationItem[] | null>(null);
   const loading = open && conversations === null;
+  // 대화 상대 이름으로 필터링(2026-09-16, 사용자 요청 — 인스타그램 메시지탭 참고). 이미 받아온
+  // 목록 안에서만 거르는 클라이언트 검색이라 별도 API 호출 없음.
+  const [query, setQuery] = useState("");
+  const filteredConversations = useMemo(() => {
+    if (!conversations) return conversations;
+    const q = query.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((c) => c.otherName.toLowerCase().includes(q));
+  }, [conversations, query]);
 
   // 목록(list) ↔ 대화창(thread) — 대화 클릭 시 페이지 이동 대신 이 패널 안에서 전환한다.
   const [view, setView] = useState<"list" | "thread">("list");
@@ -60,6 +68,7 @@ export function MessagesMenu({
     setView("list");
     setActiveConversation(null);
     setThreadData(null);
+    setQuery("");
   }
 
   function toggleOpen() {
@@ -207,17 +216,29 @@ export function MessagesMenu({
               </div>
             ) : (
               <>
+                <div className="relative px-3 py-2">
+                  <SearchIcon className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="검색"
+                    className="w-full rounded-lg bg-gray-100 py-2 pl-8 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                  />
+                </div>
                 <div className="flex-1 overflow-y-auto px-2 py-2">
                   {loading ? (
                     <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
-                  ) : !conversations || conversations.length === 0 ? (
+                  ) : !filteredConversations || filteredConversations.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 py-8 text-center">
                       <MailIcon className="h-6 w-6 text-gray-300" />
-                      <p className="text-sm text-gray-400">아직 대화가 없어요</p>
+                      <p className="text-sm text-gray-400">
+                        {query.trim() ? "일치하는 대화가 없어요" : "아직 대화가 없어요"}
+                      </p>
                     </div>
                   ) : (
                     <div className="flex flex-col gap-0.5">
-                      {conversations.map((c) => (
+                      {filteredConversations.map((c) => (
                         <button
                           key={c.id}
                           onClick={() => openThread(c)}
@@ -257,16 +278,6 @@ export function MessagesMenu({
                       ))}
                     </div>
                   )}
-                </div>
-
-                <div className="border-t border-gray-100 px-2 py-2 dark:border-gray-800">
-                  <Link
-                    href="/messages"
-                    onClick={close}
-                    className="block rounded-lg px-2 py-2 text-center text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900"
-                  >
-                    전체 메시지 보기
-                  </Link>
                 </div>
               </>
             )}
