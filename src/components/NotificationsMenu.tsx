@@ -154,11 +154,13 @@ export function NotificationsMenu({
       {open && (
         <>
           <button aria-label="알림 닫기" onClick={close} className="fixed inset-0 z-40 cursor-default" />
-          {/* 데스크톱: 사이드바 오른쪽에 딱 붙어 화면 전체 높이로 펼쳐진다(left-[72px]는
-              NavSidebar의 접힌 기본 폭 — 사이드바는 호버로만 넓어지고 본문/이 패널은 항상
-              접힌 폭 기준으로 고정돼 있다). 모바일: 화면 전체를 덮는 풀스크린 패널(md 미만엔
-              사이드바가 없어서 도킹시킬 기준점이 없다). */}
-          <div className="fixed inset-0 z-50 flex w-full flex-col bg-white md:inset-y-0 md:left-[72px] md:right-auto md:w-[420px] md:max-w-[calc(100vw-72px)] md:border-r md:border-gray-200 md:shadow-xl dark:bg-gray-950 md:dark:border-gray-800">
+          {/* 데스크톱: 사이드바 오른쪽에 딱 붙어서 펼쳐진다(left-[72px]는 NavSidebar의 접힌
+              기본 폭). 아래쪽은 inset-y-0(화면 맨 아래까지)이 아니라 top-0+bottom-16(사운드바
+              높이) — NavSidebar와 같은 이유로, 하단 사운드바와 세로로 겹치면 z-index가 같은
+              값(50)이라 쌓임 순서가 브라우저마다 불안정해서 안 겹치게 아예 높이를 끊었다
+              (2026-09-16). 모바일: 화면 전체를 덮는 풀스크린 패널(md 미만엔 사이드바가 없어서
+              도킹시킬 기준점이 없고, 모바일은 원래도 전체 화면을 덮는 게 의도된 동작). */}
+          <div className="fixed inset-0 z-50 flex w-full flex-col bg-white md:inset-y-auto md:top-0 md:bottom-16 md:left-[72px] md:right-auto md:w-[420px] md:max-w-[calc(100vw-72px)] md:border-r md:border-gray-200 md:shadow-xl dark:bg-gray-950 md:dark:border-gray-800">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100">알림</span>
               <div className="flex items-center gap-3">

@@ -54,7 +54,13 @@ export function NavSidebar({
       // ((app)/layout.tsx의 md:pl-[72px])은 항상 접힌 폭 기준으로 고정.
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      className={`fixed inset-y-0 left-0 z-40 hidden flex-col gap-1 border-r px-3 py-4 transition-[width] duration-200 ease-in-out md:flex ${
+      // inset-y-0(위아래 꽉 채움) 대신 top-0 + bottom-16(64px, GlobalPlayerBar의 h-16과 동일값) —
+      // 전엔 사이드바가 화면 맨 아래까지 뻗어 있어서 하단 사운드바(z-50)랑 같은 자리를 두고
+      // z-index로만 위아래를 가렸는데, 사이드바 폭이 바뀌는 트랜지션 중 일부 브라우저(Safari)에서
+      // 겹친 영역의 쌓임 순서가 순간적으로 꼬여 사운드바 왼쪽이 사이드바에 가려 잘려 보이는
+      // 문제가 있었다(2026-09-16 사용자 제보). 아예 두 요소가 세로로 안 겹치게 사이드바 높이를
+      // 사운드바 바로 위에서 끊었다.
+      className={`fixed left-0 top-0 bottom-16 z-40 hidden flex-col gap-1 border-r px-3 py-4 transition-[width] duration-200 ease-in-out md:flex ${
         expanded ? "w-60" : "w-[72px]"
       } ${
         isFeed
@@ -74,28 +80,38 @@ export function NavSidebar({
         </span>
       </Link>
 
-      <button type="button" onClick={search.open} className={navRowClass(search.isOpen, isFeed, expanded)}>
-        <SearchIcon className="h-6 w-6 shrink-0" />
-        <span className={navLabelClass(expanded)}>검색</span>
-      </button>
-      <MessagesMenu isFeed={isFeed} expanded={expanded} onOpenChange={setMessagesOpen} />
-      <NotificationsMenu userId={currentUserId} isFeed={isFeed} expanded={expanded} onOpenChange={setNotificationsOpen} />
-      <Link href="/upload" className={navRowClass(pathname === "/upload", isFeed, expanded)}>
-        <PlusIcon className="h-6 w-6 shrink-0" />
-        <span className={navLabelClass(expanded)}>만들기</span>
-      </Link>
-      <Link href="/help" className={navRowClass(pathname === "/help", isFeed, expanded)}>
-        <HelpIcon className="h-6 w-6 shrink-0" />
-        <span className={navLabelClass(expanded)}>Help</span>
-      </Link>
-      <ProfileMenu
-        userId={currentUserId}
-        userName={userName}
-        isAdmin={isAdmin}
-        isFeed={isFeed}
-        expanded={expanded}
-        onOpenChange={setProfileOpen}
-      />
+      {/* 메뉴 아이콘들을 로고 밑에 붙이지 않고, 남는 세로 공간 안에서 가운데로 오게
+          한다(2026-09-16, 사용자 요청 — "메뉴 아이콘들 세로 중앙정렬"). flex-1이 로고 아래
+          남은 높이를 전부 차지하고, justify-center가 그 안에서 그룹 전체를 가운데 정렬한다. */}
+      <div className="flex flex-1 flex-col justify-center gap-1">
+        <button type="button" onClick={search.open} className={navRowClass(search.isOpen, isFeed, expanded)}>
+          <SearchIcon className="h-6 w-6 shrink-0" />
+          <span className={navLabelClass(expanded)}>검색</span>
+        </button>
+        <MessagesMenu isFeed={isFeed} expanded={expanded} onOpenChange={setMessagesOpen} />
+        <NotificationsMenu
+          userId={currentUserId}
+          isFeed={isFeed}
+          expanded={expanded}
+          onOpenChange={setNotificationsOpen}
+        />
+        <Link href="/upload" className={navRowClass(pathname === "/upload", isFeed, expanded)}>
+          <PlusIcon className="h-6 w-6 shrink-0" />
+          <span className={navLabelClass(expanded)}>만들기</span>
+        </Link>
+        <Link href="/help" className={navRowClass(pathname === "/help", isFeed, expanded)}>
+          <HelpIcon className="h-6 w-6 shrink-0" />
+          <span className={navLabelClass(expanded)}>Help</span>
+        </Link>
+        <ProfileMenu
+          userId={currentUserId}
+          userName={userName}
+          isAdmin={isAdmin}
+          isFeed={isFeed}
+          expanded={expanded}
+          onOpenChange={setProfileOpen}
+        />
+      </div>
     </aside>
   );
 }
