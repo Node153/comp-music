@@ -59,9 +59,8 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
     trackId: string | null;
     watchedMs: number;
     counted: boolean;
-    lastCurrentTime: number | null;
     lastWallClock: number | null;
-  }>({ trackId: null, watchedMs: 0, counted: false, lastCurrentTime: null, lastWallClock: null });
+  }>({ trackId: null, watchedMs: 0, counted: false, lastWallClock: null });
 
   const play = useCallback((next: NowPlayingTrack) => {
     setTrack(next);
@@ -79,7 +78,6 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
       trackId: next.expiresAt ? null : next.id,
       watchedMs: 0,
       counted: false,
-      lastCurrentTime: null,
       lastWallClock: null,
     };
   }, []);
@@ -93,17 +91,19 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
       const session = viewSessionRef.current;
       if (!session.trackId || session.counted) return;
       const now = Date.now();
-      const currentTime = video.currentTime;
-      if (session.lastCurrentTime !== null && session.lastWallClock !== null) {
-        const deltaVideo = currentTime - session.lastCurrentTime;
+      // 실제 경과한 시간(wall clock)만으로 누적한다 — 예전엔 video.currentTime 변화량과도
+      // 비슷해야만 인정했는데, R2 signed URL로 스트리밍하는 오디오는 버퍼링 때문에
+      // currentTime 진행이 실제 시간과 미세하게 안 맞는 틱이 잦아서 정상 재생인데도 계속
+      // 누락되고 있었다(사용자 제보: "재생해서 조회수를 높였는데 새로고침하니 반영 안 됨" —
+      // 30초를 사실상 거의 못 채우고 있었음). 탐색/탭 백그라운드 등으로 시간이 훌쩍 뛰는
+      // 경우만 틱당 2초로 캡을 씌워 과대 집계를 막는다. 일시정지 중엔 애초에 timeupdate가
+      // 안 불리지만, paused 체크도 한 번 더 해서 안전하게 막는다.
+      if (session.lastWallClock !== null && !video.paused) {
         const deltaWall = (now - session.lastWallClock) / 1000;
-        // 탐색(seek)이나 버퍼링으로 시간이 훌쩍 뛴 경우는 "시청"이 아니라 누적에서 뺀다 —
-        // 영상 시간과 실제 경과 시간이 비슷하게 흐를 때만 정상 재생으로 본다.
-        if (deltaVideo > 0 && deltaWall > 0 && Math.abs(deltaVideo - deltaWall) < 1) {
-          session.watchedMs += deltaWall * 1000;
+        if (deltaWall > 0) {
+          session.watchedMs += Math.min(deltaWall, 2) * 1000;
         }
       }
-      session.lastCurrentTime = currentTime;
       session.lastWallClock = now;
       if (session.watchedMs >= 30000) {
         session.counted = true;
