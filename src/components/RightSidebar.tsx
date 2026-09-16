@@ -31,6 +31,11 @@ const ONLINE_VISIBLE_LIMIT = 3;
 // 온라인 목록도 PresenceHeartbeat와 같은 주기로 다시 조회해서 "방금 나간 사람"이 계속 온라인으로
 // 남아있지 않게 한다.
 const ONLINE_REFRESH_INTERVAL_MS = 30_000;
+// PEAK 목록도 같은 주기로 다시 조회한다 — 조회수는 페이지를 새로고침 안 해도 재생 중에
+// 실시간으로 오르기 때문에(NowPlayingContext), 마운트 시 한 번만 조회하면 그 사이에 새로
+// 기준을 넘긴 게시물이 있어도 사이드바가 계속 예전 상태로 남아있는다(사용자 제보 — 카드엔
+// PEAK 배지가 떴는데 사이드바엔 그대로 "아직 없어요"였던 원인).
+const PEAK_REFRESH_INTERVAL_MS = 30_000;
 
 // PEAK 게시물 = peakScore(조회수 + 좋아요×10)가 PEAK_VIEW_THRESHOLD 이상인 게시물, 점수
 // 많은 순으로 최대 3개만 노출(2026-09-17 변경, 사용자 요청 — "이번 주" 랭킹 개념은 우선
@@ -199,7 +204,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
     let cancelled = false;
     const supabase = createClient();
 
-    (async () => {
+    async function loadPeakPosts() {
       // 좋아요가 점수에 섞이는 순간(peakScore) DB에서 view_count만으로는 필터링을 못 한다 —
       // 조회수가 낮아도 좋아요가 많으면 넘을 수 있어서, 일단 넉넉한 후보 풀을 조회수 순으로
       // 가져온 뒤 좋아요 수를 더해 점수를 계산한다(카드 쪽 EngagementMeter와 동일한 공식).
@@ -252,10 +257,13 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
       }));
 
       if (!cancelled) setPeakPosts(result);
-    })();
+    }
 
+    loadPeakPosts();
+    const timer = setInterval(loadPeakPosts, PEAK_REFRESH_INTERVAL_MS);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
   }, [isMemoTab]);
 
