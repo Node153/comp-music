@@ -12,7 +12,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
-import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
+import { PEAK_VIEW_THRESHOLD, formatCompactCount } from "@/lib/feedConstants";
 import { presenceStatus, type PresenceStatus } from "@/lib/presence";
 import { Avatar } from "@/components/Avatar";
 import { MessageButton } from "@/components/MessageButton";
@@ -32,19 +32,17 @@ const ONLINE_VISIBLE_LIMIT = 3;
 // 남아있지 않게 한다.
 const ONLINE_REFRESH_INTERVAL_MS = 30_000;
 
-// 금주의 PEAK 게시물 = 이번 주(캘린더) 좋아요 수가 peakThreshold(승인 회원 수/3) 이상인 게시물,
-// 이번 주 좋아요 수 많은 순으로 최대 3개만 노출.
+// PEAK 게시물 = 조회수(view_count)가 PEAK_VIEW_THRESHOLD 이상인 게시물, 조회수 많은 순으로
+// 최대 3개만 노출(2026-09-17 변경, 사용자 요청 — "이번 주" 랭킹 개념은 우선 제거하고 단순
+// 노출만. PEAK 게시물이 충분히 쌓이면 추후 주간 로테이션 형식으로 다시 바꿀 예정).
 const PEAK_POSTS_VISIBLE_LIMIT = 3;
-// PEAK 후보를 뽑을 게시물 풀 — feed/page.tsx의 FEED_LIMIT(20)과 별개로 넉넉히 잡아서, 최신
-// 20개 밖이라도 이번 주 좋아요가 몰린 DEMO(영구 노출) 게시물을 놓치지 않게 한다.
-const PEAK_CANDIDATE_POOL_LIMIT = 50;
 
 type PeakPost = {
   postId: string;
   authorName: string;
   caption: string | null;
   publishedAt: string;
-  weeklyLikeCount: number;
+  viewCount: number;
 };
 
 type KnockablePost = {
@@ -198,63 +196,35 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
     const supabase = createClient();
 
     (async () => {
-      const weekStartISO = currentWeekStartISO();
+      const { data: rawPosts } = await supabase
+        .from("posts")
+        .select("id, user_id, caption, published_at, view_count")
+        .eq("visibility", "public")
+        .eq("status", "published")
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .gte("view_count", PEAK_VIEW_THRESHOLD)
+        .order("view_count", { ascending: false })
+        .limit(PEAK_POSTS_VISIBLE_LIMIT);
 
-      const [{ count: approvedMemberCount }, { data: rawPosts }] = await Promise.all([
-        supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
-        supabase
-          .from("posts")
-          .select("id, user_id, caption, published_at")
-          .eq("visibility", "public")
-          .eq("status", "published")
-          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-          .order("published_at", { ascending: false })
-          .limit(PEAK_CANDIDATE_POOL_LIMIT),
-      ]);
-      const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
       const posts = rawPosts ?? [];
-
       if (posts.length === 0) {
         if (!cancelled) setPeakPosts([]);
         return;
       }
 
-      const postIds = posts.map((p) => p.id);
-      const { data: weekLikes } = await supabase
-        .from("likes")
-        .select("post_id")
-        .in("post_id", postIds)
-        .gte("created_at", weekStartISO);
-
-      const weeklyLikeCountMap = new Map<string, number>();
-      for (const row of weekLikes ?? []) {
-        weeklyLikeCountMap.set(row.post_id, (weeklyLikeCountMap.get(row.post_id) ?? 0) + 1);
-      }
-
-      const peakCandidates = posts
-        .map((p) => ({ ...p, weeklyLikeCount: weeklyLikeCountMap.get(p.id) ?? 0 }))
-        .filter((p) => p.weeklyLikeCount >= peakThreshold)
-        .sort((a, b) => b.weeklyLikeCount - a.weeklyLikeCount)
-        .slice(0, PEAK_POSTS_VISIBLE_LIMIT);
-
-      if (peakCandidates.length === 0) {
-        if (!cancelled) setPeakPosts([]);
-        return;
-      }
-
-      const authorIds = [...new Set(peakCandidates.map((p) => p.user_id))];
+      const authorIds = [...new Set(posts.map((p) => p.user_id))];
       const { data: authors } = await supabase
         .from("user_display")
         .select("id, display_name")
         .in("id", authorIds);
       const authorMap = new Map((authors ?? []).map((u) => [u.id, u.display_name]));
 
-      const result: PeakPost[] = peakCandidates.map((p) => ({
+      const result: PeakPost[] = posts.map((p) => ({
         postId: p.id,
         authorName: authorMap.get(p.user_id) ?? "알 수 없음",
         caption: p.caption,
         publishedAt: p.published_at ?? new Date().toISOString(),
-        weeklyLikeCount: p.weeklyLikeCount,
+        viewCount: p.view_count,
       }));
 
       if (!cancelled) setPeakPosts(result);
@@ -362,7 +332,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
           </h2>
         ) : (
           <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            <FlameIcon className="h-3.5 w-3.5 text-red-500 dark:text-red-400" /> 금주의 Peak 게시물
+            <FlameIcon className="h-3.5 w-3.5 text-red-500 dark:text-red-400" /> Peak 게시물
           </h2>
         )}
         <div className="mt-1 flex flex-col gap-1">
@@ -404,7 +374,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
             <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">불러오는 중...</p>
           ) : peakPosts.length === 0 ? (
             <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
-              이번 주 PEAK 게시물이 아직 없어요
+              PEAK 게시물이 아직 없어요
             </p>
           ) : (
             peakPosts.map((post, i) =>
@@ -421,7 +391,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                       <FlameIcon className="h-2.5 w-2.5" /> 1위
                     </span>
                     <span className="inline-flex shrink-0 items-center gap-1 text-base font-bold text-red-600 dark:text-red-400">
-                      <FlameIcon className="h-4 w-4" /> {post.weeklyLikeCount}
+                      <FlameIcon className="h-4 w-4" /> {formatCompactCount(post.viewCount)}
                     </span>
                   </div>
                   <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
@@ -446,7 +416,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                     <div className="flex items-center gap-1.5">
                       <span className="truncate text-sm text-gray-700 dark:text-gray-200">{post.authorName}</span>
                       <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-red-500">
-                        <FlameIcon className="h-2.5 w-2.5" /> {post.weeklyLikeCount}
+                        <FlameIcon className="h-2.5 w-2.5" /> {formatCompactCount(post.viewCount)}
                       </span>
                     </div>
                     <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">

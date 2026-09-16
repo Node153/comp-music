@@ -16,6 +16,9 @@ import { useMediaProgress } from "@/lib/useMediaProgress";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylistOptional } from "@/components/PlaylistContext";
 import { usePostEngagement } from "@/components/PostEngagementContext";
+import { useDoubleTap } from "@/lib/useDoubleTap";
+import { usePostLike } from "@/lib/usePostLike";
+import { useHeartBurst } from "@/components/HeartBurst";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
 const SLIM_BAR_COUNT = 200;
@@ -47,6 +50,9 @@ export function SoundbarPlayer({
   author,
   authorId,
   expiresAt,
+  // 지금 보고 있는 사람(뷰어)의 id — 더블탭 좋아요 대상(커버 이미지 모드에서만). 게스트나
+  // inline 모드(로그인 안 함)는 undefined라 더블탭 감지 없이 클릭이 즉시 재생/일시정지만 한다.
+  viewerId,
 }: {
   src: string;
   title: string;
@@ -58,6 +64,7 @@ export function SoundbarPlayer({
   authorId?: string;
   // memo 게시물의 노출 만료 시각 — 재생목록/최근들은에 그대로 실어서 남은 시간을 보여준다.
   expiresAt?: string | null;
+  viewerId?: string;
 }) {
   const [bars, setBars] = useState<number[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -151,6 +158,17 @@ export function SoundbarPlayer({
     else audio.pause();
   }
 
+  // 더블탭 좋아요(인스타그램 참고) — 커버 이미지가 있는 global 모드에서만, 로그인 상태일 때만
+  // 활성화. 첫 클릭을 300ms 미뤄뒀다가 그 안에 두 번째 클릭이 없으면 원래대로 재생/일시정지,
+  // 있으면 좋아요만 실행한다. inline 모드(게스트)는 좋아요 자체가 불가능하므로 그대로 즉시 토글.
+  const { likeOnly } = usePostLike(trackId ?? "", viewerId ?? "");
+  const { burst, element: heartBurstEl } = useHeartBurst();
+  const handleDoubleTapLike = useDoubleTap(togglePlay, () => {
+    burst();
+    void likeOnly();
+  });
+  const posterOnClick = isGlobal && viewerId && trackId ? handleDoubleTapLike : togglePlay;
+
   function seekFromClientX(clientX: number, rect: DOMRect) {
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     if (isGlobal) {
@@ -185,7 +203,7 @@ export function SoundbarPlayer({
     return (
       <button
         type="button"
-        onClick={togglePlay}
+        onClick={posterOnClick}
         className="group relative block aspect-square w-full overflow-hidden rounded-xl"
       >
         {audioEl}
@@ -199,6 +217,7 @@ export function SoundbarPlayer({
         <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
           <div className={`h-full ${style.posterProgress}`} style={{ width: `${playedRatio * 100}%` }} />
         </div>
+        {heartBurstEl}
       </button>
     );
   }

@@ -50,7 +50,6 @@ export function ComplexAccessGate({
   collabAvailable,
   collabRoleNeeded,
   initialChatMessages,
-  likedByMe,
 }: {
   postId: string;
   // 공동창작 미체크(=DEMO처럼 좋아요/댓글/메시지) 분기에서 MessageButton의 상대방으로 필요.
@@ -74,8 +73,6 @@ export function ComplexAccessGate({
   collabAvailable: boolean;
   collabRoleNeeded: string | null;
   initialChatMessages: ChatMessage[];
-  // 공동창작 미체크 분기의 LikeButton 초기 상태.
-  likedByMe: boolean;
 }) {
   const supabase = createClient();
   // 공동창작 게시물만 미디어 박스를 안 쓰고 ComplexPostChat의 mediaSlot으로 넘겨서 재창작물
@@ -255,7 +252,7 @@ export function ComplexAccessGate({
           // 공동창작 미체크 = DEMO와 동일하게 좋아요/댓글 + (본인 글이면 조회자 목록,
           // 아니면 메시지) — feed/page.tsx의 followers 공개 게시물과 같은 구성(사용자 요청).
           <div className="flex flex-wrap border-t border-gray-100 dark:border-gray-800">
-            <LikeButton postId={postId} userId={currentUserId} initialLiked={likedByMe} className="basis-1/3" />
+            <LikeButton postId={postId} userId={currentUserId} className="basis-1/3" />
             <CommentPanel postId={postId} userId={currentUserId} buttonClassName="basis-1/3" />
             {!isOwnPost ? (
               <MessageButton

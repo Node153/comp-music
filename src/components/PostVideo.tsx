@@ -11,6 +11,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylistOptional } from "@/components/PlaylistContext";
 import { usePostEngagement } from "@/components/PostEngagementContext";
+import { useDoubleTap } from "@/lib/useDoubleTap";
+import { usePostLike } from "@/lib/usePostLike";
+import { useHeartBurst } from "@/components/HeartBurst";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
 export function PostVideo({
@@ -22,6 +25,9 @@ export function PostVideo({
   posterSrc,
   tone = "memo",
   expiresAt,
+  // 지금 보고 있는 사람(뷰어)의 id — 더블탭 좋아요 대상. 게스트(비로그인)는 undefined라
+  // 그 경우 더블탭 감지 없이 원래대로 클릭 즉시 재생/일시정지만 한다.
+  viewerId,
 }: {
   postId: string;
   title: string;
@@ -33,10 +39,13 @@ export function PostVideo({
   // memo(비공개) 영상 게시물의 노출 만료 시각 — 오디오(SoundbarPlayer)처럼 재생목록/최근들은에
   // 그대로 실어서 남은 시간 뱃지를 보여준다. DEMO는 영구노출이라 안 넘어옴(undefined).
   expiresAt?: string | null;
+  viewerId?: string;
 }) {
   const { track, play, pause, videoRef: globalVideoRef, lastCountedView } = useNowPlaying();
   const playlist = usePlaylistOptional();
   const { setViewCount } = usePostEngagement();
+  const { likeOnly } = usePostLike(postId, viewerId ?? "");
+  const { burst, element: heartBurstEl } = useHeartBurst();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const processedViewRef = useRef<number | null>(null);
@@ -92,6 +101,22 @@ export function PostVideo({
     if (track?.id === postId) pause();
   }
 
+  function togglePlayPause() {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play();
+    else v.pause();
+  }
+
+  // 더블탭 좋아요(인스타그램 참고) — 로그인 상태에서만 활성화. 첫 클릭을 300ms 미뤄뒀다가
+  // 그 안에 두 번째 클릭이 없으면 원래대로 재생/일시정지, 있으면 좋아요만 실행한다.
+  // 게스트는 좋아요 자체가 불가능하므로 지연 없이 바로 재생/일시정지.
+  const handleDoubleTapLike = useDoubleTap(togglePlayPause, () => {
+    burst();
+    void likeOnly();
+  });
+  const overlayOnClick = viewerId ? handleDoubleTapLike : togglePlayPause;
+
   if (tone === "demo") {
     return (
       <div className="relative">
@@ -107,12 +132,7 @@ export function PostVideo({
         />
         <button
           type="button"
-          onClick={() => {
-            const v = videoRef.current;
-            if (!v) return;
-            if (v.paused) v.play();
-            else v.pause();
-          }}
+          onClick={overlayOnClick}
           aria-label={isPlaying ? "일시정지" : "재생"}
           className="absolute inset-0 flex items-center justify-center bg-black/0 transition hover:bg-black/20"
         >
@@ -120,6 +140,7 @@ export function PostVideo({
             {isPlaying ? <PauseIcon className="h-7 w-7" /> : <PlayIcon className="h-7 w-7" />}
           </span>
         </button>
+        {heartBurstEl}
       </div>
     );
   }

@@ -103,6 +103,34 @@ body {
   animation: peak-slide-in 0.4s ease-out both;
 }
 
+/* 더블탭 좋아요(HeartBurst) — 인스타그램처럼 하트가 살짝 커지며 나타났다가 잠깐 멈춘 뒤
+   사라진다. */
+@keyframes heart-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  30% {
+    transform: scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.animate-heart-pop {
+  animation: heart-pop 0.9s ease-out both;
+}
+
 /* 생년월일 스크롤 휠 피커(BirthDateScrollPicker)의 각 열 스크롤바 숨김 — 네이티브 앱
    피커처럼 보이려면 스크롤바가 안 보여야 한다. Tailwind 기본 유틸에는 없어서 직접 추가. */
 .no-scrollbar {

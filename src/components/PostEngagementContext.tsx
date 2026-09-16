@@ -12,13 +12,17 @@ type PostEngagementContextValue = {
   weeklyLikeCount: number;
   // 회원 수 비례 PEAK 기준치 — 페이지 로드 시 서버에서 계산해 내려온 값(게시물마다 동일), 정적.
   peakThreshold: number;
-  // DEMO 조회수(0053) — PostVideo/SoundbarPlayer가 재생 시작 시 낙관적으로 올려서, 새로고침
+  // DEMO 조회수(0053) — NowPlayingContext가 30초 이상 재생됐을 때 올려서, 새로고침
   // 없이도 바로 화면에 반영되게 한다(서버 RPC도 같이 호출해 실제 값도 올림).
   viewCount: number;
+  // 이 게시물을 내가 좋아요 눌렀는지 — LikeButton(버튼 토글)과 더블탭 좋아요(DoubleTapLike류)가
+  // 같은 값을 공유해야 버튼으로 누르든 더블탭하든 화면이 항상 일치한다.
+  liked: boolean;
   setLikeCount: Dispatch<SetStateAction<number>>;
   setCommentCount: Dispatch<SetStateAction<number>>;
   setWeeklyLikeCount: Dispatch<SetStateAction<number>>;
   setViewCount: Dispatch<SetStateAction<number>>;
+  setLiked: Dispatch<SetStateAction<boolean>>;
 };
 
 const PostEngagementContext = createContext<PostEngagementContextValue | null>(null);
@@ -28,6 +32,7 @@ export function PostEngagementProvider({
   initialCommentCount,
   initialWeeklyLikeCount,
   initialViewCount,
+  initialLiked,
   peakThreshold,
   children,
 }: {
@@ -35,6 +40,7 @@ export function PostEngagementProvider({
   initialCommentCount: number;
   initialWeeklyLikeCount: number;
   initialViewCount?: number;
+  initialLiked?: boolean;
   peakThreshold: number;
   children: React.ReactNode;
 }) {
@@ -42,6 +48,7 @@ export function PostEngagementProvider({
   const [commentCount, setCommentCount] = useState(initialCommentCount);
   const [weeklyLikeCount, setWeeklyLikeCount] = useState(initialWeeklyLikeCount);
   const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
+  const [liked, setLiked] = useState(initialLiked ?? false);
 
   return (
     <PostEngagementContext.Provider
@@ -51,10 +58,12 @@ export function PostEngagementProvider({
         weeklyLikeCount,
         peakThreshold,
         viewCount,
+        liked,
         setLikeCount,
         setCommentCount,
         setWeeklyLikeCount,
         setViewCount,
+        setLiked,
       }}
     >
       {children}

@@ -1,6 +1,8 @@
 "use client";
 
 // INTERACT-01: 게시물당 사용자 1회, 토글 가능
+// liked 상태는 PostEngagementContext에서 공유 — 더블탭 좋아요(usePostLike)와 같은 값을
+// 봐야 버튼으로 누르든 더블탭하든 화면이 항상 일치한다(초기값은 Provider의 initialLiked).
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
@@ -9,17 +11,14 @@ import { HeartIcon } from "@/components/icons";
 export function LikeButton({
   postId,
   userId,
-  initialLiked,
   className = "",
 }: {
   postId: string;
   userId: string;
-  initialLiked: boolean;
   className?: string;
 }) {
   const supabase = createClient();
-  const { likeCount, setLikeCount, setWeeklyLikeCount } = usePostEngagement();
-  const [liked, setLiked] = useState(initialLiked);
+  const { likeCount, setLikeCount, setWeeklyLikeCount, liked, setLiked } = usePostEngagement();
   const [pending, setPending] = useState(false);
 
   async function toggle() {

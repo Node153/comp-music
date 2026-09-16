@@ -1,7 +1,13 @@
-// PEAK 게시물 = 이번 주(캘린더 기준, 월요일 0시 KST~) 좋아요 수가 승인 회원 수의 1/3 이상인 게시물.
-// 절대값 고정 대신 회원 수 비례로 둬서, 회원이 늘어날수록 기준도 같이 올라가게 한다(요구사항).
-// 서버(feed/page.tsx, notifications/page.tsx, layout.tsx)와 클라이언트(EngagementMeter.tsx)가
-// 같은 기준을 써야 해서 공용 함수로 뺌 — 회원 수 자체는 각 서버 컴포넌트가 직접 조회해서 넘긴다.
+// PEAK 게시물(카드 배지·레벨 막대·우측 사이드바 노출) = 조회수(view_count)가 이 값 이상인
+// 게시물(2026-09-17 변경, 사용자 요청) — 우선 PEAK 게시물 자체를 많이 쌓는 게 먼저라 절대값
+// 하나로 고정. 회원 수 비례였던 예전 기준(peakThresholdFromMemberCount)은 알림/이메일
+// 크론(주간 좋아요 기준)에서는 그대로 쓰고 있어 남겨둔다 — 이 값만 바꾸면 노출 기준이
+// 전체적으로 다시 조정된다.
+export const PEAK_VIEW_THRESHOLD = 1000;
+
+// 알림/이메일 크론(주간 좋아요 PEAK) 전용 — 게시물 카드/사이드바의 PEAK 기준은 위
+// PEAK_VIEW_THRESHOLD(조회수)로 바뀌었고, 이 함수는 아직 조회수 기준으로 안 옮긴 알림
+// 로직에서만 쓰인다.
 export function peakThresholdFromMemberCount(approvedMemberCount: number): number {
   return Math.max(1, Math.ceil(approvedMemberCount / 3));
 }

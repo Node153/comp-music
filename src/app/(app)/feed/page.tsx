@@ -19,6 +19,7 @@ import { PostOptionsMenu } from "@/components/PostOptionsMenu";
 import { PostViewedBy } from "@/components/PostViewedBy";
 import { PostCaption } from "@/components/PostCaption";
 import { PostViewCount } from "@/components/PostViewCount";
+import { DoubleTapLikeArea } from "@/components/DoubleTapLikeArea";
 import { LikeButton } from "./LikeButton";
 import { PinButton } from "./PinButton";
 import { CommentPanel } from "./CommentPanel";
@@ -809,6 +810,7 @@ export default async function FeedPage({
                 initialCommentCount={commentCount}
                 initialWeeklyLikeCount={weeklyLikeCount}
                 initialViewCount={post.view_count}
+                initialLiked={likedByMeSet.has(post.id)}
                 peakThreshold={peakThreshold}
               >
               <PostFocusToggle
@@ -890,7 +892,6 @@ export default async function FeedPage({
                   collabAvailable={post.collab_available}
                   collabRoleNeeded={post.collab_role_needed}
                   initialChatMessages={chatMessagesByPost.get(post.id) ?? []}
-                  likedByMe={likedByMeSet.has(post.id)}
                 />
               ) : (
                 <>
@@ -960,14 +961,26 @@ export default async function FeedPage({
                           )}
                         </div>
                       ) : post.videoSrc && post.media_type === "image" ? (
-                        <img
-                          src={post.videoSrc}
-                          alt={post.title || post.caption || "이미지 게시물"}
-                          className={`w-full object-cover ${
-                            // 위 목업과 같은 이유로 md:h-auto 필요.
-                            oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "aspect-[4/5]"
-                          }`}
-                        />
+                        currentUser ? (
+                          <DoubleTapLikeArea postId={post.id} userId={currentUser.id}>
+                            <img
+                              src={post.videoSrc}
+                              alt={post.title || post.caption || "이미지 게시물"}
+                              className={`w-full object-cover ${
+                                // 위 목업과 같은 이유로 md:h-auto 필요.
+                                oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "aspect-[4/5]"
+                              }`}
+                            />
+                          </DoubleTapLikeArea>
+                        ) : (
+                          <img
+                            src={post.videoSrc}
+                            alt={post.title || post.caption || "이미지 게시물"}
+                            className={`w-full object-cover ${
+                              oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "aspect-[4/5]"
+                            }`}
+                          />
+                        )
                       ) : post.videoSrc && post.media_type === "audio" ? (
                         // 음원+커버도 영상·이미지와 같은 정사각형(1:1)으로 통일(2026-09-14
                         // 확정) — 예전엔 카드 폭을 그대로 채우는 4:5였음. 래퍼에 패딩을 두지
@@ -984,6 +997,7 @@ export default async function FeedPage({
                             author={author?.name ?? "알 수 없음"}
                             authorId={post.user_id}
                             expiresAt={post.expires_at}
+                            viewerId={currentUser?.id}
                           />
                         </div>
                       ) : post.videoSrc ? (
@@ -1002,6 +1016,7 @@ export default async function FeedPage({
                             posterSrc={post.posterSrc}
                             tone="demo"
                             expiresAt={post.expires_at}
+                            viewerId={currentUser?.id}
                           />
                         </div>
                       ) : (
@@ -1074,11 +1089,7 @@ export default async function FeedPage({
                         iconClassName="h-5 w-5"
                       />
                     )}
-                    <LikeButton
-                      postId={post.id}
-                      userId={currentUser.id}
-                      initialLiked={likedByMeSet.has(post.id)}
-                    />
+                    <LikeButton postId={post.id} userId={currentUser.id} />
                     <CommentPanel postId={post.id} userId={currentUser.id} />
                     {!isOwnPost ? (
                       <MessageButton
