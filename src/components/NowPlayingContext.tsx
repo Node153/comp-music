@@ -3,7 +3,8 @@
 // 전역 재생 상태 — (app)/layout.tsx에 마운트되어 피드/프로필/업로드/DM 등 페이지를 이동해도
 // 언마운트되지 않는다(같은 레이아웃 세그먼트 안에서는 Next.js가 layout을 유지). 이 덕분에
 // 실제 <video> 재생은 GlobalPlayerBar 안의 엘리먼트 하나로만 이뤄지고, 페이지 이동에도 안 끊긴다.
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export type NowPlayingTrack = {
   id: string;
@@ -35,6 +36,10 @@ type NowPlayingContextValue = {
   // 카드(SoundbarPlayer)가 렌더 중 ref를 만지지 않고도 진행률을 계산할 수 있게.
   duration: number;
   setDuration: (v: number) => void;
+  // DEMO 조회수(0053/0054) — 이 트랙이 실제로 30초 이상 재생돼 서버에 카운트가 반영된
+  // 직후의 이벤트. 카드(PostVideo/SoundbarPlayer)가 자기 postId와 비교해서 화면 숫자를
+  // 낙관적으로 올리는 용도 — at은 매번 새 값이라 같은 트랙이 다시 카운트돼도 감지된다.
+  lastCountedView: { id: string; at: number } | null;
 };
 
 const NowPlayingContext = createContext<NowPlayingContextValue | null>(null);
@@ -43,12 +48,68 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
   const [track, setTrack] = useState<NowPlayingTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [lastCountedView, setLastCountedView] = useState<{ id: string; at: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // 조회수(0053/0054) 30초 시청 세션 — 실제 소리가 나는 이 <video> 하나를 기준으로 재는다.
+  // 피드 인라인 재생/최근 들은/담기 큐 재생이 전부 결국 play()를 거치므로 여기 한 곳에서만
+  // 재면 어디서 재생을 시작했든 동일하게 처리된다(사용자 요청). memo(expiresAt 있음)는
+  // 조회수 개념이 없어서 트랙 id를 세션에 안 실어 아예 재지 않는다.
+  const viewSessionRef = useRef<{
+    trackId: string | null;
+    watchedMs: number;
+    counted: boolean;
+    lastCurrentTime: number | null;
+    lastWallClock: number | null;
+  }>({ trackId: null, watchedMs: 0, counted: false, lastCurrentTime: null, lastWallClock: null });
 
   const play = useCallback((next: NowPlayingTrack) => {
     setTrack(next);
     setIsPlaying(true);
     setDuration(0);
+    // 일시정지 후 재개(toggle)는 play()를 다시 안 타서 누적이 계속 이어지고, 트랙을
+    // "새로" 고를 때만(재생 버튼을 다시 누르거나 다른 곡 선택) 30초를 처음부터 다시 채워야
+    // 카운트되게 세션을 리셋한다(사용자 확인 — 유튜브처럼 같은 트랙 재재생도 다시 카운트
+    // 하되, 이번엔 30초 게이트를 새로 넘겨야 함).
+    viewSessionRef.current = {
+      trackId: next.expiresAt ? null : next.id,
+      watchedMs: 0,
+      counted: false,
+      lastCurrentTime: null,
+      lastWallClock: null,
+    };
+  }, []);
+
+  // 전역 <video>는 (app) 레이아웃에 항상 마운트돼 있어서(GlobalPlayerBar) 이 리스너는
+  // 앱이 켜져 있는 동안 한 번만 붙으면 된다.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onTimeUpdate = () => {
+      const session = viewSessionRef.current;
+      if (!session.trackId || session.counted) return;
+      const now = Date.now();
+      const currentTime = video.currentTime;
+      if (session.lastCurrentTime !== null && session.lastWallClock !== null) {
+        const deltaVideo = currentTime - session.lastCurrentTime;
+        const deltaWall = (now - session.lastWallClock) / 1000;
+        // 탐색(seek)이나 버퍼링으로 시간이 훌쩍 뛴 경우는 "시청"이 아니라 누적에서 뺀다 —
+        // 영상 시간과 실제 경과 시간이 비슷하게 흐를 때만 정상 재생으로 본다.
+        if (deltaVideo > 0 && deltaWall > 0 && Math.abs(deltaVideo - deltaWall) < 1) {
+          session.watchedMs += deltaWall * 1000;
+        }
+      }
+      session.lastCurrentTime = currentTime;
+      session.lastWallClock = now;
+      if (session.watchedMs >= 30000) {
+        session.counted = true;
+        const viewedId = session.trackId;
+        void createClient().rpc("increment_post_view", { pid: viewedId });
+        setLastCountedView({ id: viewedId, at: now });
+      }
+    };
+    video.addEventListener("timeupdate", onTimeUpdate);
+    return () => video.removeEventListener("timeupdate", onTimeUpdate);
   }, []);
 
   const pause = useCallback(() => {
@@ -79,7 +140,19 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <NowPlayingContext.Provider
-      value={{ track, isPlaying, setIsPlaying, play, pause, toggle, close, videoRef, duration, setDuration }}
+      value={{
+        track,
+        isPlaying,
+        setIsPlaying,
+        play,
+        pause,
+        toggle,
+        close,
+        videoRef,
+        duration,
+        setDuration,
+        lastCountedView,
+      }}
     >
       {children}
     </NowPlayingContext.Provider>

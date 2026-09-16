@@ -11,7 +11,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylistOptional } from "@/components/PlaylistContext";
 import { usePostEngagement } from "@/components/PostEngagementContext";
-import { createClient } from "@/lib/supabase/client";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
 export function PostVideo({
@@ -35,11 +34,21 @@ export function PostVideo({
   // 그대로 실어서 남은 시간 뱃지를 보여준다. DEMO는 영구노출이라 안 넘어옴(undefined).
   expiresAt?: string | null;
 }) {
-  const { track, play, pause, videoRef: globalVideoRef } = useNowPlaying();
+  const { track, play, pause, videoRef: globalVideoRef, lastCountedView } = useNowPlaying();
   const playlist = usePlaylistOptional();
   const { setViewCount } = usePostEngagement();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const processedViewRef = useRef<number | null>(null);
+
+  // DEMO 조회수(0053/0054) — 30초 이상 재생돼 서버에 실제로 카운트된 순간만 화면 숫자를
+  // 낙관적으로 올린다(NowPlayingContext가 재생 시작 지점과 무관하게 중앙에서 판정).
+  useEffect(() => {
+    if (!lastCountedView || lastCountedView.id !== postId) return;
+    if (processedViewRef.current === lastCountedView.at) return;
+    processedViewRef.current = lastCountedView.at;
+    setViewCount((c) => c + 1);
+  }, [lastCountedView, postId, setViewCount]);
 
   // 이 게시물이 하단 사운드바(전역 <video>, 소리를 실제로 내는 쪽)의 현재 트랙일 때,
   // 바에서 탐색(seek)하면 여기 보이는 음소거 미리보기 영상도 같은 위치로 맞춘다 — 둘은
@@ -76,14 +85,6 @@ export function PostVideo({
     };
     if (playlist) playlist.playNow(trackData, { skipRefresh: true });
     else play(trackData);
-    // DEMO 조회수(0053) — 재생이 시작될 때마다 카운트(유튜브처럼 중복 재생도 매번 센다,
-    // 사용자 요청). memo는 아직 조회수 개념이 없어서 tone="demo"일 때만 기록한다. 화면에도
-    // 새로고침 없이 바로 반영되게 컨텍스트를 낙관적으로 먼저 올려두고, 서버 RPC로 실제 값도 올린다
-    // (사용자 제보: "조회수 표시 안 되는 것 같다" — DB엔 잘 쌓이는데 화면이 그때까지 안 바뀌던 문제).
-    if (tone === "demo") {
-      setViewCount((c) => c + 1);
-      void createClient().rpc("increment_post_view", { pid: postId });
-    }
   }
 
   function handlePause() {

@@ -16,7 +16,6 @@ import { useMediaProgress } from "@/lib/useMediaProgress";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylistOptional } from "@/components/PlaylistContext";
 import { usePostEngagement } from "@/components/PostEngagementContext";
-import { createClient } from "@/lib/supabase/client";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
 const SLIM_BAR_COUNT = 200;
@@ -98,11 +97,23 @@ export function SoundbarPlayer({
     toggle: nowToggle,
     pause: nowPause,
     duration: globalDuration,
+    lastCountedView,
   } = useNowPlaying();
   const playlist = usePlaylistOptional();
   const { setViewCount } = usePostEngagement();
   const isThisTrack = isGlobal && !!trackId && nowTrack?.id === trackId;
   const [globalTime] = useMediaProgress(videoRef, isThisTrack && nowPlaying);
+  const processedViewRef = useRef<number | null>(null);
+
+  // DEMO 조회수(0053/0054) — 30초 이상 재생돼 서버에 실제로 카운트된 순간만 화면 숫자를
+  // 낙관적으로 올린다(NowPlayingContext가 재생 시작 지점과 무관하게 중앙에서 판정).
+  useEffect(() => {
+    if (!isGlobal || !trackId) return;
+    if (!lastCountedView || lastCountedView.id !== trackId) return;
+    if (processedViewRef.current === lastCountedView.at) return;
+    processedViewRef.current = lastCountedView.at;
+    setViewCount((c) => c + 1);
+  }, [isGlobal, trackId, lastCountedView, setViewCount]);
 
   const isPlaying = isGlobal ? isThisTrack && nowPlaying : inlinePlaying;
   const currentTime = isGlobal ? (isThisTrack ? globalTime : 0) : inlineTime;
@@ -125,14 +136,6 @@ export function SoundbarPlayer({
     // src는 이 렌더에서 서버가 방금 내려준 signed URL이라 이미 최신이라 skipRefresh.
     if (playlist) playlist.playNow(trackData, { skipRefresh: true });
     else nowPlay(trackData);
-    // DEMO 조회수(0053) — 이 트랙이 하단 바의 현재 곡으로 "새로 선택"될 때마다 카운트
-    // (유튜브처럼 중복 재생도 매번 센다, 사용자 요청). 일시정지 후 재생 재개는 startGlobal이
-    // 아니라 nowToggle이 처리해서 여기서 다시 안 불리므로 중복 카운트는 안 된다. 화면에도
-    // 새로고침 없이 바로 반영되게 컨텍스트를 낙관적으로 먼저 올려두고, 서버 RPC로 실제 값도 올린다.
-    if (tone === "demo") {
-      setViewCount((c) => c + 1);
-      void createClient().rpc("increment_post_view", { pid: trackId });
-    }
   }
 
   function togglePlay() {
