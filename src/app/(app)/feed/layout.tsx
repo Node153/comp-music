@@ -9,13 +9,18 @@ import { getCurrentUser } from "@/lib/auth";
 // 같은 요청 스코프 캐시라 여기서 또 불러도 실제 auth 왕복은 추가로 안 생긴다.
 // 좌측 장르 필터 컬럼(옛 LeftSidebar)은 2026-09-16 제거됨 — NavSidebar의 검색 패널
 // (SearchMenu)로 흡수돼 이제 거기서만 보인다(사용자 요청 "검색창을 장르 필터랑 합쳐서 구성").
+// 그때 그리드를 2컬럼(본문+우측 220px)으로 줄였더니 본문(피드 카드)이 화면 중앙보다 왼쪽으로
+// 쏠려 보였다(2026-09-17 사용자 제보) — 우측 220px 사이드바만 남아 본문 칼럼의 중심이 더 이상
+// 화면 중앙과 안 맞았기 때문. 좌측에 보이는 내용 없이 폭만 우측과 똑같이 맞춘 빈 칼럼을 다시
+// 둬서(3컬럼 그리드로 원복) 본문이 원래처럼 화면 중앙에 오도록 했다.
 export default async function FeedLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
 
   if (!user) return <>{children}</>;
 
   return (
-    <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
+    <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
+      <div aria-hidden />
       <div>{children}</div>
       <RightSidebar currentUserId={user.id} />
     </div>

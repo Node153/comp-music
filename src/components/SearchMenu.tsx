@@ -27,32 +27,35 @@ import { SearchPanel } from "@/components/SearchPanel";
 
 const STORAGE_KEY = "music-network:interested-genres";
 
-// LeftSidebar.tsx와 동일한 5티어 색 체계(memo 시그니처 컬러인 violet 하나의 진하기 그라데이션).
+// 2026-09-17 수정(사용자 요청 "장르 필터 다 흑백으로 처리해줘") — 원래 LeftSidebar.tsx의 memo
+// 시그니처 컬러(violet) 그라데이션을 그대로 옮겨왔었는데, 사이트 전체 디자인 시스템(ui/styles.ts
+// 상단 주석 — "중성적인 톤(흑백 위주), 링크만 blue-600, 파괴적 액션만 red-600")과 안 맞아서
+// violet/red를 전부 걷어내고 gray 그라데이션 + 선택 시 검정 반전으로 바꿨다.
 const TIERS = [
   {
     label: "1티어",
-    dot: "bg-violet-700",
-    chip: "border-violet-300 bg-violet-100 text-violet-800 dark:border-violet-600 dark:bg-violet-900/60 dark:text-violet-100",
+    dot: "bg-gray-800",
+    chip: "border-gray-400 bg-gray-200 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100",
   },
   {
     label: "2티어",
-    dot: "bg-violet-600",
-    chip: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-200",
+    dot: "bg-gray-600",
+    chip: "border-gray-300 bg-gray-100 text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300",
   },
   {
     label: "3티어",
-    dot: "bg-violet-500",
-    chip: "border-violet-200 bg-violet-50 text-violet-600 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300",
+    dot: "bg-gray-500",
+    chip: "border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-400",
   },
   {
     label: "4티어",
-    dot: "bg-violet-400",
-    chip: "border-violet-100 bg-white text-violet-500 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-400",
+    dot: "bg-gray-400",
+    chip: "border-gray-100 bg-white text-gray-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-500",
   },
   {
     label: "5티어",
-    dot: "bg-violet-300",
-    chip: "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-400",
+    dot: "bg-gray-300",
+    chip: "border-gray-100 bg-gray-50 text-gray-400 dark:border-gray-900 dark:bg-gray-950/60 dark:text-gray-500",
   },
 ] as const;
 
@@ -184,7 +187,7 @@ export function SearchMenu({
                       {interested.map((genre) => (
                         <div
                           key={genre}
-                          className="inline-flex items-center overflow-hidden rounded-full bg-red-50 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
+                          className="inline-flex items-center overflow-hidden rounded-full bg-black text-xs font-medium text-white dark:bg-white dark:text-black"
                         >
                           <Link
                             href={`/feed?feed=completion&tag=${encodeURIComponent(genre)}`}
@@ -198,7 +201,7 @@ export function SearchMenu({
                             onClick={() => removeInterested(genre)}
                             title="관심 장르에서 제거"
                             aria-label={`관심 장르에서 ${genre} 제거`}
-                            className="rounded-full p-1 pr-2 transition hover:bg-red-100 dark:hover:bg-red-950/60"
+                            className="rounded-full p-1 pr-2 transition hover:bg-gray-700 dark:hover:bg-gray-200"
                           >
                             <XIcon className="h-3 w-3" />
                           </button>
@@ -249,7 +252,7 @@ export function SearchMenu({
                               title={`#${genre} 게시물만 보기`}
                               className={`flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:opacity-75 ${
                                 selected
-                                  ? "border-red-300 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400"
+                                  ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
                                   : tier.chip
                               }`}
                             >
