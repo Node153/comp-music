@@ -1,21 +1,38 @@
 "use client";
 
-// NavSidebar 알림 패널(ProfileMenu와 동일한 클릭-토글+바깥클릭-닫기 패턴 재사용) — 인스타그램
-// 알림탭 참고(2026-09-16, 사용자 요청 — "굳이 전체 알림보기로 페이지 이동하지 말고 사이드바에서
-// 알림정보 다 볼 수 있게"): 작은 드롭다운 대신 화면 전체 높이의 패널로 펼쳐지고, 오늘/어제/
-// 이번 주/이번 달/이전 활동으로 묶어서 보여준다 — /notifications 페이지로 이동할 필요 없이
-// 여기서 전체 목록을 다 볼 수 있어서 "전체 알림 보기" 링크는 없앴다(그 페이지 자체는 카테고리
-// 필터가 있어 남겨두되, 여기서 굳이 유도하지 않음).
-// 열릴 때마다 /api/notifications/list를 불러오고(뱃지 숫자와 같은 지연-로드 원칙), 동시에
-// markSeen으로 읽음 처리해서 뱃지를 즉시 0으로 내린다.
-import { useEffect, useState } from "react";
+// 알림 패널(ProfileMenu와 동일한 클릭-토글+바깥클릭-닫기 패턴 재사용) — 인스타그램 알림탭 참고
+// (2026-09-16, 사용자 요청 — "굳이 전체 알림보기로 페이지 이동하지 말고 사이드바에서 알림정보
+// 다 볼 수 있게"): 작은 드롭다운 대신 패널로 펼쳐지고, 오늘/어제/이번 주/이번 달/이전 활동으로
+// 묶어서 보여준다. 이어서 "/notifications 페이지 자체를 제거해달라"는 요청을 받아 그 페이지를
+// 지우고(2026-09-16), 그 페이지가 갖고 있던 카테고리 필터(전체/좋아요·댓글/신청/PEAK)와 댓글
+// 미리보기까지 이 패널로 옮겨왔다 — 이제 알림 정보 전부가 여기 하나에서만 보인다.
+// 데스크톱(NavSidebar, compact=false)은 사이드바 오른쪽에 딱 붙는 도킹 패널, 모바일
+// (MobileTopBar, compact=true)은 화면 전체를 덮는 풀스크린 패널 — 같은 컴포넌트를 반응형
+// 클래스(md:)로 나눠 재사용한다.
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { BellIcon, FlameIcon, XIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
-import { navRowClass } from "@/components/ui/styles";
+import { navRowClass, topBarIconClass } from "@/components/ui/styles";
 import type { NotificationItem } from "@/lib/notificationList";
+
+// 옛 /notifications 페이지의 카테고리 필터 그대로(2026-09-16 이전엔 URL ?type=으로 했지만,
+// 이제 페이지가 아니라 패널이라 로컬 상태로 바꿨다).
+type CategoryFilter = "all" | "engagement" | "request" | "peak";
+const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
+  { value: "all", label: "전체" },
+  { value: "engagement", label: "좋아요·댓글" },
+  { value: "request", label: "신청" },
+  { value: "peak", label: "PEAK" },
+];
+function matchesCategory(item: NotificationItem, filter: CategoryFilter) {
+  if (filter === "all") return true;
+  if (filter === "engagement") return item.type === "like" || item.type === "comment";
+  if (filter === "request") return item.type === "companion_request" || item.type === "knock";
+  return item.type === "peak";
+}
 
 // 인스타그램 알림탭과 같은 시간 구간 묶음. 알림이 createdAt 내림차순으로 이미 정렬돼 오므로
 // 순서대로 훑으면서 구간이 바뀔 때만 새 섹션을 만들면 된다(별도 정렬/버킷 배열 불필요).
@@ -45,12 +62,21 @@ function groupBySection(items: NotificationItem[]): { label: string; items: Noti
   return groups;
 }
 
-export function NotificationsMenu({ userId, isFeed }: { userId: string; isFeed: boolean }) {
+export function NotificationsMenu({
+  userId,
+  isFeed,
+  compact = false,
+}: {
+  userId: string;
+  isFeed: boolean;
+  compact?: boolean;
+}) {
   const unseenNotifications = useNotificationCount();
   const markSeen = useMarkNotificationsSeen();
   const [open, setOpen] = useState(false);
   // null = 이번에 열고 나서 아직 못 받아옴(로딩 중) — 열 때마다 toggleOpen에서 초기화해서 매번 새로 불러온다.
   const [items, setItems] = useState<NotificationItem[] | null>(null);
+  const [category, setCategory] = useState<CategoryFilter>("all");
   const loading = open && items === null;
 
   function close() {
@@ -82,24 +108,45 @@ export function NotificationsMenu({ userId, isFeed }: { userId: string; isFeed: 
     };
   }, [open, userId, markSeen]);
 
+  const filteredItems = useMemo(
+    () => (items ?? []).filter((item) => matchesCategory(item, category)),
+    [items, category],
+  );
+
   return (
     <div className="relative">
-      <button onClick={toggleOpen} title="Alerts" aria-label="Alerts" className={navRowClass(open, isFeed)}>
-        <BellIcon className="h-6 w-6" />
-        <span className="flex-1 text-left">알림</span>
-        {unseenNotifications > 0 && (
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
-            {unseenNotifications}
-          </span>
-        )}
-      </button>
+      {compact ? (
+        <button
+          onClick={toggleOpen}
+          aria-label="알림"
+          className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition ${topBarIconClass(open, isFeed)}`}
+        >
+          <BellIcon className="h-5 w-5" />
+          {unseenNotifications > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+              {unseenNotifications}
+            </span>
+          )}
+        </button>
+      ) : (
+        <button onClick={toggleOpen} title="Alerts" aria-label="Alerts" className={navRowClass(open, isFeed)}>
+          <BellIcon className="h-6 w-6" />
+          <span className="flex-1 text-left">알림</span>
+          {unseenNotifications > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+              {unseenNotifications}
+            </span>
+          )}
+        </button>
+      )}
 
       {open && (
         <>
           <button aria-label="알림 닫기" onClick={close} className="fixed inset-0 z-40 cursor-default" />
-          {/* 인스타그램처럼 사이드바 오른쪽에 딱 붙어 화면 전체 높이로 펼쳐진다(위아래로 뜨는
-              작은 드롭다운이 아님) — left-60은 NavSidebar의 고정 폭(w-60)과 같은 값. */}
-          <div className="fixed inset-y-0 left-60 z-50 flex w-[420px] max-w-[calc(100vw-15rem)] flex-col border-r border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-950">
+          {/* 데스크톱: 사이드바 오른쪽에 딱 붙어 화면 전체 높이로 펼쳐진다(left-60은 NavSidebar
+              고정 폭과 같은 값). 모바일: 화면 전체를 덮는 풀스크린 패널(md 미만엔 사이드바가
+              없어서 도킹시킬 기준점이 없다). */}
+          <div className="fixed inset-0 z-50 flex w-full flex-col bg-white md:inset-y-0 md:left-60 md:right-auto md:w-[420px] md:max-w-[calc(100vw-15rem)] md:border-r md:border-gray-200 md:shadow-xl dark:bg-gray-950 md:dark:border-gray-800">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100">알림</span>
               <div className="flex items-center gap-3">
@@ -120,13 +167,29 @@ export function NotificationsMenu({ userId, isFeed }: { userId: string; isFeed: 
               </div>
             </div>
 
+            <div className="flex gap-1.5 overflow-x-auto border-b border-gray-100 px-3 py-2 dark:border-gray-800">
+              {CATEGORY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setCategory(option.value)}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
+                    category === option.value
+                      ? "bg-black text-white dark:bg-white dark:text-black"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
             <div className="flex-1 overflow-y-auto px-2 py-2">
               {loading ? (
                 <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
-              ) : !items || items.length === 0 ? (
+              ) : filteredItems.length === 0 ? (
                 <p className="py-8 text-center text-sm text-gray-400">아직 알림이 없어요</p>
               ) : (
-                groupBySection(items).map((group) => (
+                groupBySection(filteredItems).map((group) => (
                   <div key={group.label} className="mb-2">
                     <p className="px-2 py-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {group.label}
@@ -162,6 +225,11 @@ export function NotificationsMenu({ userId, isFeed }: { userId: string; isFeed: 
                                 </>
                               )}
                             </span>
+                            {item.type === "comment" && (
+                              <span className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
+                                “{item.content}”
+                              </span>
+                            )}
                             <span className="mt-0.5 text-xs text-gray-400">{timeAgo(item.createdAt)}</span>
                           </span>
                           {item.unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />}

@@ -48,7 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     안 받아서 각자 파일에서 md:left-60으로 따로 맞춘다. */}
                 <div className="md:pl-60">
                   <TopNav />
-                  <MobileTopBar />
+                  <MobileTopBar currentUserId={user.id} />
                   {children}
                   <BottomNav currentUserId={user.id} />
                 </div>
