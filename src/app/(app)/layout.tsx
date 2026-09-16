@@ -1,5 +1,6 @@
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
+import { NavSidebar } from "@/components/NavSidebar";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { PageCanvas } from "@/components/PageCanvas";
 import { GuestTopNav } from "@/components/GuestTopNav";
@@ -18,7 +19,8 @@ import { getCurrentUser, getMyUserRow } from "@/lib/auth";
 // 승인된 사용자 전용 화면(S6 피드, S8 업로드, S9 프로필, S12/S13 DM) 공통 레이아웃.
 // 좌우 사이드바(장르 필터 / 온라인·PEAK)는 피드 전용 보조 정보라 여기 없음 —
 // feed/layout.tsx에서만 붙인다(인스타그램이 작성·DM·알림 화면엔 피드 사이드바를
-// 안 보여주는 것과 같은 원칙 — 화면마다 그 화면의 할 일에만 집중하게).
+// 안 보여주는 것과 같은 원칙 — 화면마다 그 화면의 할 일에만 집중하게). NavSidebar(전역 내비게이션,
+// 로고/검색/업로드/채팅/알림/Help/프로필)는 이것과 별개 — 항상 화면 왼쪽에 고정(2026-09-16).
 // 각 화면 콘텐츠는 모바일에서 하단 탭바(56px, h-14) 높이만큼 자체적으로 여백을 확보해야 한다.
 // 안읽음 알림 뱃지 숫자는 여기서 계산하지 않는다 — NotificationCountProvider가 마운트 후
 // /api/notifications/count로 비동기로 가져와서 첫 페인트를 막지 않는다.
@@ -40,10 +42,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <NotificationCountProvider>
               <SearchOverlayProvider>
                 <PresenceHeartbeat userId={user.id} />
-                <TopNav currentUserId={user.id} userName={userName} isAdmin={isAdmin} />
-                <MobileTopBar />
-                {children}
-                <BottomNav currentUserId={user.id} />
+                <NavSidebar currentUserId={user.id} userName={userName} isAdmin={isAdmin} />
+                {/* md 이상에서는 NavSidebar(w-60, fixed)가 왼쪽을 차지하므로 나머지 화면을
+                    그만큼 밀어낸다 — GlobalPlayerBar/QueuePanel은 fixed라 이 패딩 영향을
+                    안 받아서 각자 파일에서 md:left-60으로 따로 맞춘다. */}
+                <div className="md:pl-60">
+                  <TopNav />
+                  <MobileTopBar />
+                  {children}
+                  <BottomNav currentUserId={user.id} />
+                </div>
                 <GlobalPlayerBar />
                 <QueuePanel />
                 <SearchOverlay />

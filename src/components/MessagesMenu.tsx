@@ -1,17 +1,19 @@
 "use client";
 
-// TopNav 메시지 드롭다운(NotificationsMenu와 동일한 클릭-토글+바깥클릭-닫기 패턴 재사용) — Chat
+// NavSidebar 메시지 드롭다운(NotificationsMenu와 동일한 클릭-토글+바깥클릭-닫기 패턴 재사용) — Chat
 // 아이콘을 눌러 곧장 /messages로 이동하던 걸, 최근 대화 몇 개를 바로 훑어보다가 특정 대화를
 // 클릭했을 때만 그 대화방(/messages/[id])으로 이동하는 드롭다운으로 바꿨다.
 // 열릴 때마다 /api/messages/list를 불러온다(알림 드롭다운과 같은 지연-로드 원칙). 안읽음
 // 처리는 여전히 대화방 진입 시 MarkMessagesRead가 담당 — 여기서는 건드리지 않는다.
+// 사이드바 항목이라 버튼은 아이콘+라벨 한 줄이고(2026-09-16, 인스타그램 참고), 드롭다운은
+// 아래가 아니라 사이드바 오른쪽으로 펼쳐진다(left-full).
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { ChatIcon, EditIcon, MailIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
-import { topBarIconClass } from "@/components/ui/styles";
+import { navRowClass } from "@/components/ui/styles";
 import type { ConversationItem } from "@/lib/conversationList";
 
 export function MessagesMenu({ isFeed }: { isFeed: boolean }) {
@@ -51,19 +53,15 @@ export function MessagesMenu({ isFeed }: { isFeed: boolean }) {
 
   return (
     <div className="relative">
-      <button
-        onClick={toggleOpen}
-        title="Chat"
-        aria-label="Chat"
-        className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${topBarIconClass(open, isFeed)}`}
-      >
-        <ChatIcon />
+      <button onClick={toggleOpen} title="Chat" aria-label="Chat" className={navRowClass(open, isFeed)}>
+        <ChatIcon className="h-6 w-6" />
+        메시지
       </button>
 
       {open && (
         <>
           <button aria-label="메시지 닫기" onClick={close} className="fixed inset-0 z-40 cursor-default" />
-          <div className="absolute right-0 z-50 mt-2 flex max-h-[28rem] w-80 flex-col rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-950">
+          <div className="absolute left-full top-0 z-50 ml-2 flex max-h-[28rem] w-80 flex-col rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-950">
             <div className="flex items-center justify-between px-2 py-1.5">
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">메시지</span>
               <button

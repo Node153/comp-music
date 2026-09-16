@@ -53,3 +53,10 @@ export function topBarIconClass(active: boolean, isFeed: boolean) {
   }
   return active ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-80";
 }
+
+// NavSidebar 항목(아이콘+라벨 한 줄) 공통 스타일 — 위 topBarIconClass의 색 규칙을 그대로 쓰되
+// 사이드바 행 레이아웃(전체 폭·좌측 정렬)에 맞춘다(2026-09-16, 인스타그램 참고 — 메뉴들을
+// 상단바에서 좌측 사이드바로 이동).
+export function navRowClass(active: boolean, isFeed: boolean) {
+  return `flex w-full items-center gap-4 rounded-xl px-3 py-2.5 text-[15px] font-medium transition ${topBarIconClass(active, isFeed)}`;
+}

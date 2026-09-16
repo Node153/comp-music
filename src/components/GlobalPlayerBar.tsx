@@ -206,7 +206,10 @@ export function GlobalPlayerBar() {
           파형이 정렬 기준, 나머지 아이콘은 그 파형 양옆에 붙임). 좌우 폭이 같은 1fr이라 안의
           내용물 크기와 무관하게 가운데 열은 항상 정확히 화면 중앙에 위치한다. */}
       <div
-        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t border-black/15 px-3 text-white transition-colors md:bottom-0 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg}`}
+        // md 이상에서 NavSidebar(w-60, fixed left-0)가 화면 왼쪽을 차지하므로, 바가 그 위를
+        // 덮지 않게 md:left-60으로 시작점을 밀어낸다(2026-09-16) — 가운데 열(파형)은 여전히
+        // "보이는 화면(사이드바 오른쪽 영역)"의 정중앙에 오게 되어 의도와 오히려 더 맞는다.
+        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t border-black/15 px-3 text-white transition-colors md:bottom-0 md:left-60 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg}`}
       >
         {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
             justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}

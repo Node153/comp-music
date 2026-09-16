@@ -1,22 +1,27 @@
 "use client";
 
-// TopNav 우측 프로필 드롭다운(페이스북 참고) — 아바타 클릭 시 프로필 보기/프로필 수정/
+// NavSidebar 맨 아래 프로필 드롭다운(페이스북 참고) — 아바타 클릭 시 프로필 보기/프로필 수정/
 // (관리자면) 관리자 메뉴/로그아웃 노출. 관리자 메뉴는 눌러서 펼치면 세부 페이지 링크가 나온다.
+// 사이드바 맨 아래 행이라 버튼은 아바타+이름 한 줄이고, 드롭다운은 아래가 아니라 위로
+// 펼쳐진다(bottom-full) — 화면 하단에 붙어있어 아래로 펼치면 잘리기 쉬워서(2026-09-16).
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { ADMIN_LINKS } from "@/lib/adminLinks";
+import { navRowClass } from "@/components/ui/styles";
 
 export function ProfileMenu({
   userId,
   userName,
   isAdmin = false,
+  isFeed,
 }: {
   userId: string;
   userName: string;
   isAdmin?: boolean;
+  isFeed: boolean;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -36,8 +41,9 @@ export function ProfileMenu({
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((v) => !v)} title="Me" aria-label="Me" className="block">
-        <Avatar userId={userId} name={userName} className="h-9 w-9 text-sm" />
+      <button onClick={() => setOpen((v) => !v)} title="Me" aria-label="Me" className={navRowClass(open, isFeed)}>
+        <Avatar userId={userId} name={userName} className="h-7 w-7 text-xs" />
+        <span className="truncate">{userName}</span>
       </button>
 
       {open && (
@@ -47,7 +53,7 @@ export function ProfileMenu({
             onClick={close}
             className="fixed inset-0 z-40 cursor-default"
           />
-          <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-950">
+          <div className="absolute bottom-full left-0 z-50 mb-2 w-56 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-950">
             <Link
               href={`/profile/${userId}`}
               onClick={close}
