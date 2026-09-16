@@ -3,16 +3,15 @@
 // 데스크톱 좌측 메인 내비게이션(인스타그램 참고, 2026-09-16 사용자 요청) — 로고/검색/만들기(업로드)/
 // 채팅/알림/Help/프로필을 TopNav 상단바에서 여기로 전부 옮겼다. 상단바(TopNav)엔 이제
 // DEMO/memo 피드 탭만 남는다. 모바일(md 미만)은 그대로 BottomNav+MobileTopBar를 쓴다(hidden md:flex).
-// (app)/feed/layout.tsx의 LeftSidebar(장르 필터)와는 이름·역할이 다른 별개 컴포넌트 — 그쪽은
-// 피드 화면 안의 보조 패널이고, 이건 화면 전환용 전역 내비게이션이라 항상 화면 왼쪽에 고정된다.
+// 검색(SearchMenu)은 장르 필터를 흡수해서 메시지/알림과 같은 도킹 패널로 열린다 — SearchMenu.tsx 참고.
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { MessagesMenu } from "@/components/MessagesMenu";
-import { useSearchOverlay } from "@/components/SearchOverlayContext";
-import { PlusIcon, HelpIcon, SearchIcon } from "@/components/icons";
+import { SearchMenu } from "@/components/SearchMenu";
+import { PlusIcon, HelpIcon } from "@/components/icons";
 import { navRowClass, navLabelClass } from "@/components/ui/styles";
 
 export function NavSidebar({
@@ -25,7 +24,6 @@ export function NavSidebar({
   isAdmin?: boolean;
 }) {
   const pathname = usePathname();
-  const search = useSearchOverlay();
   const isFeed = pathname === "/feed" || pathname?.startsWith("/feed/");
 
   // 평소엔 아이콘만 보이는 좁은 레일이다가 마우스를 올리면 라벨까지 보이는 넓은 폭으로
@@ -37,10 +35,11 @@ export function NavSidebar({
   // 패널이 항상 접힌 폭(72px) 바로 옆에서 시작해서 "사이드바가 그대로 알림 화면으로 바뀐"
   // 것처럼 이어진다.
   const [hovering, setHovering] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const anyPanelOpen = messagesOpen || notificationsOpen || profileOpen;
+  const anyPanelOpen = searchOpen || messagesOpen || notificationsOpen || profileOpen;
   const expanded = hovering && !anyPanelOpen;
 
   return (
@@ -89,10 +88,7 @@ export function NavSidebar({
           한다(2026-09-16, 사용자 요청 — "메뉴 아이콘들 세로 중앙정렬"). flex-1이 로고 아래
           남은 높이를 전부 차지하고, justify-center가 그 안에서 그룹 전체를 가운데 정렬한다. */}
       <div className="flex flex-1 flex-col justify-center gap-1">
-        <button type="button" onClick={search.open} className={navRowClass(search.isOpen, isFeed, expanded)}>
-          <SearchIcon className="h-6 w-6 shrink-0" />
-          <span className={navLabelClass(expanded)}>검색</span>
-        </button>
+        <SearchMenu isFeed={isFeed} expanded={expanded} onOpenChange={setSearchOpen} />
         <MessagesMenu
           currentUserId={currentUserId}
           isFeed={isFeed}
