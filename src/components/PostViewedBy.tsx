@@ -30,14 +30,17 @@ export function PostViewedBy({
 
   // 조회 기록 — 본인 글이 아니면 마운트 시 한 번만 기록. onConflict로 중복(이미 본 글을
   // 다시 열람) 무시 — 실패해도 조용히 넘어간다(조회 기록 실패가 화면을 막을 이유는 없음).
+  // ⚠️ postgrest-js 빌더는 .then()을 실제로 호출해야 fetch가 나간다 — void만 붙이고
+  // 끝내면 요청 자체가 안 나가서 이 조회 기록이 지금까지 전혀 안 쌓이고 있었다.
   useEffect(() => {
     if (isOwnPost) return;
-    void supabase
+    supabase
       .from("post_views")
       .upsert(
         { post_id: postId, user_id: currentUserId },
         { onConflict: "post_id,user_id", ignoreDuplicates: true },
-      );
+      )
+      .then(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId, isOwnPost]);
 

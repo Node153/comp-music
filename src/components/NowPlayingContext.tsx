@@ -108,7 +108,16 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
       if (session.watchedMs >= 30000) {
         session.counted = true;
         const viewedId = session.trackId;
-        void createClient().rpc("increment_post_view", { pid: viewedId });
+        // ⚠️ postgrest-js의 쿼리 빌더는 .then()을 실제로 호출해야만 fetch가 나간다("thenable"
+        // 지연 실행 — .rpc(...)만 만들어두고 아무도 안 부르면 요청 자체가 안 보내진다).
+        // void만 붙이고 끝내면 컴파일은 되지만 네트워크 요청이 영영 안 나가서, 여태 조회수가
+        // DB에 전혀 반영되지 않고 있었다(사용자 제보로 Supabase 로그까지 까서 확인한 원인).
+        // .then()으로 실제 실행시키고 실패하면 최소한 콘솔에라도 남긴다.
+        createClient()
+          .rpc("increment_post_view", { pid: viewedId })
+          .then(({ error }) => {
+            if (error) console.error("increment_post_view failed", error);
+          });
         setLastCountedView({ id: viewedId, at: now });
       }
     };
