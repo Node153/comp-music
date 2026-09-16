@@ -15,57 +15,28 @@
 // 갖고 있고(게시물 해시태그 클릭이 `/feed?feed=completion&tag=...`로 링크되는 것과 동일한
 // 방식, feed/page.tsx의 tagParam 필터 참고) 장르 이름이 곧 그 해시태그(instrument_tags) 값이라
 // 그대로 재사용 가능하다 — 장르 칩을 그 URL로 가는 Link로 바꿔 진짜 필터 역할을 하게 했다.
-// "관심 장르"는 북마크 목록으로 남기되(클릭 시 자동으로 여기 추가돼 다음에 빠르게 다시 찾아볼
-// 수 있음), 제거는 별도 X 버튼으로만(칩 전체를 누르면 필터가 걸려야 하니 제거와 분리해야 함 —
-// 버튼 안에 버튼을 중첩할 수 없어 X를 형제 버튼으로 뺐다).
+// 2026-09-17 추가 수정(사용자 요청 4건):
+//   1) "장르 필터 티어 삭제" — LeftSidebar에서 그대로 가져온 1~5티어 그룹(ALL_GENRES 순서 기반
+//      mock 인기순, HeadphonesIcon 주석 참고) 제거. 실사용 데이터 기반으로 바뀌면서 그 순서
+//      자체가 의미 없어졌다.
+//   2) "실제 게시물에 해시태그 되어 있는 것만 추가 나머지 삭제" — 고정 목록 ALL_GENRES(약 90개)
+//      대신, 실제 published+public 게시물의 instrument_tags를 집계해 진짜 쓰인 태그만 보여준다
+//      (사용 빈도 내림차순). 아무도 안 쓴 장르를 눌러봐야 항상 "게시물이 없어요"만 나오는
+//      죽은 칩이었다.
+//   3) "관심장르 -> 선택 장르" — 로컬 저장 키(STORAGE_KEY)는 호환을 위해 그대로 두고 화면
+//      라벨/문구만 변경.
+//   4) "사이드바에서 선택된 장르 해제 하면 자동으로 피드에도 풀려야함" — 지금 보고 있는 피드의
+//      활성 태그(useSearchParams의 tag)와 제거하려는 장르가 같으면, 북마크 제거와 함께
+//      /feed?feed=completion(태그 없이)으로 이동해 필터도 같이 풀어준다.
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ALL_GENRES } from "@/lib/genres";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { SearchIcon, HeadphonesIcon, XIcon } from "@/components/icons";
 import { navRowClass, navLabelClass } from "@/components/ui/styles";
 import { SearchPanel } from "@/components/SearchPanel";
 
 const STORAGE_KEY = "music-network:interested-genres";
-
-// 2026-09-17 수정(사용자 요청 "장르 필터 다 흑백으로 처리해줘") — 원래 LeftSidebar.tsx의 memo
-// 시그니처 컬러(violet) 그라데이션을 그대로 옮겨왔었는데, 사이트 전체 디자인 시스템(ui/styles.ts
-// 상단 주석 — "중성적인 톤(흑백 위주), 링크만 blue-600, 파괴적 액션만 red-600")과 안 맞아서
-// violet/red를 전부 걷어내고 gray 그라데이션 + 선택 시 검정 반전으로 바꿨다.
-const TIERS = [
-  {
-    label: "1티어",
-    dot: "bg-gray-800",
-    chip: "border-gray-400 bg-gray-200 text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100",
-  },
-  {
-    label: "2티어",
-    dot: "bg-gray-600",
-    chip: "border-gray-300 bg-gray-100 text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300",
-  },
-  {
-    label: "3티어",
-    dot: "bg-gray-500",
-    chip: "border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-400",
-  },
-  {
-    label: "4티어",
-    dot: "bg-gray-400",
-    chip: "border-gray-100 bg-white text-gray-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-500",
-  },
-  {
-    label: "5티어",
-    dot: "bg-gray-300",
-    chip: "border-gray-100 bg-gray-50 text-gray-400 dark:border-gray-900 dark:bg-gray-950/60 dark:text-gray-500",
-  },
-] as const;
-
-function tierIndexForRank(rank: number) {
-  if (rank <= 10) return 0;
-  if (rank <= 30) return 1;
-  if (rank <= 60) return 2;
-  if (rank <= 100) return 3;
-  return 4;
-}
 
 export function SearchMenu({
   isFeed,
@@ -76,22 +47,52 @@ export function SearchMenu({
   expanded: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTag = searchParams.get("tag");
+
   const [open, setOpen] = useState(false);
   const [genreQuery, setGenreQuery] = useState("");
-  const [interested, setInterested] = useState<string[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  // null = 아직 못 받아옴(로딩 중). 실제 게시물에 쓰인 태그만 사용 빈도 내림차순으로 담는다.
+  const [usedGenres, setUsedGenres] = useState<{ genre: string; count: number }[] | null>(null);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setInterested(JSON.parse(saved));
+      if (saved) setSelectedGenres(JSON.parse(saved));
     } catch {
       // localStorage 접근 불가 환경이면 그냥 빈 목록으로 둔다.
     }
   }, []);
 
-  // "관심 장르" 칩의 X 버튼 전용 — 북마크 목록에서만 뺀다(피드 필터와는 무관).
-  function removeInterested(genre: string) {
-    setInterested((prev) => {
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("posts")
+      .select("instrument_tags")
+      .eq("status", "published")
+      .eq("visibility", "public")
+      .then(({ data }) => {
+        if (cancelled) return;
+        const counts = new Map<string, number>();
+        for (const row of data ?? []) {
+          for (const tag of row.instrument_tags ?? []) {
+            counts.set(tag, (counts.get(tag) ?? 0) + 1);
+          }
+        }
+        setUsedGenres([...counts.entries()].sort((a, b) => b[1] - a[1]).map(([genre, count]) => ({ genre, count })));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // "선택 장르" 칩의 X 버튼 전용 — 북마크 목록에서 뺀다. 지금 보고 있는 피드가 이 장르로
+  // 걸러진 상태였다면(활성 태그와 일치) 필터도 같이 풀어서 피드로 돌아간다.
+  function removeSelected(genre: string) {
+    setSelectedGenres((prev) => {
       const next = prev.filter((g) => g !== genre);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -100,13 +101,16 @@ export function SearchMenu({
       }
       return next;
     });
+    if (activeTag === genre) {
+      router.push("/feed?feed=completion");
+    }
   }
 
-  // 장르 칩 클릭(필터 적용) 시 같이 호출 — 다음에 빠르게 다시 찾아볼 수 있게 "관심 장르"에도
+  // 장르 칩 클릭(필터 적용) 시 같이 호출 — 다음에 빠르게 다시 찾아볼 수 있게 "선택 장르"에도
   // 자동으로 남긴다. 실제 필터링 자체는 Link의 href(/feed?tag=...)가 담당하고, 이 함수는 북마크
   // 저장 + 패널 닫기만 한다.
   function bookmarkGenre(genre: string) {
-    setInterested((prev) => {
+    setSelectedGenres((prev) => {
       if (prev.includes(genre)) return prev;
       const next = [...prev, genre];
       try {
@@ -119,16 +123,12 @@ export function SearchMenu({
     close();
   }
 
-  const tiers = useMemo(() => {
+  const filteredGenres = useMemo(() => {
+    if (!usedGenres) return usedGenres;
     const q = genreQuery.trim().toLowerCase();
-    const buckets: { genre: string; rank: number }[][] = [[], [], [], [], []];
-    ALL_GENRES.forEach((genre, i) => {
-      const rank = i + 1;
-      if (q && !genre.toLowerCase().includes(q)) return;
-      buckets[tierIndexForRank(rank)].push({ genre, rank });
-    });
-    return TIERS.map((tier, i) => ({ ...tier, items: buckets[i] })).filter((tier) => tier.items.length > 0);
-  }, [genreQuery]);
+    if (!q) return usedGenres;
+    return usedGenres.filter(({ genre }) => genre.toLowerCase().includes(q));
+  }, [usedGenres, genreQuery]);
 
   function close() {
     setOpen(false);
@@ -181,10 +181,10 @@ export function SearchMenu({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-gray-400 dark:text-gray-500">관심 장르</span>
-                  {interested.length > 0 ? (
+                  <span className="text-xs font-semibold text-gray-400 dark:text-gray-500">선택 장르</span>
+                  {selectedGenres.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
-                      {interested.map((genre) => (
+                      {selectedGenres.map((genre) => (
                         <div
                           key={genre}
                           className="inline-flex items-center overflow-hidden rounded-full bg-black text-xs font-medium text-white dark:bg-white dark:text-black"
@@ -198,9 +198,9 @@ export function SearchMenu({
                             #{genre}
                           </Link>
                           <button
-                            onClick={() => removeInterested(genre)}
-                            title="관심 장르에서 제거"
-                            aria-label={`관심 장르에서 ${genre} 제거`}
+                            onClick={() => removeSelected(genre)}
+                            title="선택 장르에서 제거"
+                            aria-label={`선택 장르에서 ${genre} 제거`}
                             className="rounded-full p-1 pr-2 transition hover:bg-gray-700 dark:hover:bg-gray-200"
                           >
                             <XIcon className="h-3 w-3" />
@@ -229,40 +229,36 @@ export function SearchMenu({
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2.5">
-                  {tiers.length === 0 && (
-                    <p className="px-1 py-2 text-xs text-gray-400 dark:text-gray-500">검색 결과가 없어요</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {filteredGenres === null && (
+                    <p className="px-1 py-2 text-xs text-gray-400 dark:text-gray-500">불러오는 중…</p>
                   )}
-                  {tiers.map((tier) => (
-                    <div key={tier.label} className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 px-0.5">
-                        <span className={`h-1.5 w-1.5 rounded-full ${tier.dot}`} />
-                        <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                          {tier.label}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {tier.items.map(({ genre, rank }) => {
-                          const selected = interested.includes(genre);
-                          return (
-                            <Link
-                              key={genre}
-                              href={`/feed?feed=completion&tag=${encodeURIComponent(genre)}`}
-                              onClick={() => bookmarkGenre(genre)}
-                              title={`#${genre} 게시물만 보기`}
-                              className={`flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:opacity-75 ${
-                                selected
-                                  ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-                                  : tier.chip
-                              }`}
-                            >
-                              <span className="text-[10px] font-semibold opacity-60">{rank}</span>#{genre}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                  {filteredGenres?.length === 0 &&
+                    (genreQuery.trim() ? (
+                      <p className="px-1 py-2 text-xs text-gray-400 dark:text-gray-500">검색 결과가 없어요</p>
+                    ) : (
+                      <p className="px-1 py-2 text-xs text-gray-400 dark:text-gray-500">
+                        아직 태그가 달린 게시물이 없어요
+                      </p>
+                    ))}
+                  {filteredGenres?.map(({ genre }) => {
+                    const selected = selectedGenres.includes(genre);
+                    return (
+                      <Link
+                        key={genre}
+                        href={`/feed?feed=completion&tag=${encodeURIComponent(genre)}`}
+                        onClick={() => bookmarkGenre(genre)}
+                        title={`#${genre} 게시물만 보기`}
+                        className={`rounded-full border px-2.5 py-1 text-xs transition hover:opacity-75 ${
+                          selected
+                            ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
+                            : "border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300"
+                        }`}
+                      >
+                        #{genre}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             </div>
