@@ -206,11 +206,13 @@ export function GlobalPlayerBar() {
           파형이 정렬 기준, 나머지 아이콘은 그 파형 양옆에 붙임). 좌우 폭이 같은 1fr이라 안의
           내용물 크기와 무관하게 가운데 열은 항상 정확히 화면 중앙에 위치한다. */}
       <div
-        // md 이상에서 NavSidebar(접힌 기본폭 w-[72px], fixed left-0, 호버로만 넓어짐)가 화면
-        // 왼쪽을 차지하므로, 바가 그 위를 덮지 않게 md:left-[72px]로 시작점을 밀어낸다
-        // (2026-09-16) — 가운데 열(파형)은 여전히 "보이는 화면(사이드바 오른쪽 영역)"의
-        // 정중앙에 오게 되어 의도와 오히려 더 맞는다.
-        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t border-black/15 px-3 text-white transition-colors md:bottom-0 md:left-[72px] md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg}`}
+        // 전엔 md 이상에서 NavSidebar를 피해 md:left-[72px]로 시작점을 밀어냈는데, 그래도
+        // 사이드바 폭 트랜지션 중 사운드바 왼쪽이 가려 보이는 문제가 계속 있었다(2026-09-16
+        // 재제보 — "어느 페이지에서도 잘리면 안 됨"). 근본 원인을 없애려고 NavSidebar 쪽을
+        // bottom-16까지만 뻗게 줄여서(NavSidebar.tsx 참고) 이 바와 세로로 아예 안 겹치게
+        // 했으므로, 여기 있던 left 오프셋도 걷어내고 항상 화면 맨 왼쪽부터 꽉 채운다 — 두
+        // 요소가 물리적으로 안 겹치니 어떤 z-index/트랜지션 상황에서도 가려질 수가 없다.
+        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t border-black/15 px-3 text-white transition-colors md:bottom-0 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg}`}
       >
         {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
             justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}

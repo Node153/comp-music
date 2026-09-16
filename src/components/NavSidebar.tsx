@@ -60,9 +60,14 @@ export function NavSidebar({
       // 겹친 영역의 쌓임 순서가 순간적으로 꼬여 사운드바 왼쪽이 사이드바에 가려 잘려 보이는
       // 문제가 있었다(2026-09-16 사용자 제보). 아예 두 요소가 세로로 안 겹치게 사이드바 높이를
       // 사운드바 바로 위에서 끊었다.
-      className={`fixed left-0 top-0 bottom-16 z-40 hidden flex-col gap-1 border-r px-3 py-4 transition-[width] duration-200 ease-in-out md:flex ${
-        expanded ? "w-60" : "w-[72px]"
-      } ${
+      // 패널(메시지/알림/프로필)이 열려서 강제로 접힐 때는 트랜지션 없이 즉시 접는다 — 폭이
+      // 줄어드는 애니메이션 도중(200ms) 옆 패널은 이미 접힌 폭(72px) 기준 위치에 딱 붙어
+      // 있는데 사이드바 자신은 아직 넓은 채라, 그 사이 찰나의 프레임을 캡처하면 라벨이 패널
+      // 밑에 걸쳐 보이는 것처럼 찍힐 수 있다(2026-09-16 재제보) — 순수 호버로 늘어나고
+      // 줄어들 때만 부드럽게, 패널이 강제로 접을 때는 즉시 반영해 그 프레임 자체를 없앤다.
+      className={`fixed left-0 top-0 bottom-16 z-40 hidden flex-col gap-1 border-r px-3 py-4 ease-in-out md:flex ${
+        anyPanelOpen ? "" : "transition-[width] duration-200"
+      } ${expanded ? "w-60" : "w-[72px]"} ${
         isFeed
           ? "border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1c1c1e]"
           : "border-box-gray bg-main-gray"

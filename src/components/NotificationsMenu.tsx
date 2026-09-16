@@ -160,7 +160,11 @@ export function NotificationsMenu({
               값(50)이라 쌓임 순서가 브라우저마다 불안정해서 안 겹치게 아예 높이를 끊었다
               (2026-09-16). 모바일: 화면 전체를 덮는 풀스크린 패널(md 미만엔 사이드바가 없어서
               도킹시킬 기준점이 없고, 모바일은 원래도 전체 화면을 덮는 게 의도된 동작). */}
-          <div className="fixed inset-0 z-50 flex w-full flex-col bg-white md:inset-y-auto md:top-0 md:bottom-16 md:left-[72px] md:right-auto md:w-[420px] md:max-w-[calc(100vw-72px)] md:border-r md:border-gray-200 md:shadow-xl dark:bg-gray-950 md:dark:border-gray-800">
+          {/* shadow 없음(2026-09-16) — 그림자를 주면 "사이드바 옆에 떠 있는 별개의 창"처럼
+              보여서, 사이드바와 같은 흰 배경·테두리만으로 사이드바 자체가 이어진 것처럼 보이게
+              했다(사용자 지적 — "옆에 추가 창을 띄우는 게 아니라 사이드바 자체가 알림탭으로
+              전환되는 개념"). */}
+          <div className="fixed inset-0 z-50 flex w-full flex-col bg-white md:inset-y-auto md:top-0 md:bottom-16 md:left-[72px] md:right-auto md:w-[420px] md:max-w-[calc(100vw-72px)] md:border-r md:border-gray-200 dark:bg-gray-950 md:dark:border-gray-800">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100">알림</span>
               <div className="flex items-center gap-3">
