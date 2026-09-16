@@ -66,7 +66,13 @@ export function SearchMenu({
     }
   }, []);
 
+  // MessagesMenu/NotificationsMenu와 같은 이유로 마운트 시 한 번이 아니라 패널을 열 때마다
+  // 새로 불러온다(2026-09-17, 사용자 요청 — "게시물 올릴 때 새 해시태그가 추가되면 자동으로
+  // 장르필터에 반영되게"). NavSidebar는 (app) 레이아웃에 있어서 페이지 이동으로는 리마운트가
+  // 안 되므로, 마운트 시 한 번만 불러오면 업로드 직후에도 새로고침 전까진 새 태그가 안 보였다 —
+  // 열 때마다 다시 쿼리하면 방금 올린 게시물의 태그도 바로 다음에 열었을 때 반영된다.
   useEffect(() => {
+    if (!open) return;
     let cancelled = false;
     const supabase = createClient();
     supabase
@@ -87,7 +93,7 @@ export function SearchMenu({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [open]);
 
   // "선택 장르" 칩의 X 버튼 전용 — 북마크 목록에서 뺀다. 지금 보고 있는 피드가 이 장르로
   // 걸러진 상태였다면(활성 태그와 일치) 필터도 같이 풀어서 피드로 돌아간다.
@@ -141,6 +147,7 @@ export function SearchMenu({
     // (MessagesMenu/NotificationsMenu와 동일한 이유).
     const next = !open;
     setOpen(next);
+    if (next) setUsedGenres(null);
     onOpenChange?.(next);
   }
 
