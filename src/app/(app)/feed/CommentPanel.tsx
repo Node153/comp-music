@@ -189,7 +189,7 @@ export function CommentPanel({
     <>
       <button
         onClick={togglePanel}
-        className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 ${buttonClassName}`}
+        className={`inline-flex items-center gap-1 text-base font-semibold text-gray-600 transition hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100 ${buttonClassName}`}
       >
         <CommentIcon className="h-5 w-5" />
         {commentCount > 0 ? commentCount : ""}

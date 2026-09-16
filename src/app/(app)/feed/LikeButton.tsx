@@ -52,8 +52,8 @@ export function LikeButton({
     <button
       onClick={toggle}
       aria-pressed={liked}
-      className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold transition hover:bg-gray-50 ${
-        liked ? "text-red-600" : "text-gray-600"
+      className={`inline-flex items-center gap-1 text-base font-semibold transition ${
+        liked ? "text-red-600" : "text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
       } ${className}`}
     >
       <HeartIcon className="h-5 w-5" filled={liked} />

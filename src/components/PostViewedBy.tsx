@@ -76,7 +76,7 @@ export function PostViewedBy({
         type="button"
         onClick={() => setOpen((v) => !v)}
         title="이 게시물을 본 사람"
-        className="flex items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-900"
+        className="inline-flex items-center gap-1 text-base font-semibold text-gray-600 transition hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
       >
         <EyeIcon className="h-5 w-5" />
         {loaded ? viewers.length : ""}

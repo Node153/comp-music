@@ -735,9 +735,6 @@ export default async function FeedPage({
           const author = userMap.get(post.user_id);
           const profile = profileMap.get(post.user_id);
           const isOwnPost = currentUser?.id === post.user_id;
-          // memo 공동창작 미체크 게시물은 DEMO처럼 좋아요/댓글 + (본인 글이면 조회자 목록,
-          // 아니면 메시지) 3개 슬롯을 쓴다(사용자 요청) — DEMO 본인 글만 2개(좋아요/댓글).
-          const buttonBasis = isOwnPost && !isComplex ? "basis-1/2" : "basis-1/3";
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
           const weeklyLikeCount = weeklyLikeCountMap.get(post.id) ?? 0;
@@ -835,9 +832,6 @@ export default async function FeedPage({
                   ) : undefined
                 }
                 pinButton={pinButtonEl}
-                addToPlaylistButton={
-                  playlistTrack ? <AddToPlaylistButton track={playlistTrack} /> : undefined
-                }
               >
               {/* 작품 제목 — caption(부가 설명)과 분리(0052, 2026-09-15 사용자 요청). 옛 게시물은
                   title이 없어(null) 자연히 안 보이고 caption만 뜬다(하위호환). */}
@@ -934,6 +928,14 @@ export default async function FeedPage({
                       {!isComplex && (
                         <div className="absolute right-3 top-3 z-10">
                           <EngagementMeter />
+                        </div>
+                      )}
+                      {/* 플레이리스트 담기(+) — 헤더 우측상단에 있던 걸 미디어 우측하단
+                          오버레이로 이동(사용자 요청). 흰 칩 배경을 둬서 어두운 미디어
+                          위에서도 아이콘이 묻히지 않게 한다. */}
+                      {playlistTrack && (
+                        <div className="absolute bottom-3 right-3 z-10 rounded-full bg-white/90 shadow-sm dark:bg-gray-900/90">
+                          <AddToPlaylistButton track={playlistTrack} />
                         </div>
                       )}
 
@@ -1061,10 +1063,14 @@ export default async function FeedPage({
                     </div>
                   ) : (
                 currentUser && (
-                  <div className="flex flex-wrap items-center border-t border-gray-100 shrink-0">
+                  // 왼쪽 정렬 아이콘 행(사용자 요청) — 조회수 → 하트 → 댓글 순서. 예전엔
+                  // 버튼마다 flex-basis로 폭을 균등 분할했는데, 조회수 아이콘까지 더해지며
+                  // 폭 합이 100%를 넘어 줄바꿈이 꼬였다(제보: "아이콘 꼬였어"). 이제 전부
+                  // gap만으로 나란히 놓는 guest/mock 줄과 같은 방식이라 몇 개가 오든 안전하다.
+                  <div className="flex flex-wrap items-center gap-6 border-t border-gray-100 px-4 py-3.5 shrink-0">
                     {!isComplex && (
                       <PostViewCount
-                        className="inline-flex items-center gap-1 px-4 py-3.5 text-base font-semibold text-gray-400 dark:text-gray-500"
+                        className="inline-flex items-center gap-1 text-base font-semibold text-gray-400 dark:text-gray-500"
                         iconClassName="h-5 w-5"
                       />
                     )}
@@ -1072,15 +1078,14 @@ export default async function FeedPage({
                       postId={post.id}
                       userId={currentUser.id}
                       initialLiked={likedByMeSet.has(post.id)}
-                      className={buttonBasis}
                     />
-                    <CommentPanel postId={post.id} userId={currentUser.id} buttonClassName={buttonBasis} />
+                    <CommentPanel postId={post.id} userId={currentUser.id} />
                     {!isOwnPost ? (
                       <MessageButton
                         currentUserId={currentUser.id}
                         otherUserId={post.user_id}
                         sourcePostId={post.id}
-                        className={`flex items-center justify-center gap-2 py-3.5 text-base font-semibold text-gray-600 transition hover:bg-gray-50 ${buttonBasis}`}
+                        className="inline-flex items-center gap-1 text-base font-semibold text-gray-600 transition hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
                       >
                         <MailIcon className="h-5 w-5" />
                         메시지
@@ -1093,7 +1098,6 @@ export default async function FeedPage({
                           postId={post.id}
                           currentUserId={currentUser.id}
                           isOwnPost
-                          className={buttonBasis}
                         />
                       )
                     )}
