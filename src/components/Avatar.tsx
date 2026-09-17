@@ -50,7 +50,7 @@ export function Avatar({
       src={version ? `/api/avatar/${userId}?v=${version}` : `/api/avatar/${userId}`}
       alt={name}
       onError={() => setFailed(true)}
-      className={`shrink-0 rounded-full object-cover ${className}`}
+      className={`max-w-none shrink-0 rounded-full object-cover ${className}`}
     />
   );
 }
