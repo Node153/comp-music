@@ -12,12 +12,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_DESCRIPTION = "전문 음악인만 참여할 수 있는 커뮤니티에서 습작을 공유하고 함께할 사람을 찾아보세요.";
+
 export const metadata: Metadata = {
   title: "Compmusic",
-  description: "폐쇄형 인증 기반 음악 전공/활동자 릴스 네트워킹 플랫폼 (Phase 0 MVP)",
+  description: SITE_DESCRIPTION,
   openGraph: {
     title: "Compmusic",
-    description: "폐쇄형 인증 기반 음악 전공/활동자 릴스 네트워킹 플랫폼 (Phase 0 MVP)",
+    description: SITE_DESCRIPTION,
     url: "https://compmusic.kr",
     siteName: "Compmusic",
     locale: "ko_KR",
