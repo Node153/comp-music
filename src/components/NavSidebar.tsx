@@ -79,7 +79,7 @@ export function NavSidebar({
         <img
           src="/brand-cat.png"
           alt="Compmusic"
-          className="h-9 w-9 shrink-0 rounded-full object-cover"
+          className="h-9 w-9 max-w-none shrink-0 rounded-full object-cover"
         />
         <span className={`text-lg font-bold text-gray-900 dark:text-gray-100 ${navLabelClass(expanded)}`}>
           Compmusic
