@@ -4,14 +4,20 @@
    Complex 탭일 때 ThemeSync.tsx가 <html>에 .dark를 붙였다 뗐다 해서 이 변형을 켠다. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* 무채색 팔레트를 8단계로 정리(2026-09-17)하면서, 여기 있던 Next.js 스캐폴딩 기본값
+   (#171717/#0a0a0a/#ededed)을 별도 literal로 안 남기고 이미 쓰고 있는 8단계 값으로
+   교체했다 — 실제로 거의 모든 화면이 PageCanvas + 명시적 text-black/text-white로
+   body 기본값을 덮어써서 보일 일이 없었던 폴백이라 시각적 차이는 없다. */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #000000;
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  /* .dark는 Complex/memo 탭 전용(ThemeSync.tsx) — 배경/글씨를 memo 다크 배경(#1c1c1e)·
+     흰색과 그대로 맞춘다. */
+  --background: #1c1c1e;
+  --foreground: #ffffff;
 }
 
 @theme inline {
@@ -23,7 +29,13 @@
      작업 중 나온 "매트 브라스(놋쇠)" 톤이 더 낫다고 판단돼 이걸로 통일(memo의 violet과
      짝을 맞추는 DEMO 쪽 색). bg-demo-gold/text-demo-gold/border-demo-gold로 쓴다. */
   --color-demo-gold: #c9a668;
-  /* 그레이 컬러 시스템 — 피드 DEMO/memo 탭 제외한 화면(상단 메뉴바 아이콘으로 이동하는 화면)의
+  /* 사이트 전체 무채색 팔레트 = 8단계(2026-09-17, "무채색이 너무 많다" 피드백으로 12개→8개
+     정리). 흰색(#fff)·검정(#000)을 양 끝으로 두고, 아래 그레이 4단계 + active-gray + memo
+     다크 배경(#1c1c1e, PageCanvas.tsx/GlobalPlayerBar.tsx 등에서 literal로 사용)까지가
+     전부다. 이 8개 밖의 무채색 literal(예: 예전 QueuePanel의 #8b8b8c 커스텀 중간값)은
+     만들지 않고 반드시 이 8개 중 하나를 재사용한다.
+
+     그레이 컬러 시스템 — 피드 DEMO/memo 탭 제외한 화면(상단 메뉴바 아이콘으로 이동하는 화면)의
      배경/텍스트는 이 5가지만 쓴다 — 검정/흰색은 글씨(기본 검정)에만 남긴다.
 
      [배경 4단계 — 전부 DEMO 탭 배경(demo-bg, #fafafa)을 기준으로 살짝씩만 어두운 옅은

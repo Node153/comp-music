@@ -59,13 +59,13 @@ function QueueRow({
   return (
     <div
       className={`group flex items-center gap-3 px-3 py-2 transition ${
-        current ? "bg-white/10" : "hover:bg-white/5"
+        current ? "bg-black/5" : "hover:bg-black/5"
       }`}
     >
       <button
         type="button"
         onClick={current ? onTogglePlay : onPlay}
-        className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded bg-white/10"
+        className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded bg-black/5"
         aria-label={current && playing ? "일시정지" : "재생"}
       >
         {t.posterSrc ? (
@@ -121,8 +121,8 @@ function QueueRow({
           title={queued ? "담기에서 빼기" : "담기에 추가"}
           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ${
             queued
-              ? "text-white"
-              : "text-black/45 opacity-0 hover:bg-gray-800 hover:text-white group-hover:opacity-100"
+              ? "text-black"
+              : "text-black/45 opacity-0 hover:bg-black/10 hover:text-black group-hover:opacity-100"
           }`}
         >
           {queued ? <CheckIcon className="h-3.5 w-3.5" /> : <PlusIcon className="h-3.5 w-3.5" />}
@@ -132,7 +132,7 @@ function QueueRow({
         type="button"
         onClick={onRemove}
         aria-label="목록에서 빼기"
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-black/45 opacity-0 transition hover:bg-gray-800 hover:text-white group-hover:opacity-100"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-black/45 opacity-0 transition hover:bg-black/10 hover:text-black group-hover:opacity-100"
       >
         <XIcon className="h-3.5 w-3.5" />
       </button>
@@ -171,17 +171,20 @@ export function QueuePanel() {
       {/* 크기 고정: 가로 3 : 세로 4 비율(세로로 긴 카드) — 내용이 늘어나도 카드 크기는 그대로,
           목록만 안에서 스크롤된다(아래 min-h-0 + overflow-y-auto). */}
       {/* 이 패널은 "담기"/"최근 들은" 목록에 DEMO·memo 트랙이 섞여 있을 수 있어(하단
-          GlobalPlayerBar처럼 재생 중인 트랙 하나 기준으로 밝게/어둡게 못 바꿈), DEMO
-          배경(#fafafa)·memo 배경(#1c1c1e)의 정확한 중간값(#8b8b8c)으로 고정해 항상 중립을
-          유지한다(2026-09-17, 사운드바만 트랙별로 밝기 전환하도록 바뀌며 코멘트 갱신). */}
-      <div className="flex aspect-[3/4] max-h-[80svh] flex-col overflow-hidden rounded-xl border border-black/15 bg-[#8b8b8c] text-white shadow-2xl">
+          GlobalPlayerBar처럼 재생 중인 트랙 하나 기준으로 밝게/어둡게 못 바꿈) 항상 밝은
+          고정 톤을 쓴다 — 예전엔 DEMO/memo 배경의 정확한 중간값(#8b8b8c)을 이 패널만의
+          커스텀 literal로 따로 뒀는데, 무채색 팔레트를 8단계로 정리(2026-09-17, "무채색이
+          너무 많다" 피드백)하며 새 literal을 안 늘리고 이미 있는 demo-bg(#fafafa)를 그대로
+          재사용하는 쪽으로 바꿨다. 배경이 밝아졌으니 흰색 기준이던 글씨·하이라이트·언더라인도
+          전부 검정 계열로 뒤집었다(아래 bg-black/5·hover:bg-black/10·text-black류). */}
+      <div className="flex aspect-[3/4] max-h-[80svh] flex-col overflow-hidden rounded-xl border border-black/15 bg-demo-bg text-black shadow-2xl">
         <div className="flex items-center gap-3 px-4 pt-3">
           <span className="flex-1 text-base font-bold">재생 목록</span>
           <button
             type="button"
             onClick={() => setQueueOpen(false)}
             aria-label="닫기"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-black/55 transition hover:bg-gray-800 hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-black/55 transition hover:bg-black/10 hover:text-black"
           >
             <XIcon className="h-4 w-4" />
           </button>
@@ -193,24 +196,24 @@ export function QueuePanel() {
             type="button"
             onClick={() => setPickedTab("recent")}
             className={`relative px-2 pb-2 text-sm font-semibold transition ${
-              activeTab === "recent" ? "text-white" : "text-black/55 hover:text-black"
+              activeTab === "recent" ? "text-black" : "text-black/55 hover:text-black"
             }`}
           >
             최근 들은{recentlyPlayed.length > 0 && ` (${recentlyPlayed.length})`}
             {activeTab === "recent" && (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-white" />
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-black" />
             )}
           </button>
           <button
             type="button"
             onClick={() => setPickedTab("queue")}
             className={`relative px-2 pb-2 text-sm font-semibold transition ${
-              activeTab === "queue" ? "text-white" : "text-black/55 hover:text-black"
+              activeTab === "queue" ? "text-black" : "text-black/55 hover:text-black"
             }`}
           >
             담기{items.length > 0 && ` (${items.length})`}
             {activeTab === "queue" && (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-white" />
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-black" />
             )}
           </button>
           <div className="flex-1" />
@@ -220,7 +223,7 @@ export function QueuePanel() {
               type="button"
               onClick={clearRecent}
               disabled={recentlyPlayed.length === 0}
-              className="mb-2 text-[11px] font-medium text-black/55 transition hover:text-white disabled:opacity-0"
+              className="mb-2 text-[11px] font-medium text-black/55 transition hover:text-black disabled:opacity-0"
             >
               비우기
             </button>
