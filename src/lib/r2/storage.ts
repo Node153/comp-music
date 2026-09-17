@@ -21,6 +21,19 @@ export function getR2SignedUrl(key: string, expirySeconds: number) {
   return getSignedUrl(r2Client, command, { expiresIn: expirySeconds });
 }
 
+// 아바타 전용 — presigned redirect 대신 객체를 직접 스트리밍한다. Safari가 <img> 리다이렉트
+// 응답을 Cache-Control: no-store에도 불구하고 캐시해버려서(웹킷 특성 — 새로고침해도 예전
+// 사진이 그대로 보임, Chrome은 문제 없었음, 2026-09-17 사용자 제보) 리다이렉트 자체를
+// 없애고 바이트를 직접 응답에 실어보낸다.
+export async function getR2ObjectStream(key: string) {
+  const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key });
+  const res = await r2Client.send(command);
+  return {
+    body: res.Body!.transformToWebStream(),
+    contentType: res.ContentType ?? "application/octet-stream",
+  };
+}
+
 // posts.thumbnail_url은 R2 key(직접 업로드한 커버) 또는 GIPHY가 호스팅하는 완전한 URL(GIF를
 // 커버로 고른 경우, GiphyPicker) 둘 다 저장될 수 있다 — GIF는 우리 R2에 다시 올리지 않고
 // GIPHY 자체 CDN 링크를 그대로 쓰기 때문. 읽을 때 그 값이 어느 쪽인지 구분해서 R2 key만
