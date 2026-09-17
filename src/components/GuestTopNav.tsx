@@ -23,9 +23,11 @@ export function GuestTopNav() {
     <header className="sticky top-0 z-40 hidden h-14 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-[#1c1c1e] md:flex">
       <div className="flex flex-1 items-center gap-2">
         <Link href="/feed" className="flex shrink-0 items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-xs font-bold text-white dark:bg-white dark:text-black">
-            Comp
-          </span>
+          <img
+            src="/brand-cat.png"
+            alt="Comp Music"
+            className="h-9 w-9 rounded-full object-cover"
+          />
           <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Comp Music</span>
         </Link>
       </div>

@@ -55,9 +55,11 @@ export function GuestSignupPromptProvider({ children }: { children: React.ReactN
               </button>
             </div>
             <div className="-mt-4 flex flex-col items-center gap-3 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-lg font-bold text-white dark:bg-white dark:text-black">
-                Comp
-              </span>
+              <img
+                src="/brand-cat.png"
+                alt="Comp Music"
+                className="h-12 w-12 rounded-full object-cover"
+              />
               <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 가입하면 더 많은 걸 할 수 있어요
               </p>

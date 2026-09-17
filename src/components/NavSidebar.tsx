@@ -76,9 +76,11 @@ export function NavSidebar({
         href="/feed"
         className={`mb-3 flex items-center px-3 py-2 ${expanded ? "justify-start gap-2" : "justify-center gap-0"}`}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-xs font-bold text-white dark:bg-white dark:text-black">
-          Comp
-        </span>
+        <img
+          src="/brand-cat.png"
+          alt="Comp Music"
+          className="h-9 w-9 shrink-0 rounded-full object-cover"
+        />
         <span className={`text-lg font-bold text-gray-900 dark:text-gray-100 ${navLabelClass(expanded)}`}>
           Comp Music
         </span>
