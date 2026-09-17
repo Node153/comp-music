@@ -76,7 +76,7 @@ export default function PrivacyPolicyPage() {
       </div>
 
       <p className="text-sm leading-relaxed text-gray-700">
-        Comp Music(이하 &quot;서비스&quot;)를 운영하는 개인 운영자(이하 &quot;운영자&quot;)는 이용자의
+        Compmusic(이하 &quot;서비스&quot;)를 운영하는 개인 운영자(이하 &quot;운영자&quot;)는 이용자의
         개인정보를 소중히 다루며, 「개인정보보호법」 등 관련 법령을 준수하기 위해 다음과 같이
         개인정보처리방침을 수립·공개합니다. 이 방침은 이상적인 운영 계획이 아니라, 이 문서의
         시행일자 기준으로 서비스가 실제로 처리하는 데이터 흐름을 설명합니다.
@@ -280,7 +280,7 @@ export default function PrivacyPolicyPage() {
       </Section>
 
       <Section title="10. 개인정보 보호책임자">
-        <p>현재 Comp Music은 개인 운영자가 개발·운영하는 서비스입니다.</p>
+        <p>현재 Compmusic은 개인 운영자가 개발·운영하는 서비스입니다.</p>
         <ul className="list-disc pl-5">
           <li>담당자: 정태인</li>
           <li>

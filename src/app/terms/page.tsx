@@ -37,9 +37,9 @@ export default function TermsPage() {
       <section className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-4">
         <h2 className={sectionTitle}>운영자 정보</h2>
         <div className="flex flex-col gap-1 text-sm leading-relaxed text-gray-700">
-          <p>서비스명: Comp Music</p>
+          <p>서비스명: Compmusic</p>
           <p>
-            현재 Comp Music은 사업자등록 전 개인 개발 단계로 운영되고 있습니다. 사업자등록을 마치는
+            현재 Compmusic은 사업자등록 전 개인 개발 단계로 운영되고 있습니다. 사업자등록을 마치는
             대로 사업자(법인)명, 대표자명, 사업장 주소, 사업자등록번호를 이곳에 갱신하여
             공개합니다.
           </p>
@@ -54,7 +54,7 @@ export default function TermsPage() {
 
       <Article title="제1조 (목적)">
         <p>
-          이 약관은 Comp Music(이하 &quot;서비스&quot;)가 제공하는 음악 전공생·활동자 네트워킹
+          이 약관은 Compmusic(이하 &quot;서비스&quot;)가 제공하는 음악 전공생·활동자 네트워킹
           서비스의 이용조건 및 절차, 회원과 운영자의 권리·의무 및 책임사항을 규정함을
           목적으로 합니다.
         </p>

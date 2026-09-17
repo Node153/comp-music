@@ -34,7 +34,7 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
       }`}
     >
       <Link href="/feed" className="shrink-0 text-sm font-bold text-gray-900 dark:text-gray-100">
-        Comp Music
+        Compmusic
       </Link>
 
       <nav className="flex flex-1 items-center justify-center gap-1">

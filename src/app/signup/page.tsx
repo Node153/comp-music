@@ -258,7 +258,7 @@ export default function SignupPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-8 px-6 py-12">
       <header className="flex flex-col gap-1.5">
         <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gray-400">
-          Comp Music
+          Compmusic
         </span>
         <h1 className="text-[26px] font-bold leading-tight tracking-tight text-gray-900">
           회원가입
@@ -513,7 +513,7 @@ export default function SignupPage() {
               />
               <span>
                 memo(비공개 협업 공간)에서 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은
-                참여자끼리 직접 정해야 한다는 점을 이해했습니다. Comp Music은 이를 대신 결정하거나
+                참여자끼리 직접 정해야 한다는 점을 이해했습니다. Compmusic은 이를 대신 결정하거나
                 분쟁을 중재하지 않습니다.
                 <span className="mt-0.5 block text-xs text-gray-400">
                   작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
@@ -529,7 +529,7 @@ export default function SignupPage() {
                 className={checkbox}
               />
               <span>
-                Comp Music가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
+                Compmusic가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
                 것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
               </span>
             </label>

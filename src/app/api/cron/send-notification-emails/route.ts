@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
       if (sections.length > 0) {
         await sendEmail(
           user.email,
-          "Comp Music에 새 알림이 있어요",
+          "Compmusic에 새 알림이 있어요",
           `<p>${sections.join(", ")}이 와있어요.</p><p><a href="${APP_URL}/notifications">지금 확인하기</a></p>`,
         );
         sent += 1;

@@ -57,7 +57,7 @@ export function GuestSignupPromptProvider({ children }: { children: React.ReactN
             <div className="-mt-4 flex flex-col items-center gap-3 text-center">
               <img
                 src="/brand-cat.png"
-                alt="Comp Music"
+                alt="Compmusic"
                 className="h-12 w-12 rounded-full object-cover"
               />
               <p className="text-base font-semibold text-gray-900 dark:text-gray-100">

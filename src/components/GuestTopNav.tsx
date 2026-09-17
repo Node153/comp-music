@@ -25,10 +25,10 @@ export function GuestTopNav() {
         <Link href="/feed" className="flex shrink-0 items-center gap-2">
           <img
             src="/brand-cat.png"
-            alt="Comp Music"
+            alt="Compmusic"
             className="h-9 w-9 rounded-full object-cover"
           />
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Comp Music</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Compmusic</span>
         </Link>
       </div>
 
