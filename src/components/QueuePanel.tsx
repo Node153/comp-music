@@ -170,8 +170,10 @@ export function QueuePanel() {
     <div className="fixed right-1 bottom-[124px] z-40 w-[300px] max-w-[calc(100vw_-_0.5rem)] md:right-4 md:bottom-[68px] md:w-[340px]">
       {/* 크기 고정: 가로 3 : 세로 4 비율(세로로 긴 카드) — 내용이 늘어나도 카드 크기는 그대로,
           목록만 안에서 스크롤된다(아래 min-h-0 + overflow-y-auto). */}
-      {/* 하단 사운드바와 같은 색으로 통일 — DEMO 배경(#fafafa)·memo 배경(#1c1c1e)의 정확한
-          중간값(#8b8b8c). */}
+      {/* 이 패널은 "담기"/"최근 들은" 목록에 DEMO·memo 트랙이 섞여 있을 수 있어(하단
+          GlobalPlayerBar처럼 재생 중인 트랙 하나 기준으로 밝게/어둡게 못 바꿈), DEMO
+          배경(#fafafa)·memo 배경(#1c1c1e)의 정확한 중간값(#8b8b8c)으로 고정해 항상 중립을
+          유지한다(2026-09-17, 사운드바만 트랙별로 밝기 전환하도록 바뀌며 코멘트 갱신). */}
       <div className="flex aspect-[3/4] max-h-[80svh] flex-col overflow-hidden rounded-xl border border-black/15 bg-[#8b8b8c] text-white shadow-2xl">
         <div className="flex items-center gap-3 px-4 pt-3">
           <span className="flex-1 text-base font-bold">재생 목록</span>

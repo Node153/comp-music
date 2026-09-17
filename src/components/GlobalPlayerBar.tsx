@@ -158,10 +158,25 @@ export function GlobalPlayerBar() {
 
   // memo(비공개) 오디오/영상 게시물은 expiresAt(노출 만료 시각)을 들고 있다 — DEMO는
   // 영구노출이라 안 붙는 필드라, 이 값의 유무로 지금 재생 중인 트랙이 memo 쪽인지 구분한다.
-  // (한 번 바 배경 자체를 보라색으로 바꿨다가 "바는 원복, 파형만 포인트 컬러로"로 정정받음
-  // — 바 배경은 항상 중립 회색 고정, 파형만 memo 포인트 컬러(violet)로 바뀐다.)
+  // 예전엔 바 배경을 DEMO/memo 중간값(#8b8b8c) 고정으로 두고 파형만 포인트 컬러로 바꿨는데,
+  // "데모에선 밝게, 메모에선 어둡게" 요청(2026-09-17)으로 바 배경도 트랙 종류를 따라가게
+  // 바꿨다 — DEMO는 데모탭 배경(demo-bg, #fafafa), memo는 memo/complex 탭 배경(#1c1c1e)과
+  // 동일한 톤. 배경이 밝음/어두움을 오가므로 아이콘·글씨·파형 미재생 구간·재생 버튼까지
+  // 전부 이 값 하나(isMemoTrack)로 자동 반전시켜 항상 가독성이 유지되게 한다.
   const isMemoTrack = !!track?.expiresAt;
-  const barBg = "bg-[#8b8b8c]";
+  const barBg = isMemoTrack ? "bg-[#1c1c1e]" : "bg-demo-bg";
+  const barText = isMemoTrack ? "text-white" : "text-black";
+  const barMuted = isMemoTrack ? "text-white/55" : "text-black/55";
+  const barBorder = isMemoTrack ? "border-white/10" : "border-black/10";
+  const barHover = isMemoTrack ? "hover:bg-white/10" : "hover:bg-black/10";
+  const barActive = isMemoTrack ? "bg-white/20" : "bg-black/10";
+  const coverBg = isMemoTrack ? "bg-white/10" : "bg-black/10";
+  const coverIcon = isMemoTrack ? "text-white/45" : "text-black/45";
+  const barAccent = isMemoTrack ? "accent-white" : "accent-black";
+  // 재생 버튼은 항상 바와 반대색 필 — 바가 밝아지면(DEMO) 흰 버튼이 묻히므로 검정 필+흰
+  // 아이콘으로 뒤집는다(memo는 기존 그대로 흰 필+검정 아이콘).
+  const playButtonBg = isMemoTrack ? "bg-white text-black" : "bg-black text-white";
+  const unplayedBarColor = isMemoTrack ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.16)";
   // 골드와 마찬가지로 진폭(v)에 따라 3단계로 명암을 주되(사용자 요청 — "볼륨에 따라
   // 색조정"), 색상 자체만 violet 계열로.
   const playedColor = (v: number) => (isMemoTrack ? memoBandColor(v) : demoBandColor(v));
@@ -195,11 +210,12 @@ export function GlobalPlayerBar() {
         tabIndex={-1}
         className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
       />
-      {/* 바 배경 = DEMO 탭 배경(#fafafa)과 memo 탭 배경(#1c1c1e)의 정확한 중간값(#8b8b8c) —
-          사용자 요청: 아이콘이 아니라 사운드바 자체를 이 중립 회색으로, 항상 고정(트랙 종류와
-          무관 — 한 번 memo 재생 시 바 배경 자체를 보라색으로 바꿨다가 "바는 원복, 파형만
-          포인트 컬러로"로 정정받음). 대신 재생 중인 트랙이 memo면 파형(playedColor/
-          playheadColor, 위 isMemoTrack 참고)만 violet 계열로 바뀐다.
+      {/* 바 배경 = 재생 중인 트랙 종류를 따라감(2026-09-17) — DEMO는 데모탭 배경(demo-bg,
+          #fafafa)으로 밝게, memo는 memo/complex 탭 배경(#1c1c1e)으로 어둡게. 배경이 바뀌므로
+          아이콘·글씨·파형 미재생 구간·재생 버튼 색은 전부 isMemoTrack 하나로 자동 반전
+          (barText/barMuted/barBorder/barHover/barActive/coverBg/coverIcon/playButtonBg,
+          위 선언부 참고) — 가독성이 항상 유지된다. 재생 중인 파형(playedColor/playheadColor)은
+          기존처럼 DEMO 골드/memo violet 포인트 컬러 그대로.
           데스크톱 레이아웃: 파형(가운데 열)을 고정폭(900px — feed/page.tsx <main>의
           max-w-[900px]과 동일 값, 게시물 카드(760px)보다 조금 더 넓게)으로 두고, 좌우 열을
           똑같은 minmax(0,1fr)로 줘서 파형이 "화면 자체의" 정중앙에 오게 만든다(사용자 요청 —
@@ -212,7 +228,7 @@ export function GlobalPlayerBar() {
         // bottom-16까지만 뻗게 줄여서(NavSidebar.tsx 참고) 이 바와 세로로 아예 안 겹치게
         // 했으므로, 여기 있던 left 오프셋도 걷어내고 항상 화면 맨 왼쪽부터 꽉 채운다 — 두
         // 요소가 물리적으로 안 겹치니 어떤 z-index/트랜지션 상황에서도 가려질 수가 없다.
-        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t border-black/15 px-3 text-white transition-colors md:bottom-0 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg}`}
+        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t px-3 transition-colors md:bottom-0 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg} ${barText} ${barBorder}`}
       >
         {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
             justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}
@@ -221,7 +237,7 @@ export function GlobalPlayerBar() {
             onClick={() => playPrev()}
             disabled={!hasPrev}
             aria-label="이전 곡"
-            className="hidden h-8 w-8 items-center justify-center rounded-full text-white transition hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent md:flex"
+            className={`hidden h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30 disabled:hover:bg-transparent md:flex ${barHover}`}
           >
             <SkipBackIcon className="h-4 w-4" />
           </button>
@@ -229,7 +245,7 @@ export function GlobalPlayerBar() {
             onClick={track ? toggle : () => playAt(0)}
             disabled={!track && !hasQueue}
             aria-label={isPlaying ? "일시정지" : "재생"}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black transition disabled:opacity-30"
+            className={`flex h-9 w-9 items-center justify-center rounded-full transition disabled:opacity-30 ${playButtonBg}`}
           >
             {isPlaying ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
           </button>
@@ -237,7 +253,7 @@ export function GlobalPlayerBar() {
             onClick={() => playNext()}
             disabled={!hasNext}
             aria-label="다음 곡"
-            className="hidden h-8 w-8 items-center justify-center rounded-full text-white transition hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent md:flex"
+            className={`hidden h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30 disabled:hover:bg-transparent md:flex ${barHover}`}
           >
             <SkipForwardIcon className="h-4 w-4" />
           </button>
@@ -245,7 +261,7 @@ export function GlobalPlayerBar() {
 
         {/* 가운데: 경과 시간 — 파형(탐색) — 총 시간 */}
         <div className="flex min-w-0 items-center gap-2 md:gap-3">
-          <span className="hidden w-9 shrink-0 text-right text-[11px] tabular-nums text-black/55 md:block">
+          <span className={`hidden w-9 shrink-0 text-right text-[11px] tabular-nums md:block ${barMuted}`}>
             {formatTime(progress)}
           </span>
           <button
@@ -260,7 +276,7 @@ export function GlobalPlayerBar() {
                 className="w-full flex-1 rounded-[1px]"
                 style={{
                   height: `${Math.max(6, v * 100)}%`,
-                  background: i < playedBarCount ? playedColor(v) : "rgba(255,255,255,0.22)",
+                  background: i < playedBarCount ? playedColor(v) : unplayedBarColor,
                 }}
               />
             ))}
@@ -271,7 +287,7 @@ export function GlobalPlayerBar() {
               />
             )}
           </button>
-          <span className="hidden w-9 shrink-0 text-[11px] tabular-nums text-black/55 md:block">
+          <span className={`hidden w-9 shrink-0 text-[11px] tabular-nums md:block ${barMuted}`}>
             {formatTime(duration)}
           </span>
         </div>
@@ -280,19 +296,19 @@ export function GlobalPlayerBar() {
             justify-self를 안 줘서 기본값 stretch로 열 전체를 채우고, flex 기본 정렬(시작 쪽
             packing)로 왼쪽부터 붙는다. 이래야 title의 flex-1/truncate도 실제로 동작한다.) */}
         <div className="flex min-w-0 items-center gap-1.5 md:gap-2">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded bg-white/10">
+          <span className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded ${coverBg}`}>
             {track?.posterSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={track.posterSrc} alt="" className="h-full w-full object-cover" />
             ) : (
-              <HeadphonesIcon className="h-4 w-4 text-black/45" />
+              <HeadphonesIcon className={`h-4 w-4 ${coverIcon}`} />
             )}
           </span>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-xs font-semibold md:text-sm">
               {track ? track.title : "재생 중인 트랙 없음"}
             </span>
-            <span className="truncate text-[11px] text-black/55 md:text-xs">
+            <span className={`truncate text-[11px] md:text-xs ${barMuted}`}>
               {track ? track.author : hasQueue ? `대기열 ${queueItems.length}곡` : "—"}
             </span>
           </div>
@@ -306,7 +322,7 @@ export function GlobalPlayerBar() {
                   className="fixed inset-0 z-40 cursor-default"
                 />
                 <div
-                  className={`absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 justify-center rounded-lg border border-black/15 px-2 py-3 shadow-xl ${barBg}`}
+                  className={`absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 justify-center rounded-lg border px-2 py-3 shadow-xl ${barBg} ${barBorder}`}
                 >
                   <input
                     type="range"
@@ -316,7 +332,7 @@ export function GlobalPlayerBar() {
                     value={volume}
                     onChange={(e) => setVolume(parseFloat(e.target.value))}
                     aria-label="볼륨"
-                    className="cursor-pointer accent-white"
+                    className={`cursor-pointer ${barAccent}`}
                     style={{
                       writingMode: "vertical-lr",
                       direction: "rtl",
@@ -332,8 +348,8 @@ export function GlobalPlayerBar() {
               onClick={() => setVolumeOpen((v) => !v)}
               aria-label="볼륨"
               aria-pressed={volumeOpen}
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition ${
-                volumeOpen ? "bg-white/20" : "hover:bg-gray-800"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition ${
+                volumeOpen ? barActive : barHover
               }`}
             >
               <VolumeIcon className="h-4 w-4" muted={volume === 0} />
@@ -344,8 +360,8 @@ export function GlobalPlayerBar() {
             disabled={!hasPanel}
             aria-label="재생 대기열"
             aria-pressed={queueOpen}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition disabled:opacity-30 ${
-              queueOpen ? "bg-white/20" : "hover:bg-gray-800"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition disabled:opacity-30 ${
+              queueOpen ? barActive : barHover
             }`}
           >
             <ListIcon className="h-4 w-4" />
