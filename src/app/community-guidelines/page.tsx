@@ -62,7 +62,7 @@ export default function CommunityGuidelinesPage() {
 
       <Section title="1. 목적과 적용 범위">
         <p>
-          이 문서는 Comp를 안전하고 즐겁게 쓰기 위한 실제 운영 기준을 안내합니다. 이 정책은{" "}
+          이 문서는 Comp Music을 안전하고 즐겁게 쓰기 위한 실제 운영 기준을 안내합니다. 이 정책은{" "}
           <a href="/terms" className="text-blue-600 underline">
             이용약관
           </a>
@@ -146,7 +146,7 @@ export default function CommunityGuidelinesPage() {
           <li>
             신고 접수: <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-600 underline">{CONTACT_EMAIL}</a>
           </li>
-          <li>이메일 제목 형식(권장): [Comp 신고] 신고 유형 / 대상 닉네임</li>
+          <li>이메일 제목 형식(권장): [Comp Music 신고] 신고 유형 / 대상 닉네임</li>
           <li>
             함께 알려주시면 처리가 빨라지는 정보: 신고자 이메일, 대상 계정 또는 게시물 링크,
             위반 유형, 발생 일시와 설명, 캡처 등 증빙 자료, (본인 권리 침해 신고인 경우) 권리자임을
@@ -238,7 +238,7 @@ export default function CommunityGuidelinesPage() {
 
       <Section title="11. 미성년자 보호">
         <p>
-          Comp는 만 14세 이상만 가입할 수 있습니다. 가입 시 입력한 생년월일 기준으로 확인하며,
+          Comp Music은 만 14세 이상만 가입할 수 있습니다. 가입 시 입력한 생년월일 기준으로 확인하며,
           만 14세 미만은 현재 가입이 제한됩니다(법정대리인 동의를 통한 가입은 아직 지원하지
           않습니다). 미성년 회원을 대상으로 한 성적 접근, 착취 또는 부적절한 사적 연락 시도는
           제4조의 금지행위 중에서도 가장 중대한 위반으로 간주하여 소명 기회 없이 즉시 조치하고

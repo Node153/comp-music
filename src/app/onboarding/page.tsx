@@ -221,7 +221,7 @@ export default function OnboardingPage() {
       </button>
       <div className="flex flex-col gap-1.5">
         <h1 className={pageTitle}>거의 다 됐어요</h1>
-        <p className={mutedText}>Comp에서 쓸 이름/닉네임을 확인하고, 마지막으로 동의만 하면 돼요.</p>
+        <p className={mutedText}>Comp Music에서 쓸 이름/닉네임을 확인하고, 마지막으로 동의만 하면 돼요.</p>
         {connectedEmail && (
           <p className={mutedText}>
             연결된 이메일: <span className="font-medium text-gray-700">{connectedEmail}</span>
@@ -415,7 +415,7 @@ export default function OnboardingPage() {
             />
             <span>
               memo(비공개 협업 공간)에서 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은
-              참여자끼리 직접 정해야 한다는 점을 이해했습니다. Comp는 이를 대신 결정하거나
+              참여자끼리 직접 정해야 한다는 점을 이해했습니다. Comp Music은 이를 대신 결정하거나
               분쟁을 중재하지 않습니다.
               <span className="mt-0.5 block text-xs text-gray-400">
                 작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
@@ -431,7 +431,7 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              Comp가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
+              Comp Music가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
               것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
             </span>
           </label>

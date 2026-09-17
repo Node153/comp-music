@@ -80,7 +80,7 @@ export function NavSidebar({
           Comp
         </span>
         <span className={`text-lg font-bold text-gray-900 dark:text-gray-100 ${navLabelClass(expanded)}`}>
-          Comp
+          Comp Music
         </span>
       </Link>
 

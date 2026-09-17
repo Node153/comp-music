@@ -26,7 +26,7 @@ export function GuestTopNav() {
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-xs font-bold text-white dark:bg-white dark:text-black">
             Comp
           </span>
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Comp</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Comp Music</span>
         </Link>
       </div>
 

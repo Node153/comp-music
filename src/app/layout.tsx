@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Comp",
+  title: "Comp Music",
   description: "폐쇄형 인증 기반 음악 전공/활동자 릴스 네트워킹 플랫폼 (Phase 0 MVP)",
 };
 

@@ -26,7 +26,7 @@ export default function BetaNoticePage() {
       </div>
 
       <p className="text-sm leading-relaxed text-gray-700">
-        Comp는 현재 정식 출시 전 기능과 안정성을 개선하기 위한 베타 서비스로 운영되고 있습니다.
+        Comp Music은 현재 정식 출시 전 기능과 안정성을 개선하기 위한 베타 서비스로 운영되고 있습니다.
         베타 기간에는 이용자 피드백과 운영상 필요에 따라 서비스의 기능, 화면 구성, 운영 방식 및
         정책이 수시로 변경될 수 있습니다.
       </p>
@@ -51,7 +51,7 @@ export default function BetaNoticePage() {
       </Section>
 
       <p className="text-sm font-medium leading-relaxed text-gray-900">
-        중요한 작업물과 협업 자료는 반드시 개인 저장 공간에 별도로 백업해 주세요. Comp를
+        중요한 작업물과 협업 자료는 반드시 개인 저장 공간에 별도로 백업해 주세요. Comp Music을
         음원·영상·악보 등 작업물의 유일한 보관 수단으로 이용하지 않기를 권장합니다.
       </p>
 

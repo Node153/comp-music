@@ -1,7 +1,7 @@
 // Resend REST API 직접 호출 — SDK 없이 fetch 하나로 충분해서 의존성을 안 늘렸다.
 // RESEND_API_KEY는 비밀 값이라 서버 코드(크론/API 라우트)에서만 써야 한다 — 절대
 // NEXT_PUBLIC_ 접두사 붙이지 말 것.
-const FROM_ADDRESS = "Comp <onboarding@resend.dev>";
+const FROM_ADDRESS = "Comp Music <onboarding@resend.dev>";
 
 export async function sendEmail(to: string, subject: string, html: string) {
   // 도메인 verify 전이라 RESEND_API_KEY를 아직 안 넣었다 — 키 없으면 throw 하지 말고
