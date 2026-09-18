@@ -53,6 +53,10 @@ export function SoundbarPlayer({
   // 지금 보고 있는 사람(뷰어)의 id — 더블탭 좋아요 대상(커버 이미지 모드에서만). 게스트나
   // inline 모드(로그인 안 함)는 undefined라 더블탭 감지 없이 클릭이 즉시 재생/일시정지만 한다.
   viewerId,
+  // 합작게시물 열람 권한이 있는 사람에게만 원본 음원 다운로드를 열어주기 위한 옵션
+  // (호출부가 명시적으로 넘길 때만 다운로드 버튼이 뜬다 — 기본은 비활성).
+  downloadUrl,
+  downloadName,
 }: {
   src: string;
   title: string;
@@ -65,6 +69,8 @@ export function SoundbarPlayer({
   // memo 게시물의 노출 만료 시각 — 재생목록/최근들은에 그대로 실어서 남은 시간을 보여준다.
   expiresAt?: string | null;
   viewerId?: string;
+  downloadUrl?: string | null;
+  downloadName?: string;
 }) {
   const [bars, setBars] = useState<number[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -201,24 +207,32 @@ export function SoundbarPlayer({
 
   if (posterSrc) {
     return (
-      <button
-        type="button"
-        onClick={posterOnClick}
-        className="group relative block aspect-square w-full overflow-hidden rounded-xl"
-      >
-        {audioEl}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={posterSrc} alt={title} className="h-full w-full object-cover" />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition group-hover:bg-black/45">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black">
-            {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}
-          </span>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
-          <div className={`h-full ${style.posterProgress}`} style={{ width: `${playedRatio * 100}%` }} />
-        </div>
+      <div className="group relative aspect-square w-full overflow-hidden rounded-xl">
+        <button type="button" onClick={posterOnClick} className="block h-full w-full">
+          {audioEl}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={posterSrc} alt={title} className="h-full w-full object-cover" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition group-hover:bg-black/45">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black">
+              {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6" />}
+            </span>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20">
+            <div className={`h-full ${style.posterProgress}`} style={{ width: `${playedRatio * 100}%` }} />
+          </div>
+        </button>
+        {downloadUrl && (
+          <a
+            href={downloadUrl}
+            download={downloadName ?? title}
+            title="다운로드"
+            className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-sm text-white hover:bg-black/70"
+          >
+            ⬇
+          </a>
+        )}
         {heartBurstEl}
-      </button>
+      </div>
     );
   }
 
@@ -238,6 +252,16 @@ export function SoundbarPlayer({
         <span className="shrink-0 text-[11px] text-neutral-400">
           {formatWaveformTime(currentTime)} / {formatWaveformTime(duration)}
         </span>
+        {downloadUrl && (
+          <a
+            href={downloadUrl}
+            download={downloadName ?? title}
+            title="다운로드"
+            className="ml-auto shrink-0 rounded-full p-1 text-sm text-neutral-400 hover:bg-white/10 hover:text-neutral-200"
+          >
+            ⬇
+          </a>
+        )}
       </div>
 
       {failed && <p className="text-[11px] text-neutral-400">파형을 분석하지 못했어요. 재생은 문제없어요.</p>}

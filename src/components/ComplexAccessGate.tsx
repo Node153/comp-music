@@ -26,7 +26,7 @@ import { MessageButton } from "@/components/MessageButton";
 import { LikeButton } from "@/app/(app)/feed/LikeButton";
 import { CommentPanel } from "@/app/(app)/feed/CommentPanel";
 import type { MediaType } from "@/types/database";
-import { LockIcon, UsersIcon, MailIcon } from "@/components/icons";
+import { LockIcon, MailIcon } from "@/components/icons";
 
 type PendingRequest = { userId: string; name: string };
 
@@ -48,7 +48,6 @@ export function ComplexAccessGate({
   initialPendingRequests,
   contentTypeLabel,
   collabAvailable,
-  collabRoleNeeded,
   initialChatMessages,
 }: {
   postId: string;
@@ -81,7 +80,13 @@ export function ComplexAccessGate({
   const useInlineChatLayout = canViewMedia && !!videoSrc && collabAvailable;
   const inlineMediaEl = canViewMedia && !!videoSrc
     ? mediaType === "audio" ? (
-        <SoundbarPlayer src={videoSrc} title={contentTypeLabel ?? "음원"} posterSrc={posterSrc} />
+        <SoundbarPlayer
+          src={videoSrc}
+          title={contentTypeLabel ?? "음원"}
+          posterSrc={posterSrc}
+          downloadUrl={collabAvailable ? videoSrc : undefined}
+          downloadName={contentTypeLabel ?? "음원"}
+        />
       ) : mediaType === "image" ? (
         <img src={videoSrc} alt="" className="max-h-[420px] w-auto max-w-full rounded-xl object-contain" />
       ) : (
@@ -187,11 +192,6 @@ export function ComplexAccessGate({
         {contentTypeLabel && (
           <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900 dark:text-gray-400">
             {contentTypeLabel}
-          </span>
-        )}
-        {collabAvailable && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
-            <UsersIcon className="h-3.5 w-3.5" /> 합작게시물{collabRoleNeeded ? `: ${collabRoleNeeded}` : ""}
           </span>
         )}
       </div>

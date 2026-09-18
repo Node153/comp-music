@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
 import { usePostFocused } from "@/components/PostFocusContext";
-import { XIcon, UploadIcon } from "@/components/icons";
+import { XIcon, UploadIcon, PlusIcon } from "@/components/icons";
 
 export type ChatMessage = {
   id: string;
@@ -245,9 +245,19 @@ export function ComplexPostChat({
               )}
               {m.type === "audio" && m.fileUrl && (
                 <div className="flex flex-col gap-1 rounded-xl bg-violet-50 p-2 dark:bg-violet-950/30">
-                  <span className="text-xs font-semibold text-violet-600 dark:text-violet-300">
-                    🎵 {m.fileName}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="flex-1 truncate text-xs font-semibold text-violet-600 dark:text-violet-300">
+                      🎵 {m.fileName}
+                    </span>
+                    <a
+                      href={m.fileUrl}
+                      download={m.fileName ?? undefined}
+                      title="다운로드"
+                      className="shrink-0 rounded-full p-1 text-xs text-violet-500 hover:bg-violet-100 dark:text-violet-300 dark:hover:bg-violet-900/50"
+                    >
+                      ⬇
+                    </a>
+                  </div>
                   <audio src={m.fileUrl} controls className="h-8 w-56" />
                 </div>
               )}
@@ -314,8 +324,8 @@ export function ComplexPostChat({
   if (!focused) {
     return (
       <div className="flex min-h-0 grow shrink-0 flex-col border-t border-gray-100 dark:border-gray-800">
-        {/* 사운드바는 위로 붙이고(상단정렬), 그 아래는 재창작물(추가 사운드바)이 쌓일
-            자리를 사운드바 한 칸 높이의 빈 줄칸으로 미리 잡아둔다(사용자 요청). */}
+        {/* 사운드바는 위로 붙이고(상단정렬), 그 아래는 재창작물(추가 사운드바)이 쌓인다.
+            다음 자리는 빈 안내문이 아니라 실제로 음원을 올릴 수 있는 + 버튼(사용자 요청). */}
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">
           {mediaSlot}
           {secondaryStack.map((card) => (
@@ -323,20 +333,33 @@ export function ComplexPostChat({
               key={card.generation}
               className="flex shrink-0 flex-col gap-1.5 rounded-xl bg-neutral-900 p-2.5"
             >
-              <span className="text-[11px] text-neutral-400">
-                {card.generation}차 · {card.work.senderName}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="flex-1 text-[11px] text-neutral-400">
+                  {card.generation}차 · {card.work.senderName}
+                </span>
+                {card.work.fileUrl && (
+                  <a
+                    href={card.work.fileUrl}
+                    download={card.work.fileName ?? undefined}
+                    title="다운로드"
+                    className="shrink-0 rounded-full p-1 text-sm text-neutral-400 hover:bg-white/10 hover:text-neutral-200"
+                  >
+                    ⬇
+                  </a>
+                )}
+              </div>
               {card.work.fileUrl && <audio src={card.work.fileUrl} controls className="h-8 w-full" />}
             </div>
           ))}
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={`slot-${i}`}
-              className="flex h-[76px] shrink-0 items-center justify-center rounded-xl border border-dashed border-gray-200 text-[11px] text-gray-300 dark:border-neutral-700 dark:text-neutral-600"
-            >
-              다음 사운드바 자리
-            </div>
-          ))}
+          <button
+            type="button"
+            disabled={!canUploadWork || sending}
+            title={canUploadWork ? "음원 작업물 올리기" : "합작게시물에서만 방장 외 사용자가 음원을 올릴 수 있어요"}
+            onClick={() => audioInputRef.current?.click()}
+            className="flex h-[76px] shrink-0 items-center justify-center rounded-xl border border-dashed border-gray-200 text-gray-300 hover:border-gray-300 hover:text-gray-400 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:text-gray-300 dark:border-neutral-700 dark:text-neutral-600 dark:hover:border-neutral-600 dark:hover:text-neutral-500 dark:disabled:hover:border-neutral-700 dark:disabled:hover:text-neutral-600"
+          >
+            <PlusIcon className="h-5 w-5" />
+          </button>
         </div>
         <div className="flex min-h-0 flex-1 flex-col border-t border-gray-100 dark:border-gray-800">
           <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">{renderMessages()}</div>
