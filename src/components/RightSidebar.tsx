@@ -12,11 +12,10 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
-import { PEAK_VIEW_THRESHOLD, peakScore, formatCompactCount } from "@/lib/feedConstants";
 import { presenceStatus, type PresenceStatus } from "@/lib/presence";
 import { Avatar } from "@/components/Avatar";
 import { MessageButton } from "@/components/MessageButton";
-import { LockIcon, FlameIcon, DotsIcon } from "@/components/icons";
+import { LockIcon, FlameIcon, DotsIcon, HeadphonesIcon } from "@/components/icons";
 
 // 온라인/자리비움/오프라인 판정은 lib/presence(메시지 화면과 공유)를 그대로 쓴다. 오프라인인
 // Companion은 이 목록에 아예 안 보인다(헤더가 "온라인 — N명"이라 오프라인까지 섞으면 숫자가
@@ -37,21 +36,13 @@ const ONLINE_REFRESH_INTERVAL_MS = 30_000;
 // PEAK 배지가 떴는데 사이드바엔 그대로 "아직 없어요"였던 원인).
 const PEAK_REFRESH_INTERVAL_MS = 30_000;
 
-// PEAK 게시물 = peakScore(조회수 + 좋아요×10)가 PEAK_VIEW_THRESHOLD 이상인 게시물, 점수
-// 많은 순으로 최대 3개만 노출(2026-09-17 변경, 사용자 요청 — "이번 주" 랭킹 개념은 우선
-// 제거하고 단순 노출만. PEAK 게시물이 충분히 쌓이면 추후 주간 로테이션 형식으로 다시 바꿀 예정).
-const PEAK_POSTS_VISIBLE_LIMIT = 3;
-// PEAK 후보를 뽑을 게시물 풀 — 좋아요가 점수에 섞여서 view_count만으로 DB에서 걸러낼 수
-// 없어(조회수는 낮아도 좋아요가 많으면 넘을 수 있음) 조회수 순으로 넉넉히 잡아온 뒤
-// 클라이언트에서 좋아요를 더해 점수를 계산한다.
-const PEAK_CANDIDATE_POOL_LIMIT = 50;
-
 type PeakPost = {
   postId: string;
+  authorId: string;
   authorName: string;
   caption: string | null;
   publishedAt: string;
-  score: number;
+  thumbnailUrl: string | null;
 };
 
 type KnockablePost = {
@@ -202,61 +193,19 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
   useEffect(() => {
     if (isMemoTab) return;
     let cancelled = false;
-    const supabase = createClient();
 
+    // PEAK 판정(posts.peaked_at) 자체는 이제 DB에 영구 고정돼있어(0056 마이그레이션) 여기서
+    // 점수를 다시 계산할 필요가 없다 — 다만 썸네일(thumbnail_url)이 R2 key인 경우 signed URL로
+    // 바꾸는 resolveMediaUrl이 서버 전용 함수라 브라우저에서 바로 못 써서, 전용 API 라우트
+    // (/api/peak-posts)를 거쳐 이미 해석된 URL을 받아온다.
     async function loadPeakPosts() {
-      // 좋아요가 점수에 섞이는 순간(peakScore) DB에서 view_count만으로는 필터링을 못 한다 —
-      // 조회수가 낮아도 좋아요가 많으면 넘을 수 있어서, 일단 넉넉한 후보 풀을 조회수 순으로
-      // 가져온 뒤 좋아요 수를 더해 점수를 계산한다(카드 쪽 EngagementMeter와 동일한 공식).
-      const { data: rawPosts } = await supabase
-        .from("posts")
-        .select("id, user_id, caption, published_at, view_count")
-        .eq("visibility", "public")
-        .eq("status", "published")
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .order("view_count", { ascending: false })
-        .limit(PEAK_CANDIDATE_POOL_LIMIT);
-
-      const posts = rawPosts ?? [];
-      if (posts.length === 0) {
-        if (!cancelled) setPeakPosts([]);
-        return;
+      try {
+        const res = await fetch("/api/peak-posts");
+        const { posts } = (await res.json()) as { posts: PeakPost[] };
+        if (!cancelled) setPeakPosts(posts);
+      } catch {
+        if (!cancelled) setPeakPosts((prev) => prev ?? []);
       }
-
-      const postIds = posts.map((p) => p.id);
-      const { data: likeRows } = await supabase.from("likes").select("post_id").in("post_id", postIds);
-      const likeCountMap = new Map<string, number>();
-      for (const row of likeRows ?? []) {
-        likeCountMap.set(row.post_id, (likeCountMap.get(row.post_id) ?? 0) + 1);
-      }
-
-      const peakCandidates = posts
-        .map((p) => ({ ...p, score: peakScore(p.view_count, likeCountMap.get(p.id) ?? 0) }))
-        .filter((p) => p.score >= PEAK_VIEW_THRESHOLD)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, PEAK_POSTS_VISIBLE_LIMIT);
-
-      if (peakCandidates.length === 0) {
-        if (!cancelled) setPeakPosts([]);
-        return;
-      }
-
-      const authorIds = [...new Set(peakCandidates.map((p) => p.user_id))];
-      const { data: authors } = await supabase
-        .from("user_display")
-        .select("id, display_name")
-        .in("id", authorIds);
-      const authorMap = new Map((authors ?? []).map((u) => [u.id, u.display_name]));
-
-      const result: PeakPost[] = peakCandidates.map((p) => ({
-        postId: p.id,
-        authorName: authorMap.get(p.user_id) ?? "알 수 없음",
-        caption: p.caption,
-        publishedAt: p.published_at ?? new Date().toISOString(),
-        score: p.score,
-      }));
-
-      if (!cancelled) setPeakPosts(result);
     }
 
     loadPeakPosts();
@@ -367,7 +316,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
             <FlameIcon className="h-3.5 w-3.5 text-red-500 dark:text-red-400" /> Peak 게시물
           </h2>
         )}
-        <div className="mt-1 flex flex-col gap-1">
+        <div className={isMemoTab ? "mt-1 flex flex-col gap-1" : "mt-1"}>
           {isMemoTab ? (
             knockablePosts === null ? (
               <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">불러오는 중...</p>
@@ -409,55 +358,45 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
               PEAK 게시물이 아직 없어요
             </p>
           ) : (
-            peakPosts.map((post, i) =>
-              i === 0 ? (
-                // 1위는 카드로 확대 — 나머지 두 개와 같은 줄짜리 취급이면 순위 1위라는 게 안 와닿아서
-                // 여기만 반응 수를 크게 보여주고 카드 자체 크기도 키운다.
-                <Link
-                  key={post.postId}
-                  href={`/feed?feed=completion#${post.postId}`}
-                  className="animate-peak-in flex flex-col gap-1 rounded-lg border-2 border-red-300 bg-red-50 p-2.5 transition hover:bg-red-100 dark:border-red-800/70 dark:bg-red-950/40 dark:hover:bg-red-950/60"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                      <FlameIcon className="h-2.5 w-2.5" /> 1위
-                    </span>
-                    <span className="inline-flex shrink-0 items-center gap-1 text-base font-bold text-red-600 dark:text-red-400">
-                      <FlameIcon className="h-4 w-4" /> {formatCompactCount(post.score)}
-                    </span>
-                  </div>
-                  <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
-                    {post.authorName}
-                  </span>
-                  <span className="truncate text-xs text-gray-500 dark:text-gray-400">
-                    {post.caption || "게시물"}
-                  </span>
-                  <span className="text-[11px] text-gray-400 dark:text-gray-500">{timeAgo(post.publishedAt)}</span>
-                </Link>
-              ) : (
+            // 페이스북 스토리 트레이 참고 — 다만 우리 썸네일은 가로형(landscape) 미디어라
+            // 스토리 특유의 세로형 원형 대신 가로 카드를 가로 스크롤로 늘어놓는다. 순위·조회수
+            // 숫자("1위", "1K")는 걷어내고(사용자 요청) 플레임 그라디언트 링만으로 PEAK임을
+            // 표시한다 — 한 번 PEAK가 되면(posts.peaked_at) 좋아요를 취소해도 계속 여기 남는다.
+            <div className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              {peakPosts.map((post, i) => (
                 <Link
                   key={post.postId}
                   href={`/feed?feed=completion#${post.postId}`}
                   style={{ animationDelay: `${i * 100}ms` }}
-                  className="animate-peak-in flex items-center gap-2 rounded-md border border-red-100 bg-red-50 px-2 py-1.5 transition hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:hover:bg-red-950/50"
+                  className="animate-peak-in group w-28 shrink-0"
                 >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-red-500 dark:bg-black/30">
-                    {i + 1}
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate text-sm text-gray-700 dark:text-gray-200">{post.authorName}</span>
-                      <span className="inline-flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-red-500">
-                        <FlameIcon className="h-2.5 w-2.5" /> {formatCompactCount(post.score)}
-                      </span>
+                  <div className="relative aspect-[4/3] w-full rounded-2xl bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 p-[2px] transition group-hover:brightness-110">
+                    <div className="relative h-full w-full overflow-hidden rounded-[14px] bg-gray-200 dark:bg-gray-900">
+                      {post.thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={post.thumbnailUrl}
+                          alt={post.caption || "PEAK 게시물"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900">
+                          <HeadphonesIcon className="h-6 w-6 text-white/70" />
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent px-1.5 pb-1 pt-4">
+                        <span className="block truncate text-[11px] font-semibold text-white">
+                          {post.authorName}
+                        </span>
+                      </div>
                     </div>
-                    <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">
-                      {post.caption || "게시물"} · {timeAgo(post.publishedAt)}
+                    <span className="absolute -left-1 -top-1 flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-white dark:ring-black">
+                      <Avatar userId={post.authorId} name={post.authorName} className="h-6 w-6 text-[10px]" />
                     </span>
                   </div>
                 </Link>
-              ),
-            )
+              ))}
+            </div>
           )}
         </div>
       </section>

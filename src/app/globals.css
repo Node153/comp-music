@@ -115,6 +115,16 @@ body {
   animation: peak-slide-in 0.4s ease-out both;
 }
 
+/* PEAK 게시물 가로 스크롤 트레이 — 스크롤은 되지만 스크롤바는 안 보이게(스토리 트레이 참고). */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* 더블탭 좋아요(HeartBurst) — 인스타그램처럼 하트가 살짝 커지며 나타났다가 잠깐 멈춘 뒤
    사라진다. */
 @keyframes heart-pop {
