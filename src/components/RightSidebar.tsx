@@ -386,7 +386,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
                       )}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent px-1.5 pb-1 pt-4">
                         <span className="block truncate text-[11px] font-semibold text-white">
-                          {post.authorName}
+                          {post.caption || "제목 없음"}
                         </span>
                       </div>
                     </div>
