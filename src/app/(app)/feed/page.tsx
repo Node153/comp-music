@@ -27,7 +27,7 @@ import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
-import { HeartIcon, CommentIcon, UsersIcon, MailIcon } from "@/components/icons";
+import { HeartIcon, CommentIcon, MailIcon } from "@/components/icons";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -635,8 +635,11 @@ export default async function FeedPage({
 
   // 한 게시물 = 한 화면. 게시물마다 고정 프레임 높이 안에 컴팩트하게 담고 세로 가운데 정렬한다.
   //   · 모바일(md 미만): 릴스/쇼츠식 스냅 스크롤. 프레임 = 100svh − MobileTopBar(h-12) −
-  //     BottomNav(h-14) − iOS 하단 세이프에어리어. dvh가 아니라 svh인 이유: 주소창이 보일 때
-  //     (가장 작을 때) 기준으로 잡아야 좋아요/댓글 줄이 하단 탭바 뒤로 안 잘림.
+  //     GlobalPlayerBar(h-16, bottom-14로 BottomNav 바로 위에 뜸) − BottomNav(h-14) − iOS
+  //     하단 세이프에어리어(2026-09-18 수정 — 이 calc가 원래 GlobalPlayerBar 도입 전에 짜여
+  //     BottomNav만 빼고 있어서, 맨 마지막 게시물이 사운드바에 가려 잘리는 문제가 있었다).
+  //     dvh가 아니라 svh인 이유: 주소창이 보일 때(가장 작을 때) 기준으로 잡아야 좋아요/댓글
+  //     줄이 하단 탭바 뒤로 안 잘림.
   //   · 데스크톱(md 이상): **완전 고정 px, 뷰포트 크기 무관**(2026-09-14 확정, 사용자 요청 —
   //     "모니터 기준 1440×990 고정, 카드 가로·세로 고정"). 1440×990 모니터에서 TopNav(h-14)
   //     + 상하 여백(≈3.5rem) = 7rem(112px)을 뺀 878px을 세로로 잡고, 카드 비율을 4:3 세로
@@ -660,7 +663,7 @@ export default async function FeedPage({
   //     기존 카드 피드(자연 높이)를 그대로 둔다.
   const oneScreenFeed = !!currentUser;
   const feedListClass = oneScreenFeed
-    ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_6.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
+    ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_10.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
     : "flex flex-col gap-6";
   // 모바일: article이 정확히 스냅 프레임 높이(h-full)라 스냅이 게시물 top에 딱 맞는다.
   // 데스크톱: 카드 659×878px 고정(위 설명 참고) — memo(합작 포함)도 2026-09-14부터 같은
@@ -682,8 +685,15 @@ export default async function FeedPage({
 
   return (
     <main
-      className={`mx-auto max-w-[900px] px-0 pt-0 md:px-4 md:pb-8 md:pt-4 ${
-        oneScreenFeed ? "pb-24 max-md:pb-0" : "pb-24"
+      // 하단 여백 = GlobalPlayerBar 클리어런스. 로그인 시에만 그 바가 떠 있으므로(비로그인은
+      // 없음, AppLayout 참고) oneScreenFeed일 때만 넉넉히 잡는다 — 데스크톱은 pageCard(공유
+      // 스타일, ui/styles.ts)와 같은 md:pb-24(96px = 바 h-16/64px + 여유 32px) 기준으로
+      // 통일했다(2026-09-18 수정 — 기존 md:pb-8=32px로는 바 높이(64px)를 못 가려 맨 마지막
+      // 게시물이 잘려 보였다, DEMO/memo 탭 공통 문제라 여기 한 곳만 고치면 둘 다 해결됨).
+      // 모바일은 max-md:pb-0 그대로 두고, 대신 프레임 높이 calc 자체(위 feedListClass의
+      // 10.5rem)에서 바 높이를 빼서 처리한다.
+      className={`mx-auto max-w-[900px] px-0 pt-0 md:px-4 md:pt-4 ${
+        oneScreenFeed ? "max-md:pb-0 md:pb-24" : "pb-24 md:pb-8"
       }`}
     >
       {!currentUser && (
@@ -774,7 +784,13 @@ export default async function FeedPage({
           const inlineMediaEl =
             useInlineChatLayout && post.videoSrc ? (
               post.media_type === "audio" ? (
-                <SoundbarPlayer src={post.videoSrc} title={post.title || post.caption || "음원"} posterSrc={post.posterSrc} />
+                <SoundbarPlayer
+                  src={post.videoSrc}
+                  title={post.title || post.caption || "음원"}
+                  posterSrc={post.posterSrc}
+                  downloadUrl={post.videoSrc}
+                  downloadName={post.title || post.caption || "음원"}
+                />
               ) : post.media_type === "image" ? (
                 <img
                   src={post.videoSrc}
@@ -1044,11 +1060,6 @@ export default async function FeedPage({
                           #{tag}
                         </Link>
                       ))}
-                    {post.collab_available && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-black px-2 py-1 text-xs font-medium text-white dark:bg-white dark:text-black">
-                        <UsersIcon className="h-3.5 w-3.5" /> 합작게시물{post.collab_role_needed ? `: ${post.collab_role_needed}` : ""}
-                      </span>
-                    )}
                   </div>
 
                   {isComplex && post.collab_available ? (
