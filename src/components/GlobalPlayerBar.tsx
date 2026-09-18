@@ -9,6 +9,7 @@
 // 바 자체가 항상 하단에 고정이라 별도 "닫기(X)" 버튼은 없음(사용자 요청) — 재생 정지는
 // 재생/일시정지 토글로, 큐 비우기는 QueuePanel 쪽에서.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylist } from "@/components/PlaylistContext";
 import { useMediaProgress } from "@/lib/useMediaProgress";
@@ -61,6 +62,8 @@ function presetBars(seed: string): number[] {
 }
 
 export function GlobalPlayerBar() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { track, isPlaying, setIsPlaying, toggle, pause, videoRef, duration, setDuration } =
     useNowPlaying();
   const {
@@ -156,29 +159,34 @@ export function GlobalPlayerBar() {
     };
   }, [videoRef, pause, playNext, setDuration]);
 
-  // memo(비공개) 오디오/영상 게시물은 expiresAt(노출 만료 시각)을 들고 있다 — DEMO는
-  // 영구노출이라 안 붙는 필드라, 이 값의 유무로 지금 재생 중인 트랙이 memo 쪽인지 구분한다.
-  // 예전엔 바 배경을 DEMO/memo 중간값(#8b8b8c) 고정으로 두고 파형만 포인트 컬러로 바꿨는데,
-  // "데모에선 밝게, 메모에선 어둡게" 요청(2026-09-17)으로 바 배경도 트랙 종류를 따라가게
-  // 바꿨다 — DEMO는 데모탭 배경(demo-bg, #fafafa), memo는 memo/complex 탭 배경(#1c1c1e)과
-  // 동일한 톤. 배경이 밝음/어두움을 오가므로 아이콘·글씨·파형 미재생 구간·재생 버튼까지
-  // 전부 이 값 하나(isMemoTrack)로 자동 반전시켜 항상 가독성이 유지되게 한다.
-  const isMemoTrack = !!track?.expiresAt;
-  const barBg = isMemoTrack ? "bg-[#1c1c1e]" : "bg-demo-bg";
-  const barText = isMemoTrack ? "text-white" : "text-black";
-  const barMuted = isMemoTrack ? "text-white/55" : "text-black/55";
-  const barBorder = isMemoTrack ? "border-white/10" : "border-black/10";
-  const barHover = isMemoTrack ? "hover:bg-white/10" : "hover:bg-black/10";
-  const barActive = isMemoTrack ? "bg-white/20" : "bg-black/10";
-  const coverBg = isMemoTrack ? "bg-white/10" : "bg-black/10";
-  const coverIcon = isMemoTrack ? "text-white/45" : "text-black/45";
-  const barAccent = isMemoTrack ? "accent-white" : "accent-black";
+  // 바 배경은 "재생 중인 트랙의 종류"가 아니라 ThemeSync.tsx와 완전히 같은 식(pathname +
+  // ?feed=complex)으로 계산한 "지금 보고 있는 사이트 테마"를 따른다(2026-09-18 수정 —
+  // 트랙 기준으로 했더니 곡을 하나도 안 튼 대기 상태·memo 탭 안에서는 항상 밝은 채로 안
+  // 바뀐다는 제보). 이러면 ThemeSync가 <html>에 .dark를 붙이는 바로 그 순간에 바 색도 같이
+  // 바뀌고, 탭 전환 중엔 globals.css의 .theme-transition(4s ease)이 <html> 하위 전부에
+  // 걸리므로 이 바도 자동으로 같은 그라데이션을 타고 부드럽게 전환된다(별도 트랜지션 코드
+  // 불필요 — DEMO/memo 탭 전환 시에만 느려지고 평소 hover 등은 그대로 빠름).
+  const isMemoTheme = pathname === "/feed" && searchParams.get("feed") === "complex";
+  const barBg = isMemoTheme ? "bg-[#1c1c1e]" : "bg-demo-bg";
+  const barText = isMemoTheme ? "text-white" : "text-black";
+  const barMuted = isMemoTheme ? "text-white/55" : "text-black/55";
+  const barBorder = isMemoTheme ? "border-white/10" : "border-black/10";
+  const barHover = isMemoTheme ? "hover:bg-white/10" : "hover:bg-black/10";
+  const barActive = isMemoTheme ? "bg-white/20" : "bg-black/10";
+  const coverBg = isMemoTheme ? "bg-white/10" : "bg-black/10";
+  const coverIcon = isMemoTheme ? "text-white/45" : "text-black/45";
+  const barAccent = isMemoTheme ? "accent-white" : "accent-black";
   // 재생 버튼은 항상 바와 반대색 필 — 바가 밝아지면(DEMO) 흰 버튼이 묻히므로 검정 필+흰
   // 아이콘으로 뒤집는다(memo는 기존 그대로 흰 필+검정 아이콘).
-  const playButtonBg = isMemoTrack ? "bg-white text-black" : "bg-black text-white";
-  const unplayedBarColor = isMemoTrack ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.16)";
-  // 골드와 마찬가지로 진폭(v)에 따라 3단계로 명암을 주되(사용자 요청 — "볼륨에 따라
-  // 색조정"), 색상 자체만 violet 계열로.
+  const playButtonBg = isMemoTheme ? "bg-white text-black" : "bg-black text-white";
+  const unplayedBarColor = isMemoTheme ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.16)";
+  // 파형 포인트 컬러(재생된 구간·플레이헤드)만은 여전히 "지금 재생 중인 트랙 자체"의 종류를
+  // 따른다 — memo(비공개) 오디오/영상 게시물은 expiresAt(노출 만료 시각)을 들고 있다(DEMO는
+  // 영구노출이라 안 붙는 필드). 바 색(사이트 테마)과 트랙 색(브랜드 포인트)은 서로 다른
+  // 기준이라 각자 트랙을 memo 탭 밖에서 재생해도(예: 대기열에 담아뒀다 DEMO 탭에서 이어
+  // 재생) 파형은 그 트랙 고유의 색을 유지한다. 골드와 마찬가지로 진폭(v)에 따라 3단계로
+  // 명암을 주되(사용자 요청 — "볼륨에 따라 색조정"), 색상 자체만 violet 계열로.
+  const isMemoTrack = !!track?.expiresAt;
   const playedColor = (v: number) => (isMemoTrack ? memoBandColor(v) : demoBandColor(v));
   const playheadColor = isMemoTrack ? "#c4b5f2" : "#f5d999";
 
@@ -210,11 +218,12 @@ export function GlobalPlayerBar() {
         tabIndex={-1}
         className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
       />
-      {/* 바 배경 = 재생 중인 트랙 종류를 따라감(2026-09-17) — DEMO는 데모탭 배경(demo-bg,
-          #fafafa)으로 밝게, memo는 memo/complex 탭 배경(#1c1c1e)으로 어둡게. 배경이 바뀌므로
-          아이콘·글씨·파형 미재생 구간·재생 버튼 색은 전부 isMemoTrack 하나로 자동 반전
-          (barText/barMuted/barBorder/barHover/barActive/coverBg/coverIcon/playButtonBg,
-          위 선언부 참고) — 가독성이 항상 유지된다. 재생 중인 파형(playedColor/playheadColor)은
+      {/* 바 배경 = 지금 보고 있는 사이트 테마(isMemoTheme, ThemeSync와 동일 기준)를 따라감
+          (2026-09-18) — DEMO는 데모탭 배경(demo-bg, #fafafa)으로 밝게, memo 탭은 memo/complex
+          배경(#1c1c1e)으로 어둡게. 배경이 바뀌므로 아이콘·글씨·파형 미재생 구간·재생 버튼
+          색은 전부 isMemoTheme 하나로 자동 반전(barText/barMuted/barBorder/barHover/
+          barActive/coverBg/coverIcon/playButtonBg, 위 선언부 참고) — 가독성이 항상 유지된다.
+          재생 중인 파형(playedColor/playheadColor)만은 트랙 자체의 종류(isMemoTrack)를 따라
           기존처럼 DEMO 골드/memo violet 포인트 컬러 그대로.
           데스크톱 레이아웃: 파형(가운데 열)을 고정폭(900px — feed/page.tsx <main>의
           max-w-[900px]과 동일 값, 게시물 카드(760px)보다 조금 더 넓게)으로 두고, 좌우 열을
