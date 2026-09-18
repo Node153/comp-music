@@ -77,6 +77,16 @@ export function SoundbarPlayer({
   const style = TONE[tone];
   const isGlobal = mode === "global";
 
+  // blob:(방금 로컬에서 올린 미리보기)나 같은 출처 경로는 <a download>가 그대로 잘 먹지만,
+  // R2 signed URL(cross-origin)은 Safari 등에서 download 속성을 무시하고 그냥 열어버리는
+  // 경우가 있어(사용자 보고) 서버 프록시(Content-Disposition: attachment)를 거치게 한다.
+  const downloadHref =
+    downloadUrl == null
+      ? null
+      : downloadUrl.startsWith("blob:") || downloadUrl.startsWith("/")
+        ? downloadUrl
+        : `/api/media/download-proxy?url=${encodeURIComponent(downloadUrl)}&name=${encodeURIComponent(downloadName ?? title)}`;
+
   // ---- 파형 분석 (모드 공통) ----
   useEffect(() => {
     if (posterSrc) return; // 커버 이미지 모드에서는 파형을 안 그리니 분석 자체를 건너뛴다.
@@ -221,9 +231,9 @@ export function SoundbarPlayer({
             <div className={`h-full ${style.posterProgress}`} style={{ width: `${playedRatio * 100}%` }} />
           </div>
         </button>
-        {downloadUrl && (
+        {downloadHref && (
           <a
-            href={downloadUrl}
+            href={downloadHref}
             download={downloadName ?? title}
             title="다운로드"
             className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-sm text-white hover:bg-black/70"
@@ -252,9 +262,9 @@ export function SoundbarPlayer({
         <span className="shrink-0 text-[11px] text-neutral-400">
           {formatWaveformTime(currentTime)} / {formatWaveformTime(duration)}
         </span>
-        {downloadUrl && (
+        {downloadHref && (
           <a
-            href={downloadUrl}
+            href={downloadHref}
             download={downloadName ?? title}
             title="다운로드"
             className="ml-auto shrink-0 rounded-full p-1 text-sm text-neutral-400 hover:bg-white/10 hover:text-neutral-200"

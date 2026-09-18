@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
 import { usePostFocused } from "@/components/PostFocusContext";
+import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { XIcon, UploadIcon, PlusIcon } from "@/components/icons";
 
 export type ChatMessage = {
@@ -31,13 +32,6 @@ export type ChatMessage = {
   fileKey?: string | null;
   isWork: boolean;
   createdAt: string;
-};
-
-const WORK_TYPE_LABEL: Record<ChatMessage["type"], string> = {
-  text: "✍️",
-  image: "🖼️",
-  video: "🎬",
-  audio: "🎵",
 };
 
 export function ComplexPostChat({
@@ -244,21 +238,16 @@ export function ComplexPostChat({
                 </div>
               )}
               {m.type === "audio" && m.fileUrl && (
-                <div className="flex flex-col gap-1 rounded-xl bg-violet-50 p-2 dark:bg-violet-950/30">
-                  <div className="flex items-center gap-1.5">
-                    <span className="flex-1 truncate text-xs font-semibold text-violet-600 dark:text-violet-300">
-                      🎵 {m.fileName}
-                    </span>
-                    <a
-                      href={m.fileUrl}
-                      download={m.fileName ?? undefined}
-                      title="다운로드"
-                      className="shrink-0 rounded-full p-1 text-xs text-violet-500 hover:bg-violet-100 dark:text-violet-300 dark:hover:bg-violet-900/50"
-                    >
-                      ⬇
-                    </a>
-                  </div>
-                  <audio src={m.fileUrl} controls className="h-8 w-56" />
+                <div className="flex w-64 flex-col gap-1">
+                  <span className="truncate px-0.5 text-xs font-semibold text-violet-600 dark:text-violet-300">
+                    🎵 {m.fileName}
+                  </span>
+                  <SoundbarPlayer
+                    src={m.fileUrl}
+                    title={m.fileName ?? "음원"}
+                    downloadUrl={m.fileUrl}
+                    downloadName={m.fileName ?? undefined}
+                  />
                 </div>
               )}
             </div>
@@ -329,26 +318,18 @@ export function ComplexPostChat({
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">
           {mediaSlot}
           {secondaryStack.map((card) => (
-            <div
-              key={card.generation}
-              className="flex shrink-0 flex-col gap-1.5 rounded-xl bg-neutral-900 p-2.5"
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="flex-1 text-[11px] text-neutral-400">
-                  {card.generation}차 · {card.work.senderName}
-                </span>
-                {card.work.fileUrl && (
-                  <a
-                    href={card.work.fileUrl}
-                    download={card.work.fileName ?? undefined}
-                    title="다운로드"
-                    className="shrink-0 rounded-full p-1 text-sm text-neutral-400 hover:bg-white/10 hover:text-neutral-200"
-                  >
-                    ⬇
-                  </a>
-                )}
-              </div>
-              {card.work.fileUrl && <audio src={card.work.fileUrl} controls className="h-8 w-full" />}
+            <div key={card.generation} className="flex shrink-0 flex-col gap-1">
+              <span className="px-0.5 text-[11px] text-neutral-400">
+                {card.generation}차 · {card.work.senderName}
+              </span>
+              {card.work.fileUrl && (
+                <SoundbarPlayer
+                  src={card.work.fileUrl}
+                  title={`${card.generation}차 · ${card.work.senderName}`}
+                  downloadUrl={card.work.fileUrl}
+                  downloadName={card.work.fileName ?? undefined}
+                />
+              )}
             </div>
           ))}
           <button
@@ -391,35 +372,19 @@ export function ComplexPostChat({
                 <span>{stackOpen ? "▲" : "▼"}</span>
               </button>
               {stackOpen && (
-                <div className="flex max-h-[220px] flex-col gap-1 overflow-y-auto">
+                <div className="flex max-h-[220px] flex-col gap-2 overflow-y-auto">
                   {secondaryStack.map((card) => (
-                    <div
-                      key={card.generation}
-                      className="flex flex-col gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2 py-1.5 dark:border-gray-800 dark:bg-gray-900/40"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className="shrink-0 text-sm">{WORK_TYPE_LABEL[card.work.type]}</span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                            {card.generation}차 창작물
-                          </p>
-                          <p className="truncate text-[10px] text-gray-400 dark:text-gray-500">
-                            {card.work.senderName}
-                          </p>
-                        </div>
-                        {card.work.fileUrl && (
-                          <a
-                            href={card.work.fileUrl}
-                            download={card.work.fileName ?? undefined}
-                            title="다운로드"
-                            className="shrink-0 rounded-full p-1 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-                          >
-                            ⬇
-                          </a>
-                        )}
-                      </div>
+                    <div key={card.generation} className="flex shrink-0 flex-col gap-1">
+                      <span className="px-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                        {card.generation}차 · {card.work.senderName}
+                      </span>
                       {card.work.fileUrl && (
-                        <audio src={card.work.fileUrl} controls className="h-8 w-full" />
+                        <SoundbarPlayer
+                          src={card.work.fileUrl}
+                          title={`${card.generation}차 · ${card.work.senderName}`}
+                          downloadUrl={card.work.fileUrl}
+                          downloadName={card.work.fileName ?? undefined}
+                        />
                       )}
                     </div>
                   ))}
