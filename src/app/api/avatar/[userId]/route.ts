@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getR2ObjectStream } from "@/lib/r2/storage";
+import { ALLOWED_UPLOAD_CONTENT_TYPES } from "@/lib/r2/allowedContentTypes";
 
 // 사진을 바꾼 직후에도 항상 최신본이 뜨도록 이 라우트 자체는 캐시하지 않는다 — 예전엔
 // <img src="/api/avatar/{id}"> URL이 안 바뀌어서 브라우저가 이전 사진을 그대로 재사용했다.
@@ -34,7 +35,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   // 브라우저가 자체 휴리스틱으로 캐시할 여지가 있었는데, 리다이렉트 없이 우리 라우트가
   // 직접 no-store를 실어보내면 그 여지 자체가 없어진다.
   const { body, contentType } = await getR2ObjectStream(data.profile_image_url);
-  return new NextResponse(body, {
-    headers: { "Content-Type": contentType, "Cache-Control": "no-store" },
-  });
+  const headers: Record<string, string> = { "Content-Type": contentType, "Cache-Control": "no-store" };
+  // upload-url이 화이트리스트를 강제하기 전(과거)에 올라간 오브젝트가 남아있을 수 있어,
+  // 예상 밖의 Content-Type이면 브라우저가 직접 렌더링하지 못하게 다운로드로 강제한다.
+  if (!ALLOWED_UPLOAD_CONTENT_TYPES.has(contentType)) {
+    headers["Content-Disposition"] = "attachment";
+  }
+  return new NextResponse(body, { headers });
 }

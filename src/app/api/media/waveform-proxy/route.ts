@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ALLOWED_UPLOAD_CONTENT_TYPES } from "@/lib/r2/allowedContentTypes";
 
 // SoundbarPlayer가 파형 분석(fetch + decodeAudioData)을 위해서만 쓰는 프록시.
 // R2 signed URL을 브라우저에서 직접 fetch()하면 CORS 때문에 막히는 경우가 있는데
@@ -31,10 +32,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "원본 파일을 가져오지 못했습니다." }, { status: 502 });
   }
 
-  return new NextResponse(res.body, {
-    headers: {
-      "Content-Type": res.headers.get("Content-Type") ?? "application/octet-stream",
-      "Cache-Control": "private, max-age=1800",
-    },
-  });
+  const contentType = res.headers.get("Content-Type") ?? "application/octet-stream";
+  const headers: Record<string, string> = {
+    "Content-Type": contentType,
+    "Cache-Control": "private, max-age=1800",
+  };
+  // upload-url이 화이트리스트를 강제하기 전(과거)에 올라간 오브젝트가 남아있을 수 있어,
+  // 예상 밖의 Content-Type이면 브라우저가 직접 렌더링하지 못하게 다운로드로 강제한다.
+  if (!ALLOWED_UPLOAD_CONTENT_TYPES.has(contentType)) {
+    headers["Content-Disposition"] = "attachment";
+  }
+
+  return new NextResponse(res.body, { headers });
 }

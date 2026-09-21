@@ -89,10 +89,7 @@ export function ConversationView({
 
     if (!error && data) {
       setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data]));
-      await supabase
-        .from("conversations")
-        .update({ last_message_at: new Date().toISOString() })
-        .eq("id", conversationId);
+      await supabase.rpc("touch_conversation_last_message", { p_conversation_id: conversationId });
       setText("");
       setPendingSourcePostId(null);
     }

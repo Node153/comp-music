@@ -4,27 +4,15 @@
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function MarkMessagesRead({
-  conversationId,
-  currentUserId,
-}: {
-  conversationId: string;
-  currentUserId: string;
-}) {
+export function MarkMessagesRead({ conversationId }: { conversationId: string }) {
   const supabase = createClient();
 
   useEffect(() => {
     async function markRead() {
-      await supabase
-        .from("messages")
-        .update({ read_at: new Date().toISOString() })
-        .eq("conversation_id", conversationId)
-        .neq("sender_id", currentUserId)
-        .is("read_at", null);
+      await supabase.rpc("mark_messages_read", { p_conversation_id: conversationId });
     }
     void markRead();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, currentUserId]);
+  }, [conversationId, supabase]);
 
   return null;
 }

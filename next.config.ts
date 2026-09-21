@@ -2,7 +2,20 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Sentry/Supabase realtime/Giphy/카카오 OAuth 등 외부 연동이 많아 CSP는 라이브 검증 없이
+  // 섣불리 추가하지 않고, 깨질 위험이 거의 없는 기본 보안 헤더만 우선 적용한다.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
 };
 
 // Sentry (0035_error_monitoring) — SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT가

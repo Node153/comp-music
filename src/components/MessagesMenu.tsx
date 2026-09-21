@@ -202,7 +202,7 @@ export function MessagesMenu({
                   <p className="py-8 text-center text-sm text-gray-400">불러오는 중…</p>
                 ) : (
                   <>
-                    <MarkMessagesRead conversationId={activeConversation.id} currentUserId={currentUserId} />
+                    <MarkMessagesRead conversationId={activeConversation.id} />
                     <ConversationView
                       conversationId={activeConversation.id}
                       currentUserId={currentUserId}

@@ -622,6 +622,20 @@ export interface Database {
         Args: { pid: string };
         Returns: void;
       };
+      // mark_messages_read(0057) — DM 읽음 처리. messages_update_participant 정책이
+      // with check 없이 열려 있어 대화 참여자가 상대 메시지의 content/sender_id까지 고칠 수
+      // 있던 문제를 막기 위해, 테이블 직접 UPDATE 대신 read_at만 갱신하는 함수로 대체했다.
+      mark_messages_read: {
+        Args: { p_conversation_id: string };
+        Returns: void;
+      };
+      // touch_conversation_last_message(0057) — 메시지 전송 시 목록 정렬용 last_message_at
+      // 갱신. conversations_update_participant도 같은 이유(with check 없음, user_a_id/
+      // user_b_id까지 바꿔치기 가능)로 막고 이 함수로 대체.
+      touch_conversation_last_message: {
+        Args: { p_conversation_id: string };
+        Returns: void;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
