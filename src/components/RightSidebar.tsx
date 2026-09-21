@@ -358,40 +358,40 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
               PEAK 게시물이 아직 없어요
             </p>
           ) : (
-            // 세로 목록으로 배치(사용자 요청 — 가로 스크롤 카드는 되돌림). 썸네일과 제목·작성자는
-            // 유지하되 한 줄씩 아래로 쌓는다. 순위·조회수 숫자("1위", "1K")는 계속 없음 — 한 번
-            // PEAK가 되면(posts.peaked_at) 좋아요를 취소해도 계속 여기 남는다.
-            <div className="flex flex-col gap-1">
+            // 박스형 목록 줄(테두리·배경) 대신 게시물 카드 자체만 깔끔하게, 세로로 쌓는다
+            // (사용자 요청). 카드 안에 제목을 오버레이하는 방식은 유지 — 순위·조회수 숫자
+            // ("1위", "1K")는 계속 없음. 한 번 PEAK가 되면(posts.peaked_at) 좋아요를 취소해도
+            // 계속 여기 남는다.
+            <div className="flex flex-col gap-2">
               {peakPosts.map((post, i) => (
                 <Link
                   key={post.postId}
                   href={`/feed?feed=completion#${post.postId}`}
                   style={{ animationDelay: `${i * 100}ms` }}
-                  className="animate-peak-in flex items-center gap-2 rounded-md border border-red-100 bg-red-50 px-2 py-1.5 transition hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:hover:bg-red-950/50"
+                  className="animate-peak-in group"
                 >
-                  <span className="relative h-9 w-12 shrink-0 overflow-hidden rounded-md bg-gray-200 dark:bg-gray-900">
-                    {post.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={post.thumbnailUrl}
-                        alt={post.caption || "PEAK 게시물"}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900">
-                        <HeadphonesIcon className="h-4 w-4 text-white/70" />
+                  <div className="relative aspect-[16/10] w-full rounded-2xl bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 p-[2px] transition group-hover:brightness-110">
+                    <div className="relative h-full w-full overflow-hidden rounded-[14px] bg-gray-200 dark:bg-gray-900">
+                      {post.thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={post.thumbnailUrl}
+                          alt={post.caption || "PEAK 게시물"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900">
+                          <HeadphonesIcon className="h-6 w-6 text-white/70" />
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent px-2 pb-1.5 pt-5">
+                        <span className="block truncate text-[13px] font-semibold text-white">
+                          {post.caption || "제목 없음"}
+                        </span>
                       </div>
-                    )}
-                    <span className="absolute -left-1 -top-1 flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-white dark:ring-black">
-                      <Avatar userId={post.authorId} name={post.authorName} className="h-5 w-5 text-[9px]" />
-                    </span>
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">
-                      {post.caption || "제목 없음"}
-                    </span>
-                    <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">
-                      {post.authorName} · {timeAgo(post.publishedAt)}
+                    </div>
+                    <span className="absolute -left-1.5 -top-1.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-white dark:ring-black">
+                      <Avatar userId={post.authorId} name={post.authorName} className="h-7 w-7 text-[10px]" />
                     </span>
                   </div>
                 </Link>
