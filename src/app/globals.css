@@ -143,6 +143,40 @@ body {
   animation: heart-pop 0.9s ease-out both;
 }
 
+/* 좋아요 버튼을 눌렀을 때 게시물 중앙에 뜨는 "Kick!" 문구(KickBurst) — heart-pop보다
+   오래(3초) 머무르고, 매번 살짝 다른 위치로 뜬 뒤(--kick-x/--kick-y, KickBurst가 트리거마다
+   랜덤으로 지정) 위로 둥실 떠오르며 흔들리다 사라진다. 항상 정확히 같은 자리에 뜨면 밋밋해서
+   흔들림을 넣어달라는 요청. */
+@keyframes kick-pop {
+  0% {
+    opacity: 0;
+    transform: translate(var(--kick-x, 0px), var(--kick-y, 0px)) scale(0.5) rotate(-4deg);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(var(--kick-x, 0px), var(--kick-y, 0px)) scale(1.15) rotate(3deg);
+  }
+  20% {
+    transform: translate(var(--kick-x, 0px), var(--kick-y, 0px)) scale(1) rotate(-1deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(var(--kick-x, 0px), calc(var(--kick-y, 0px) - 10px)) scale(1.04) rotate(1deg);
+  }
+  85% {
+    opacity: 1;
+    transform: translate(var(--kick-x, 0px), calc(var(--kick-y, 0px) - 16px)) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--kick-x, 0px), calc(var(--kick-y, 0px) - 22px)) scale(0.96) rotate(0deg);
+  }
+}
+
+.animate-kick-pop {
+  animation: kick-pop 3s ease-in-out both;
+}
+
 /* 생년월일 스크롤 휠 피커(BirthDateScrollPicker)의 각 열 스크롤바 숨김 — 네이티브 앱
    피커처럼 보이려면 스크롤바가 안 보여야 한다. Tailwind 기본 유틸에는 없어서 직접 추가. */
 .no-scrollbar {
