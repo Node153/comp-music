@@ -143,6 +143,33 @@ body {
   animation: heart-pop 0.9s ease-out both;
 }
 
+/* 좋아요 버튼(LikeButton)을 눌렀을 때 위로 살짝 떠오르며 나타났다 사라지는 "Kick!" 문구. */
+@keyframes kick-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -8px) scale(1.1);
+  }
+  35% {
+    transform: translate(-50%, -10px) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -18px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -26px) scale(1);
+  }
+}
+
+.animate-kick-pop {
+  animation: kick-pop 0.7s ease-out both;
+}
+
 /* 생년월일 스크롤 휠 피커(BirthDateScrollPicker)의 각 열 스크롤바 숨김 — 네이티브 앱
    피커처럼 보이려면 스크롤바가 안 보여야 한다. Tailwind 기본 유틸에는 없어서 직접 추가. */
 .no-scrollbar {
