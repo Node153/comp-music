@@ -25,7 +25,7 @@ const PREFERENCE_ROWS: { key: PreferenceKey; label: string; description: string 
     description: "누군가 Companion을 신청하면 메일로 알려드려요",
   },
   { key: "email_notify_message", label: "메시지", description: "새 메시지가 오면 메일로 알려드려요" },
-  { key: "email_notify_like", label: "좋아요", description: "내 게시물에 좋아요가 눌리면 메일로 알려드려요" },
+  { key: "email_notify_like", label: "Kick", description: "내 게시물에 Kick이 눌리면 메일로 알려드려요" },
   { key: "email_notify_comment", label: "댓글", description: "내 게시물에 댓글이 달리면 메일로 알려드려요" },
   { key: "email_notify_peak", label: "PEAK", description: "내 게시물이 PEAK에 도달하면 메일로 알려드려요" },
 ];

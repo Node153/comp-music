@@ -23,7 +23,7 @@ import type { NotificationItem } from "@/lib/notificationList";
 type CategoryFilter = "all" | "engagement" | "request" | "peak";
 const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
   { value: "all", label: "전체" },
-  { value: "engagement", label: "좋아요·댓글" },
+  { value: "engagement", label: "Kick·댓글" },
   { value: "request", label: "신청" },
   { value: "peak", label: "PEAK" },
 ];
@@ -236,7 +236,7 @@ export function NotificationsMenu({
                               ) : (
                                 <>
                                   <span className="font-semibold">{item.actorName}</span>
-                                  {item.type === "like" && "님이 회원님의 게시물을 좋아합니다"}
+                                  {item.type === "like" && "님이 회원님의 게시물을 Kick했어요"}
                                   {item.type === "comment" && "님이 댓글을 남겼습니다"}
                                   {item.type === "companion_request" && "님이 Companion을 신청했어요"}
                                   {item.type === "knock" && "님이 비공개 게시물에 노크했어요"}

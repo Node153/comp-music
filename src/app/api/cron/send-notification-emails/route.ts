@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
           .in("post_id", myPostIds)
           .neq("user_id", user.id)
           .gt("created_at", cursor);
-        if (count) sections.push(`좋아요 ${count}개`);
+        if (count) sections.push(`Kick ${count}개`);
       }
 
       if (user.email_notify_comment && myPostIds.length > 0) {

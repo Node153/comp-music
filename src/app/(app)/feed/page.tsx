@@ -699,7 +699,7 @@ export default async function FeedPage({
       {!currentUser && (
         <div className="mx-3 mb-4 flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 md:mx-0">
           <p className="text-sm text-gray-600">
-            가입하면 좋아요·댓글을 남기고, memo(비공개 공간)도 볼 수 있어요.
+            가입하면 Kick·댓글을 남기고, memo(비공개 공간)도 볼 수 있어요.
           </p>
           <Link
             href="/signup"
