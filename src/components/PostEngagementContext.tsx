@@ -23,6 +23,11 @@ type PostEngagementContextValue = {
   setWeeklyLikeCount: Dispatch<SetStateAction<number>>;
   setViewCount: Dispatch<SetStateAction<number>>;
   setLiked: Dispatch<SetStateAction<boolean>>;
+  // 좋아요 버튼을 눌렀을 때 게시물 중앙에 "Kick!" 문구를 띄우기 위한 트리거(사용자 요청).
+  // LikeButton(버튼)에서 쏘고 KickBurst(게시물 카드 최상단, article 기준 중앙)가 받아서 그린다.
+  kickKey: number | null;
+  triggerKick: () => void;
+  clearKick: () => void;
 };
 
 const PostEngagementContext = createContext<PostEngagementContextValue | null>(null);
@@ -49,6 +54,9 @@ export function PostEngagementProvider({
   const [weeklyLikeCount, setWeeklyLikeCount] = useState(initialWeeklyLikeCount);
   const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
   const [liked, setLiked] = useState(initialLiked ?? false);
+  const [kickKey, setKickKey] = useState<number | null>(null);
+  const triggerKick = () => setKickKey((k) => (k ?? 0) + 1);
+  const clearKick = () => setKickKey(null);
 
   return (
     <PostEngagementContext.Provider
@@ -64,6 +72,9 @@ export function PostEngagementProvider({
         setWeeklyLikeCount,
         setViewCount,
         setLiked,
+        kickKey,
+        triggerKick,
+        clearKick,
       }}
     >
       {children}

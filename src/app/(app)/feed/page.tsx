@@ -20,6 +20,7 @@ import { PostViewedBy } from "@/components/PostViewedBy";
 import { PostCaption } from "@/components/PostCaption";
 import { PostViewCount } from "@/components/PostViewCount";
 import { DoubleTapLikeArea } from "@/components/DoubleTapLikeArea";
+import { KickBurst } from "@/components/KickBurst";
 import { LikeButton } from "./LikeButton";
 import { PinButton } from "./PinButton";
 import { CommentPanel } from "./CommentPanel";
@@ -819,7 +820,7 @@ export default async function FeedPage({
             <article
               key={post.id}
               id={post.id}
-              className={`scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400 ${articleSnapClass}`}
+              className={`relative scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400 ${articleSnapClass}`}
             >
               <PostEngagementProvider
                 initialLikeCount={likeCount}
@@ -829,6 +830,7 @@ export default async function FeedPage({
                 initialLiked={likedByMeSet.has(post.id)}
                 peakThreshold={peakThreshold}
               >
+              <KickBurst />
               <PostFocusToggle
                 authorId={post.user_id}
                 authorName={author?.name ?? "알 수 없음"}
