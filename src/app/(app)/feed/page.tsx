@@ -510,15 +510,24 @@ export default async function FeedPage({
     const inviteOnlyForOthers = posts.filter(
       (p) => p.visibility === "invite_only" && p.user_id !== currentUser.id,
     );
-    await Promise.all(
-      inviteOnlyForOthers.map(async (p) => {
-        const { data } = await supabase.rpc("knock_context", { pid: p.id });
-        const rows = data ?? [];
-        if (rows.length === 0) return;
+    if (inviteOnlyForOthers.length > 0) {
+      const { data: batchRows } = await supabase.rpc("knock_context_batch", {
+        pids: inviteOnlyForOthers.map((p) => p.id),
+      });
+      const rowsByPost = new Map<string, { display_name: string; is_companion: boolean }[]>();
+      for (const row of batchRows ?? []) {
+        const list = rowsByPost.get(row.post_id) ?? [];
+        list.push({ display_name: row.display_name, is_companion: row.is_companion });
+        rowsByPost.set(row.post_id, list);
+      }
+
+      for (const p of inviteOnlyForOthers) {
+        const rows = rowsByPost.get(p.id) ?? [];
+        if (rows.length === 0) continue;
 
         if (canViewMediaFor(p)) {
           participantSummaryByPost.set(p.id, `${rows.map((r) => r.display_name).join(", ")}에게 공개`);
-          return;
+          continue;
         }
 
         const companionNames = rows.filter((r) => r.is_companion).map((r) => r.display_name);
@@ -528,8 +537,8 @@ export default async function FeedPage({
             ? `${companionNames.join(", ")}${otherCount > 0 ? ` 외 ${otherCount}명` : ""}에게 공개`
             : `${otherCount}명에게 공개`;
         participantSummaryByPost.set(p.id, summary);
-      }),
-    );
+      }
+    }
   }
 
   // 열람 가능한 Complex 게시물의 채팅+재창작물 스택을 서버에서 미리 가져온다(초기 렌더용 —

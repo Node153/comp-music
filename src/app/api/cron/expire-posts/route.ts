@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteR2Object } from "@/lib/r2/storage";
+import { runWithConcurrency } from "@/lib/concurrency";
 
 // FEED-06: 노출시간 만료된 posts의 status를 published -> expired로 정리(soft-expire).
 //
@@ -52,12 +53,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (toDelete && toDelete.length > 0) {
-    await Promise.all(
-      toDelete.map((post) => {
-        const mediaKey = post.video_url ?? post.image_url ?? post.audio_url;
-        return mediaKey ? deleteR2Object(mediaKey) : undefined;
-      }),
-    );
+    await runWithConcurrency(toDelete, 10, (post) => {
+      const mediaKey = post.video_url ?? post.image_url ?? post.audio_url;
+      return mediaKey ? deleteR2Object(mediaKey) : Promise.resolve();
+    });
     const { error: deleteError } = await supabase
       .from("posts")
       .delete()

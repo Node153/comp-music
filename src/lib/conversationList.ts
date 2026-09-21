@@ -45,18 +45,20 @@ export async function getConversationList(
       : { data: [] };
   const presenceMap = new Map((presenceRows ?? []).map((u) => [u.id, presenceStatus(u.last_seen_at)]));
 
-  const { data: lastMessages } =
+  // 대화당 마지막 메시지 1개만 필요해서, 전체 메시지를 긁어와 JS에서 고르는 대신 DB에서
+  // DISTINCT ON으로 이미 한 행씩만 받아온다(0060) — 대화 이력이 쌓여도 비용이 늘지 않는다.
+  const lastMessagesResult =
     conversationIds.length > 0
-      ? await supabase
-          .from("messages")
-          .select("conversation_id, content, created_at")
-          .in("conversation_id", conversationIds)
-          .order("created_at", { ascending: false })
+      ? await supabase.rpc("latest_messages_for_conversations", { conversation_ids: conversationIds })
       : { data: [] };
-  const lastMessageMap = new Map<string, { content: string; created_at: string }>();
-  for (const m of lastMessages ?? []) {
-    if (!lastMessageMap.has(m.conversation_id)) lastMessageMap.set(m.conversation_id, m);
-  }
+  const lastMessages = (lastMessagesResult.data ?? []) as {
+    conversation_id: string;
+    content: string;
+    created_at: string;
+  }[];
+  const lastMessageMap = new Map(
+    lastMessages.map((m) => [m.conversation_id, { content: m.content, created_at: m.created_at }]),
+  );
 
   const { data: unreadRows } =
     conversationIds.length > 0

@@ -187,16 +187,24 @@ export default function SignupPage() {
     // 사람이 로그인 방법을 잊고 다른 방법으로 또 가입할 수 있는 문제. 이름+생년월일이 겹치는
     // 계정이 이미 있으면 여기서 막는다(완전 자동 차단 — 동명이인 오탐 가능성은 감수하기로
     // 사용자가 명시적으로 결정함. 추후 PASS 본인인증 도입 시 연락처 기반으로 재검토 예정).
-    const { data: isDuplicate, error: duplicateCheckError } = await supabase.rpc(
-      "check_duplicate_identity",
-      { p_name: name, p_birth_date: birthDate },
-    );
-    if (duplicateCheckError) {
+    // 가입 전(비로그인) 호출이라 RPC를 직접 부르지 않고 rate limit이 걸린 서버 라우트를
+    // 거친다(0058) — anon이 이 RPC를 직접 무제한 호출하면 로그인 없이 "이름+생년월일 존재
+    // 여부"를 조회하는 프라이버시 오라클이 되기 때문.
+    const duplicateCheckRes = await fetch("/api/auth/check-duplicate-identity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, birthDate }),
+    });
+    const duplicateCheckBody = (await duplicateCheckRes.json().catch(() => ({}))) as {
+      isDuplicate?: boolean;
+      error?: string;
+    };
+    if (!duplicateCheckRes.ok) {
       setLoading(false);
-      setError(duplicateCheckError.message);
+      setError(duplicateCheckBody.error ?? "중복가입 확인에 실패했습니다.");
       return;
     }
-    if (isDuplicate) {
+    if (duplicateCheckBody.isDuplicate) {
       setLoading(false);
       setError(
         `이미 동일한 이름과 생년월일로 가입된 계정이 있습니다. 본인의 계정이 맞다면 이전에 가입한 방법으로 로그인해주세요. 다른 사람인데 이 안내를 받으셨다면 ${CONTACT_EMAIL}로 문의해주세요.`,

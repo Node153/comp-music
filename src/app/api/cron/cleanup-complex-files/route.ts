@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteR2Object } from "@/lib/r2/storage";
+import { runWithConcurrency } from "@/lib/concurrency";
 
 // memo(Complex) 채팅에 쌓이는 파일(재창작물 음원 + 이미지)은 DEMO와 달리 영구 보관 대상이
 // 아니다 — memo는 "그때그때 스케치" 공동창작 공간이라 계속 쌓이면 R2 저장 비용만 늘어난다.
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ deleted: 0 });
   }
 
-  await Promise.all(oldFiles.map((row) => deleteR2Object(row.file_key!)));
+  await runWithConcurrency(oldFiles, 10, (row) => deleteR2Object(row.file_key!));
   const { error: deleteError } = await supabase
     .from("post_chat_messages")
     .delete()

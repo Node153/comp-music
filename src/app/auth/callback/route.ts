@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       providerErrorDescription,
     });
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(`소셜로그인 실패: ${providerErrorDescription ?? providerError}`)}`,
+      `${origin}/login?error=${encodeURIComponent("소셜로그인에 실패했습니다. 다시 시도해주세요.")}`,
     );
   }
 
@@ -32,12 +32,11 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}/feed`);
     }
-    // 원인을 못 남기면 매번 이 함수로 다시 들어와서 재현 테스트를 해야 해서, 실패 사유를
-    // 서버 로그(Vercel)에도 남기고 화면에도 그대로 보여준다(임시 진단용 — 안정화되면
-    // 사용자에게 내부 에러 메시지를 그대로 노출하지 않는 일반 문구로 되돌릴 것).
+    // 실패 사유는 서버 로그(Vercel)에만 남기고, 화면에는 내부 에러 메시지를 노출하지 않는다
+    // (한때 진단용으로 그대로 노출했었음 — 안정화된 지금은 되돌릴 시점).
     console.error("OAuth callback: exchangeCodeForSession 실패", error);
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(`소셜로그인 실패: ${error.message}`)}`,
+      `${origin}/login?error=${encodeURIComponent("소셜로그인에 실패했습니다. 다시 시도해주세요.")}`,
     );
   }
 

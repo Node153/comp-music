@@ -9,6 +9,9 @@ import { ConversationView } from "./ConversationView";
 // S13 DM 대화창 (DM-01, DM-03)
 // 게시물에서 시작된 DM은 첫 메시지의 source_post_id를 대화 상단에 고정 노출
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 10;
+// 대화가 쌓일수록 열 때마다 전체 이력을 매번 다시 읽어오던 걸 막기 위해 최근 메시지만 가져온다
+// (오래된 메시지를 스크롤로 더 불러오는 기능은 아직 없음 — 우선 무제한 조회부터 막는 범위).
+const MESSAGE_PAGE_SIZE = 100;
 
 export default async function ConversationPage({
   params,
@@ -44,13 +47,27 @@ export default async function ConversationPage({
   const otherUser = otherUserRow ? { name: otherUserRow.display_name } : null;
   const otherUserStatus = presenceStatus(presenceRow?.last_seen_at ?? null);
 
-  const { data: messages } = await supabase
-    .from("messages")
-    .select("id, sender_id, content, created_at, read_at, source_post_id")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
-
-  const pinnedPostId = (messages ?? []).find((m) => m.source_post_id)?.source_post_id ?? null;
+  // 핀 배너는 "게시물에서 시작된 대화"의 첫 메시지 하나만 있으면 되므로, 표시할 메시지
+  // 목록(최근 것만)과 별도로 가볍게 따로 조회한다 — 그래야 최근 메시지만 가져와도 오래된
+  // 대화의 핀 배너가 사라지지 않는다.
+  const [{ data: recentMessages }, { data: pinnedSourceRow }] = await Promise.all([
+    supabase
+      .from("messages")
+      .select("id, sender_id, content, created_at, read_at, source_post_id")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false })
+      .limit(MESSAGE_PAGE_SIZE),
+    supabase
+      .from("messages")
+      .select("source_post_id")
+      .eq("conversation_id", conversationId)
+      .not("source_post_id", "is", null)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const messages = (recentMessages ?? []).slice().reverse();
+  const pinnedPostId = pinnedSourceRow?.source_post_id ?? null;
   let pinnedPost: {
     videoSrc: string | null;
     caption: string | null;

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
+import { runWithConcurrency } from "@/lib/concurrency";
 
 // 이메일 알림(하루 1회 다이제스트) — Vercel Hobby 플랜 크론이 하루 1회로만 제한돼서(모바일
 // 앱이 없어 이메일이 유일한 알림 채널인데도) 실시간 발송 대신 이 방식으로 간다. 사용자별
@@ -9,7 +10,7 @@ import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedCon
 // 세어서 한 통으로 모아 보낸다. Kakao 무이메일 가입자(handle_new_user, 0034)의 자리표시자
 // 이메일(@no-email.comp.local)은 실제 메일함이 아니라서 건너뛴다.
 const PLACEHOLDER_EMAIL_SUFFIX = "@no-email.comp.local";
-const APP_URL = "https://comp-music.vercel.app";
+const APP_URL = "https://compmusic.kr";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -41,7 +42,10 @@ export async function GET(request: NextRequest) {
 
   let sent = 0;
 
-  for (const user of users ?? []) {
+  // 유저마다 최대 7개 쿼리를 하나씩 순차 await 하면(예전 for-loop) 유저 수가 늘수록 함수
+  // 실행 시간이 그대로 비례해서 늘어나 타임아웃으로 뒤쪽 유저만 못 받는 사고가 날 수 있다 —
+  // 유저 단위로는 병렬 처리하되, 동시성은 제한해서 DB 커넥션이 한 번에 몰리지 않게 한다.
+  await runWithConcurrency(users ?? [], 8, async (user) => {
     const cursor = user.last_notification_emailed_at;
     const sections: string[] = [];
 
@@ -134,7 +138,7 @@ export async function GET(request: NextRequest) {
     }
 
     await supabase.from("users").update({ last_notification_emailed_at: now }).eq("id", user.id);
-  }
+  });
 
   return NextResponse.json({ checked: users?.length ?? 0, sent });
 }

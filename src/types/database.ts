@@ -592,6 +592,12 @@ export interface Database {
         Args: { pid: string };
         Returns: { display_name: string; is_companion: boolean }[];
       };
+      // knock_context_batch(0059) — knock_context와 동일 로직을 post_id 배열로 한 번에 받는
+      // 배치 버전. feed/page.tsx가 invite_only 게시물마다 개별 호출하던 N+1을 없애려고 추가.
+      knock_context_batch: {
+        Args: { pids: string[] };
+        Returns: { post_id: string; display_name: string; is_companion: boolean }[];
+      };
       // public_taken_nicknames(0032)는 닉네임 겹침 방지 기능 자체를 되돌리면서(2026-08-20,
       // 익명성 강화 목적으로 숫자 접미사 재도입) 호출부가 없어짐 — DB 함수는 그대로 남아있지만
       // (재사용 가능성 있어 별도 마이그레이션으로 안 지움) 여기 타입 선언은 정리.
@@ -635,6 +641,18 @@ export interface Database {
       touch_conversation_last_message: {
         Args: { p_conversation_id: string };
         Returns: void;
+      };
+      // check_rate_limit(0058) — 고정 윈도 요청 횟수 제한. service_role(admin client, src/lib/
+      // rateLimit.ts)에서만 호출하고 클라이언트에는 노출하지 않는다.
+      check_rate_limit: {
+        Args: { p_bucket: string; p_key_hash: string; p_window_seconds: number; p_max: number };
+        Returns: boolean;
+      };
+      // latest_messages_for_conversations(0060) — conversationList.ts가 대화당 마지막 메시지
+      // 1개만 필요한데 전체 메시지를 긁어오던 걸 막기 위한 DISTINCT ON 배치 조회.
+      latest_messages_for_conversations: {
+        Args: { conversation_ids: string[] };
+        Returns: { conversation_id: string; content: string; created_at: string }[];
       };
     };
     Enums: Record<string, never>;
