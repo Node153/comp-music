@@ -13,6 +13,7 @@ import { SearchOverlayProvider } from "@/components/SearchOverlayContext";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { ThemeSync } from "@/components/ThemeSync";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
+import { FeatureGuideModal } from "@/components/FeatureGuideModal";
 import { NotificationCountProvider } from "@/components/NotificationCountContext";
 import { MessageCountProvider } from "@/components/MessageCountContext";
 import { getCurrentUser, getMyUserRow } from "@/lib/auth";
@@ -44,6 +45,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <MessageCountProvider>
                 <SearchOverlayProvider>
                   <PresenceHeartbeat userId={user.id} />
+                  {/* 신규 유저 첫 방문 가이드(DEMO/memo/PEAK/노크) — 로그인 화면 어디든 공통으로
+                      한 번만 뜨면 되는 오버레이라 fixed 모달로 여기 둔다(2026-09-23). */}
+                  <FeatureGuideModal userId={user.id} />
                   <NavSidebar currentUserId={user.id} userName={userName} isAdmin={isAdmin} />
                   {/* md 이상에서는 NavSidebar(접힌 기본폭 w-[72px], fixed, 호버 시 w-60으로만
                       넓어짐)가 왼쪽을 차지하므로 나머지 화면을 접힌 폭만큼 밀어낸다 — 호버 확장은
