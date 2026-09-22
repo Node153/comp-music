@@ -48,7 +48,11 @@ export default async function HelpPage() {
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 bg-main-gray p-6 pb-24 md:my-6 md:rounded-lg md:pb-6">
+    // 모바일은 pb-24(96px)로는 부족 — 로그인 사용자에겐 하단바 두 개(GlobalPlayerBar 64px +
+    // BottomNav 56px = 7.5rem/120px)가 항상 떠 있어서, 페이지 맨 아래 피드백 채팅 입력창이
+    // 그 밑에 24px 정도 가려지는 문제가 있었다(2026-09-22 확인 — messages/[conversationId]와
+    // 같은 원인). 데스크톱은 BottomNav가 없어(md:hidden) 기존 md:pb-6 그대로 둔다.
+    <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 bg-main-gray p-6 pb-[7.5rem] md:my-6 md:rounded-lg md:pb-6">
       <div>
         <h1 className={`${pageTitle} !text-black`}>Help</h1>
         <p className={`${mutedText} !text-active-gray mt-1`}>공지사항을 확인하고, 하고 싶은 말을 남겨주세요.</p>

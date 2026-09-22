@@ -93,7 +93,11 @@ export default async function ConversationPage({
   }
 
   return (
-    <main className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-[600px] flex-col bg-main-gray p-6 md:my-6 md:h-[70vh] md:rounded-lg">
+    // 모바일에서는 고정 하단바 두 개(GlobalPlayerBar 64px + NavSidebar 모바일 탭바 56px = 7.5rem)가
+    // 항상 화면 맨 아래를 덮고 있어서, 상단바(3.5rem)만 빼면 메시지 입력창이 그 밑에 가려진다
+    // (2026-09-22 확인 — 입력창이 존재는 하는데 두 고정바에 물리적으로 겹쳐 안 보이던 버그).
+    // 데스크톱은 모바일 탭바가 없어(md:hidden) 기존 md:h-[70vh]로 그대로 둔다.
+    <main className="mx-auto flex h-[calc(100vh-3.5rem-7.5rem)] max-w-[600px] flex-col bg-main-gray p-6 md:my-6 md:h-[70vh] md:rounded-lg">
       <MarkMessagesRead conversationId={conversationId} />
       <div className="flex items-center gap-3 pb-3">
         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">

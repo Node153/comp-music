@@ -25,7 +25,7 @@ const CARDS = [
 
 export function MemoGuideCards() {
   return (
-    <div className="flex gap-2 overflow-x-auto px-4 py-2 md:justify-center md:px-0">
+    <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-2 md:justify-center md:px-0">
       {CARDS.map((card) => (
         <div
           key={card.headline.join()}
