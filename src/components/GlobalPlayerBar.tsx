@@ -22,6 +22,7 @@ import {
   ListIcon,
   HeadphonesIcon,
   VolumeIcon,
+  ChevronDownIcon,
 } from "@/components/icons";
 
 const BAR_COUNT = 160;
@@ -64,8 +65,18 @@ function presetBars(seed: string): number[] {
 export function GlobalPlayerBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { track, isPlaying, setIsPlaying, toggle, pause, videoRef, duration, setDuration } =
-    useNowPlaying();
+  const {
+    track,
+    isPlaying,
+    setIsPlaying,
+    toggle,
+    pause,
+    videoRef,
+    duration,
+    setDuration,
+    barCollapsed,
+    toggleBarCollapsed,
+  } = useNowPlaying();
   const {
     items: queueItems,
     playAt,
@@ -230,6 +241,40 @@ export function GlobalPlayerBar() {
           똑같은 minmax(0,1fr)로 줘서 파형이 "화면 자체의" 정중앙에 오게 만든다(사용자 요청 —
           파형이 정렬 기준, 나머지 아이콘은 그 파형 양옆에 붙임). 좌우 폭이 같은 1fr이라 안의
           내용물 크기와 무관하게 가운데 열은 항상 정확히 화면 중앙에 위치한다. */}
+      {/* 모바일 접힘 전용 축소 바 — BottomNav 토글로 켜지면 풀 바(아래) 대신 이 얇은 줄만
+          보인다. 데스크톱(md)은 barCollapsed와 무관하게 절대 안 보임(토글 버튼 자체가
+          모바일 전용 BottomNav에만 있으므로). */}
+      <div
+        className={`fixed inset-x-0 bottom-14 z-50 h-11 items-center gap-2 border-t px-3 transition-colors md:hidden ${
+          barCollapsed ? "flex" : "hidden"
+        } ${barBg} ${barText} ${barBorder}`}
+      >
+        <button
+          onClick={track ? toggle : () => playAt(0)}
+          disabled={!track && !hasQueue}
+          aria-label={isPlaying ? "일시정지" : "재생"}
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition disabled:opacity-30 ${playButtonBg}`}
+        >
+          {isPlaying ? <PauseIcon className="h-3.5 w-3.5" /> : <PlayIcon className="h-3.5 w-3.5" />}
+        </button>
+        <button
+          onClick={toggleBarCollapsed}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          aria-label="사운드바 펼치기"
+        >
+          <span className="truncate text-xs font-semibold">
+            {track ? track.title : hasQueue ? `대기열 ${queueItems.length}곡` : "재생 중인 트랙 없음"}
+          </span>
+        </button>
+        <button
+          onClick={toggleBarCollapsed}
+          aria-label="사운드바 펼치기"
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ${barHover}`}
+        >
+          <ChevronDownIcon className="h-4 w-4 rotate-180" />
+        </button>
+      </div>
+
       <div
         // 전엔 md 이상에서 NavSidebar를 피해 md:left-[72px]로 시작점을 밀어냈는데, 그래도
         // 사이드바 폭 트랜지션 중 사운드바 왼쪽이 가려 보이는 문제가 계속 있었다(2026-09-16
@@ -237,7 +282,11 @@ export function GlobalPlayerBar() {
         // bottom-16까지만 뻗게 줄여서(NavSidebar.tsx 참고) 이 바와 세로로 아예 안 겹치게
         // 했으므로, 여기 있던 left 오프셋도 걷어내고 항상 화면 맨 왼쪽부터 꽉 채운다 — 두
         // 요소가 물리적으로 안 겹치니 어떤 z-index/트랜지션 상황에서도 가려질 수가 없다.
-        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t px-3 transition-colors md:bottom-0 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg} ${barText} ${barBorder}`}
+        // 모바일에서 barCollapsed면 위 축소 바로 대체되니 이 풀 바는 숨긴다(md:grid로
+        // md 이상에서는 항상 강제 노출 — 데스크톱엔 접기 버튼이 없어서 늘 펼쳐진 채여야 함).
+        className={`fixed inset-x-0 bottom-14 z-50 h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t px-3 transition-colors md:bottom-0 md:grid md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${
+          barCollapsed ? "hidden" : "grid"
+        } ${barBg} ${barText} ${barBorder}`}
       >
         {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
             justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}
