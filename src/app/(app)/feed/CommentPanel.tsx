@@ -23,10 +23,14 @@ export function CommentPanel({
   postId,
   userId,
   buttonClassName = "",
+  isDemo = false,
 }: {
   postId: string;
   userId: string;
   buttonClassName?: string;
+  // demo(공개 피드)의 댓글은 누구나 보는 공간이라 작성자가 나와 Companion이어도 닉네임만
+  // 보여준다(사용자 요청) — memo(기본값)는 그대로 user_display(0018)로 실명/닉네임을 가른다.
+  isDemo?: boolean;
 }) {
   const supabase = createClient();
   const { commentCount, setCommentCount } = usePostEngagement();
@@ -52,10 +56,14 @@ export function CommentPanel({
       .order("created_at", { ascending: true });
 
     // 이름은 user_display 뷰(0018) — 내가 Companion인 작성자만 실명, 나머지는 닉네임.
+    // demo는 예외 — public_post_authors(0024, 닉네임만)를 써서 Companion이어도 닉네임만 보여준다.
     const userIds = [...new Set((rows ?? []).map((r) => r.user_id))];
     const { data: users } =
       userIds.length > 0
-        ? await supabase.from("user_display").select("id, display_name").in("id", userIds)
+        ? await supabase
+            .from(isDemo ? "public_post_authors" : "user_display")
+            .select("id, display_name")
+            .in("id", userIds)
         : { data: [] };
     const nameMap = new Map((users ?? []).map((u) => [u.id, u.display_name]));
 

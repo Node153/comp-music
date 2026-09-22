@@ -44,9 +44,11 @@ export async function GET() {
     .sort((a, b) => b.score - a.score)
     .slice(0, PEAK_POSTS_VISIBLE_LIMIT);
 
+  // PEAK는 항상 demo(공개) 게시물이라 뷰어가 작성자의 Companion이어도 닉네임만 보여준다
+  // (사용자 요청) — public_post_authors(0024)는 애초에 닉네임만 내려준다.
   const authorIds = [...new Set(topPosts.map((p) => p.user_id))];
   const { data: authors } = await supabase
-    .from("user_display")
+    .from("public_post_authors")
     .select("id, display_name")
     .in("id", authorIds);
   const authorMap = new Map((authors ?? []).map((u) => [u.id, u.display_name]));

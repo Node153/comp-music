@@ -134,13 +134,12 @@ export default async function FeedPage({
   const postIds = posts.map((p) => p.id);
   const userIds = [...new Set(posts.map((p) => p.user_id))];
 
-  // 이름 표시는 전부 user_display 뷰(0018) — 뷰어가 Companion이면 실명, 아니면 닉네임이 내려온다.
-  // 비로그인 방문자는 누구의 Companion도 될 수 없고 user_display 자체가 "승인된 뷰어" 전제라
-  // 행을 안 내려주므로, 훨씬 좁은 public_post_authors(0024, 닉네임만) 뷰를 대신 쓴다.
+  // 이름 표시는 demo/memo가 다르다 — memo(Companion 전용)는 user_display 뷰(0018)로 뷰어가
+  // Companion이면 실명, 아니면 닉네임. demo(공개 피드)는 누구나 보는 공간이라 뷰어가 작성자의
+  // Companion이어도 닉네임만 보여준다(사용자 요청) — public_post_authors(0024)는 애초에
+  // 닉네임만 내려주고 로그인 여부도 안 가려서 그대로 쓸 수 있다.
   // 게시물 목록이 정해지면 그에 딸린 조회들(작성자·프로필·좋아요·댓글)과 PEAK 기준치용
   // 회원 수는 서로 독립이라 한 번에 병렬로 — 예전엔 5개를 순차 await 했다.
-  // 이름 표시는 user_display 뷰(0018) — 뷰어가 Companion이면 실명, 아니면 닉네임. 비로그인
-  // 방문자는 user_display가 행을 안 내려주므로 public_post_authors(0024, 닉네임만)를 쓴다.
   const [
     { data: users },
     { data: profiles },
@@ -150,7 +149,7 @@ export default async function FeedPage({
     { data: pinRows },
   ] = await Promise.all([
     userIds.length > 0
-      ? currentUser
+      ? isComplex
         ? supabase.from("user_display").select("id, display_name").in("id", userIds)
         : supabase.from("public_post_authors").select("id, display_name").in("id", userIds)
       : { data: [] as { id: string; display_name: string }[] },
@@ -832,7 +831,7 @@ export default async function FeedPage({
                       />
                     )}
                     <LikeButton postId={post.id} userId={currentUser.id} />
-                    <CommentPanel postId={post.id} userId={currentUser.id} />
+                    <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isComplex} />
                     {!isOwnPost ? (
                       <MessageButton
                         currentUserId={currentUser.id}

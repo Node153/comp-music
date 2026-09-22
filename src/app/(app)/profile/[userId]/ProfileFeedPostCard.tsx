@@ -131,7 +131,7 @@ export function ProfileFeedPostCard({
           <div className="flex flex-wrap items-center gap-6 border-t border-main-gray px-4 py-3.5">
             <PostViewCount className="inline-flex items-center gap-1 text-sm font-semibold text-black" iconClassName="h-4 w-4" />
             <LikeButton postId={post.id} userId={currentUserId} />
-            <CommentPanel postId={post.id} userId={currentUserId} />
+            <CommentPanel postId={post.id} userId={currentUserId} isDemo />
           </div>
         )}
       </article>
