@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
+import { HelpIcon } from "@/components/icons";
 import { beginThemeTransitionWithSound } from "@/lib/theme";
 
 const FEED_TABS = [
@@ -62,6 +63,15 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
         })}
       </nav>
 
+      {/* Help가 하단 탭(BottomNav)에서 빠지면서(2026-09, 사용자 요청 — 하단 탭 맨 앞은
+          "홈"이어야 해서 자리 재배치) 모바일에서 갈 곳이 없어지지 않도록 여기로 옮겨왔다. */}
+      <Link
+        href="/help"
+        aria-label="Help"
+        className={`shrink-0 ${isFeed ? "text-gray-500 dark:text-gray-400" : "text-black"}`}
+      >
+        <HelpIcon className="h-5 w-5" />
+      </Link>
       <NotificationsMenu userId={currentUserId} isFeed={isFeed} compact />
     </header>
   );
