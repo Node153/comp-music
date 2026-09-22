@@ -60,10 +60,12 @@ export function CompanionButton({
   const decline = () => run("none", deletePairRow);
   const disconnect = () => run("none", deletePairRow);
 
+  // 그레이 단계 축소(2026-09, 사용자 피드백) — 배경 채움 대신 테두리 굵기/색으로 주/보조
+  // 버튼을 구분한다(캔버스/카드 2단계 외에 새 배경톤을 안 만듦).
   const primaryClass =
-    "flex-1 rounded-xl bg-demo-bg px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-90 disabled:opacity-50";
+    "flex-1 rounded-xl border border-active-gray px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-90 disabled:opacity-50";
   const secondaryClass =
-    "flex-1 rounded-xl bg-box-gray px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-80 disabled:opacity-50";
+    "flex-1 rounded-xl border border-box-gray px-4 py-2.5 text-sm font-medium text-black transition hover:opacity-80 disabled:opacity-50";
 
   if (relation === "incoming") {
     return (

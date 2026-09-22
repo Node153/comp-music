@@ -1,33 +1,57 @@
 "use client";
 
-// 프로필 탭 게시물 그리드 — 현재 게시물 / 보관된 게시물 필터(2026-09) + 사용자 정의 폴더
-// (2026-09, 정태인님 제안 — 인스타그램 하이라이트/페이스북 앨범처럼 기존 게시물을 골라 담는
-// 묶음). ProfileTabs(게시물/소개/Companion) 탭 밑줄과 시각적으로 겹쳐 보이지 않도록(레퍼런스
-// 4곳 다 프로필에서 탭을 2단으로 안 겹침, 2026-09 검토) 밑줄 탭 대신 알약 모양 필터 칩으로.
+// 데스크톱 프로필 오른쪽 컬럼(3단계, 페이스북 참고) — "자기 피드"라는 표현대로, 왼쪽 3열
+// 썸네일 그리드(PostsGrid, 모바일 전용) 대신 세로로 넘기는 실제 피드 카드를 보여준다.
+// 현재/보관된 필터는 그대로 유지하고, 폴더는 큐레이션 도구 성격이 강해 기존
+// FolderView(썸네일 그리드 + 담기/빼기)를 그대로 재사용한다 — 피드 카드로 안 바꿈.
+// 밑줄 탭 대신 알약 필터 칩으로(2026-09, PostsGrid.tsx와 동일한 이유 — ProfileTabs 탭
+// 밑줄과 2단으로 겹쳐 보이지 않게).
 import { useState } from "react";
-import { PostTile, type ProfilePost } from "./PostTile";
+import type { ContentType } from "@/types/database";
 import { FolderView, type FolderData } from "./FolderView";
 import { NewFolderButton } from "./NewFolderButton";
+import { ProfileFeedPostCard } from "./ProfileFeedPostCard";
 
-export function PostsGrid({
+export type FeedPost = {
+  id: string;
+  title: string | null;
+  videoSrc: string | null;
+  posterSrc: string | null;
+  media_type: string;
+  content_type: ContentType | null;
+  instrument_tags: string[] | null;
+  caption: string | null;
+  isExpired: boolean;
+  view_count: number;
+  likeCount: number;
+  likedByMe: boolean;
+  commentCount: number;
+};
+
+export function ProfileFeed({
   posts,
   folders,
   isOwnProfile,
   userId,
+  currentUserId,
+  authorName,
 }: {
-  posts: ProfilePost[];
+  posts: FeedPost[];
   folders: FolderData[];
   isOwnProfile: boolean;
   userId: string;
+  currentUserId: string | null;
+  authorName: string;
 }) {
   const [tab, setTab] = useState<string>("current");
 
   const currentPosts = posts.filter((post) => !post.isExpired);
   const expiredPosts = posts.filter((post) => post.isExpired);
   const activeFolder = folders.find((f) => f.id === tab);
+  const visiblePosts = tab === "current" ? currentPosts : expiredPosts;
 
   return (
-    <div className="mt-4">
+    <div className="min-w-0">
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -77,12 +101,12 @@ export function PostsGrid({
           onDeleted={() => setTab("current")}
         />
       ) : (
-        <div className="mt-4 grid grid-cols-3 gap-1.5">
-          {(tab === "current" ? currentPosts : expiredPosts).map((post) => (
-            <PostTile key={post.id} post={post} />
+        <div className="mt-4 flex flex-col gap-4">
+          {visiblePosts.map((post) => (
+            <ProfileFeedPostCard key={post.id} post={post} authorName={authorName} currentUserId={currentUserId} />
           ))}
-          {(tab === "current" ? currentPosts : expiredPosts).length === 0 && (
-            <p className="col-span-3 py-10 text-center text-sm text-active-gray">
+          {visiblePosts.length === 0 && (
+            <p className="py-10 text-center text-sm text-active-gray">
               {tab === "current" ? "현재 게시물이 없습니다" : "보관된 게시물이 없습니다"}
             </p>
           )}

@@ -319,6 +319,37 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["post_pins"]["Insert"]>;
         Relationships: [];
       };
+      // 프로필 게시물 탭의 사용자 정의 폴더(0057) — 기존 게시물을 담기만 하는 묶음.
+      post_folders: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_folders"]["Insert"]>;
+        Relationships: [];
+      };
+      post_folder_items: {
+        Row: {
+          folder_id: string;
+          post_id: string;
+          created_at: string;
+        };
+        Insert: {
+          folder_id: string;
+          post_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_folder_items"]["Insert"]>;
+        Relationships: [];
+      };
       comments: {
         Row: {
           id: string;

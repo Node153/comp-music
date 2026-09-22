@@ -17,8 +17,10 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { PositionTagPicker } from "@/components/PositionTagPicker";
+import { GenreTagPicker } from "@/components/GenreTagPicker";
 import { VisibilityToggle } from "@/components/VisibilityToggle";
 import { errorText } from "@/components/ui/styles";
+import { GraduationCapIcon, MicIcon } from "@/components/icons";
 
 // 그레이 3단계(옅은/중간/짙은)만 쓰는 화면이라, 여러 색을 한번에 묶은 공유 토큰(field/label)
 // 대신 여기서 직접 정의한다 — 공유 토큰은 이 화면 밖(가입 인증 서류 제출 등)에서도 쓰여서 그대로 둔다.
@@ -28,9 +30,10 @@ const blackLabel = "text-sm font-medium text-black";
 
 type UserType = "student" | "activist";
 
-const USER_TYPE_OPTIONS: { value: UserType; label: string }[] = [
-  { value: "student", label: "🎓 전공생" },
-  { value: "activist", label: "🎤 활동자" },
+// 애플 이모지(🎓🎤) 대신 다른 화면과 같은 선(stroke) 아이콘으로(2026-09, 사용자 피드백).
+const USER_TYPE_OPTIONS: { value: UserType; label: string; Icon: typeof GraduationCapIcon }[] = [
+  { value: "student", label: "전공생", Icon: GraduationCapIcon },
+  { value: "activist", label: "활동자", Icon: MicIcon },
 ];
 
 type ProfileDetails = {
@@ -42,6 +45,9 @@ type ProfileDetails = {
   region: string;
   regionPublic: boolean;
   bio: string;
+  favoriteGenres: string[];
+  soundcloud: string;
+  youtube: string;
 };
 
 const EMPTY: ProfileDetails = {
@@ -53,6 +59,9 @@ const EMPTY: ProfileDetails = {
   region: "",
   regionPublic: true,
   bio: "",
+  favoriteGenres: [],
+  soundcloud: "",
+  youtube: "",
 };
 
 
@@ -68,7 +77,9 @@ export function ProfileDetailsForm() {
       if (!data.user) return;
       const { data: row } = await supabase
         .from("profiles")
-        .select("user_type, user_type_public, school, school_public, instruments, region, region_public, bio")
+        .select(
+          "user_type, user_type_public, school, school_public, instruments, region, region_public, bio, favorite_genres, portfolio_links",
+        )
         .eq("user_id", data.user.id)
         .maybeSingle();
 
@@ -94,6 +105,9 @@ export function ProfileDetailsForm() {
           region: row.region ?? "",
           regionPublic: row.region_public,
           bio: row.bio ?? "",
+          favoriteGenres: row.favorite_genres ?? [],
+          soundcloud: row.portfolio_links?.soundcloud ?? "",
+          youtube: row.portfolio_links?.youtube ?? "",
         });
       } else {
         setDetails((d) => ({ ...d, userType }));
@@ -114,6 +128,10 @@ export function ProfileDetailsForm() {
       setSaving(false);
       return;
     }
+    const portfolioLinks: Record<string, string> = {};
+    if (details.soundcloud.trim()) portfolioLinks.soundcloud = details.soundcloud.trim();
+    if (details.youtube.trim()) portfolioLinks.youtube = details.youtube.trim();
+
     const { error } = await supabase.from("profiles").upsert(
       {
         user_id: user.id,
@@ -125,6 +143,8 @@ export function ProfileDetailsForm() {
         region: details.region.trim() || null,
         region_public: details.regionPublic,
         bio: details.bio.trim() || null,
+        favorite_genres: details.favoriteGenres.length > 0 ? details.favoriteGenres : null,
+        portfolio_links: Object.keys(portfolioLinks).length > 0 ? portfolioLinks : null,
       },
       { onConflict: "user_id" },
     );
@@ -152,12 +172,13 @@ export function ProfileDetailsForm() {
               type="button"
               disabled={!loaded}
               onClick={() => setDetails((d) => ({ ...d, userType: option.value }))}
-              className={`rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              className={`flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                 details.userType === option.value
                   ? "bg-demo-bg text-black"
                   : "bg-box-gray text-black hover:opacity-80"
               }`}
             >
+              <option.Icon className="h-4 w-4" />
               {option.label}
             </button>
           ))}
@@ -185,6 +206,10 @@ export function ProfileDetailsForm() {
         value={details.instruments}
         onChange={(next) => setDetails((d) => ({ ...d, instruments: next }))}
       />
+      <GenreTagPicker
+        value={details.favoriteGenres}
+        onChange={(next) => setDetails((d) => ({ ...d, favoriteGenres: next }))}
+      />
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <span className={blackLabel}>지역</span>
@@ -200,6 +225,25 @@ export function ProfileDetailsForm() {
           disabled={!loaded}
           value={details.region}
           onChange={(e) => setDetails((d) => ({ ...d, region: e.target.value }))}
+          className={grayField}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <span className={blackLabel}>포트폴리오 링크</span>
+        <input
+          type="url"
+          placeholder="SoundCloud 링크"
+          disabled={!loaded}
+          value={details.soundcloud}
+          onChange={(e) => setDetails((d) => ({ ...d, soundcloud: e.target.value }))}
+          className={grayField}
+        />
+        <input
+          type="url"
+          placeholder="YouTube 링크"
+          disabled={!loaded}
+          value={details.youtube}
+          onChange={(e) => setDetails((d) => ({ ...d, youtube: e.target.value }))}
           className={grayField}
         />
       </div>

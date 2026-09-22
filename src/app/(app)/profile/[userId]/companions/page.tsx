@@ -57,7 +57,7 @@ export default async function CompanionsPage({
       <li key={id}>
         <Link
           href={`/profile/${id}`}
-          className="flex items-center gap-3 rounded-xl bg-box-gray px-2 py-3 transition hover:opacity-90"
+          className="flex items-center gap-3 rounded-xl border border-box-gray px-2 py-3 transition hover:opacity-90"
         >
           <Avatar userId={id} name={u.display_name} className="h-10 w-10 text-sm" />
           <div className="flex flex-1 flex-col">

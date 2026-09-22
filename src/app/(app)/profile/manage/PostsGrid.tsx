@@ -26,8 +26,10 @@ export function PostsGrid({ posts }: { posts: ManagedPost[] }) {
         <button
           type="button"
           onClick={() => setTab("current")}
-          className={`flex-1 border-b-2 px-2 py-2.5 text-sm font-semibold text-black transition ${
-            tab === "current" ? "border-box-gray" : "border-transparent hover:opacity-70"
+          className={`flex-1 border-b-2 px-2 py-2.5 text-sm transition ${
+            tab === "current"
+              ? "border-black font-semibold text-black"
+              : "border-transparent font-medium text-active-gray hover:opacity-70"
           }`}
         >
           현재 게시물 <span className="text-active-gray">{currentPosts.length}</span>
@@ -35,11 +37,13 @@ export function PostsGrid({ posts }: { posts: ManagedPost[] }) {
         <button
           type="button"
           onClick={() => setTab("expired")}
-          className={`flex-1 border-b-2 px-2 py-2.5 text-sm font-semibold text-black transition ${
-            tab === "expired" ? "border-box-gray" : "border-transparent hover:opacity-70"
+          className={`flex-1 border-b-2 px-2 py-2.5 text-sm transition ${
+            tab === "expired"
+              ? "border-black font-semibold text-black"
+              : "border-transparent font-medium text-active-gray hover:opacity-70"
           }`}
         >
-          만료된 게시물 <span className="text-active-gray">{expiredPosts.length}</span>
+          보관된 게시물 <span className="text-active-gray">{expiredPosts.length}</span>
         </button>
       </div>
 
@@ -63,7 +67,7 @@ export function PostsGrid({ posts }: { posts: ManagedPost[] }) {
         ))}
         {visiblePosts.length === 0 && (
           <p className="col-span-3 py-10 text-center text-sm text-active-gray">
-            {tab === "current" ? "현재 게시물이 없습니다" : "만료된 게시물이 없습니다"}
+            {tab === "current" ? "현재 게시물이 없습니다" : "보관된 게시물이 없습니다"}
           </p>
         )}
       </div>
