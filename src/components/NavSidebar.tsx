@@ -11,7 +11,7 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { MessagesMenu } from "@/components/MessagesMenu";
 import { SearchMenu } from "@/components/SearchMenu";
-import { PlusIcon, HelpIcon } from "@/components/icons";
+import { HomeIcon, PlusIcon, HelpIcon } from "@/components/icons";
 import { navRowClass, navLabelClass } from "@/components/ui/styles";
 
 export function NavSidebar({
@@ -90,6 +90,13 @@ export function NavSidebar({
           한다(2026-09-16, 사용자 요청 — "메뉴 아이콘들 세로 중앙정렬"). flex-1이 로고 아래
           남은 높이를 전부 차지하고, justify-center가 그 안에서 그룹 전체를 가운데 정렬한다. */}
       <div className="flex flex-1 flex-col justify-center gap-1">
+        {/* 로고 클릭으로도 /feed로 갈 수 있지만, 인스타/스레드 데스크톱 웹도 그거랑 별개로
+            메뉴 목록 맨 위에 "홈"을 따로 둔다(2026-09, 사용자 요청 — 모바일 하단 탭에 홈을
+            추가한 것과 같은 이유, BottomNav.tsx 주석 참고). */}
+        <Link href="/feed" className={navRowClass(isFeed, isFeed, expanded)}>
+          <HomeIcon className="h-6 w-6 shrink-0" />
+          <span className={navLabelClass(expanded)}>홈</span>
+        </Link>
         <SearchMenu isFeed={isFeed} expanded={expanded} onOpenChange={setSearchOpen} />
         <MessagesMenu
           currentUserId={currentUserId}
