@@ -14,6 +14,7 @@ import { SearchOverlay } from "@/components/SearchOverlay";
 import { ThemeSync } from "@/components/ThemeSync";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { NotificationCountProvider } from "@/components/NotificationCountContext";
+import { MessageCountProvider } from "@/components/MessageCountContext";
 import { getCurrentUser, getMyUserRow } from "@/lib/auth";
 
 // 승인된 사용자 전용 화면(S6 피드, S8 업로드, S9 프로필, S12/S13 DM) 공통 레이아웃.
@@ -40,24 +41,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <PageCanvas>
           <PlaylistProvider>
             <NotificationCountProvider>
-              <SearchOverlayProvider>
-                <PresenceHeartbeat userId={user.id} />
-                <NavSidebar currentUserId={user.id} userName={userName} isAdmin={isAdmin} />
-                {/* md 이상에서는 NavSidebar(접힌 기본폭 w-[72px], fixed, 호버 시 w-60으로만
-                    넓어짐)가 왼쪽을 차지하므로 나머지 화면을 접힌 폭만큼 밀어낸다 — 호버 확장은
-                    콘텐츠를 안 밀고 그 위에 겹쳐 뜨는 오버레이라 오프셋은 항상 접힌 폭 기준.
-                    GlobalPlayerBar/QueuePanel은 fixed라 이 패딩 영향을 안 받아서 각자 파일에서
-                    md:left-[72px]로 따로 맞춘다. */}
-                <div className="md:pl-[72px]">
-                  <TopNav />
-                  <MobileTopBar currentUserId={user.id} />
-                  {children}
-                  <BottomNav currentUserId={user.id} />
-                </div>
-                <GlobalPlayerBar />
-                <QueuePanel />
-                <SearchOverlay />
-              </SearchOverlayProvider>
+              <MessageCountProvider>
+                <SearchOverlayProvider>
+                  <PresenceHeartbeat userId={user.id} />
+                  <NavSidebar currentUserId={user.id} userName={userName} isAdmin={isAdmin} />
+                  {/* md 이상에서는 NavSidebar(접힌 기본폭 w-[72px], fixed, 호버 시 w-60으로만
+                      넓어짐)가 왼쪽을 차지하므로 나머지 화면을 접힌 폭만큼 밀어낸다 — 호버 확장은
+                      콘텐츠를 안 밀고 그 위에 겹쳐 뜨는 오버레이라 오프셋은 항상 접힌 폭 기준.
+                      GlobalPlayerBar/QueuePanel은 fixed라 이 패딩 영향을 안 받아서 각자 파일에서
+                      md:left-[72px]로 따로 맞춘다. */}
+                  <div className="md:pl-[72px]">
+                    <TopNav />
+                    <MobileTopBar currentUserId={user.id} />
+                    {children}
+                    <BottomNav currentUserId={user.id} />
+                  </div>
+                  <GlobalPlayerBar />
+                  <QueuePanel />
+                  <SearchOverlay />
+                </SearchOverlayProvider>
+              </MessageCountProvider>
             </NotificationCountProvider>
           </PlaylistProvider>
         </PageCanvas>

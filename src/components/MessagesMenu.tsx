@@ -22,6 +22,7 @@ import type { ConversationItem } from "@/lib/conversationList";
 import type { PresenceStatus } from "@/lib/presence";
 import { MarkMessagesRead } from "@/app/(app)/messages/[conversationId]/MarkMessagesRead";
 import { ConversationView } from "@/app/(app)/messages/[conversationId]/ConversationView";
+import { useMessageCount } from "@/components/MessageCountContext";
 
 type ThreadData = {
   otherUserId: string;
@@ -42,6 +43,7 @@ export function MessagesMenu({
   onOpenChange?: (open: boolean) => void;
 }) {
   const search = useSearchOverlay();
+  const unreadConversations = useMessageCount();
   const [open, setOpen] = useState(false);
   // null = 이번에 열고 나서 아직 못 받아옴(로딩 중) — 열 때마다 toggleOpen에서 초기화해서 매번 새로 불러온다.
   const [conversations, setConversations] = useState<ConversationItem[] | null>(null);
@@ -129,7 +131,14 @@ export function MessagesMenu({
   return (
     <div className="relative">
       <button onClick={toggleOpen} title="Chat" aria-label="Chat" className={navRowClass(open, isFeed, expanded)}>
-        <ChatIcon className="h-6 w-6 shrink-0" />
+        <span className="relative shrink-0">
+          <ChatIcon className="h-6 w-6" />
+          {unreadConversations > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+              {unreadConversations}
+            </span>
+          )}
+        </span>
         <span className={navLabelClass(expanded)}>메시지</span>
       </button>
 

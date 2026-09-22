@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { useNotificationCount } from "@/components/NotificationCountContext";
+import { useMessageCount } from "@/components/MessageCountContext";
 import { HomeIcon, SearchIcon, MailIcon, PlusIcon, UserIcon } from "@/components/icons";
 
 const itemClass = (active: boolean) =>
@@ -25,6 +26,7 @@ export function BottomNav({ currentUserId }: { currentUserId: string }) {
   const pathname = usePathname();
   const search = useSearchOverlay();
   const unseenNotifications = useNotificationCount();
+  const unreadConversations = useMessageCount();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-white/10 bg-[#1c1c1e]/80 text-white backdrop-blur md:hidden">
@@ -43,6 +45,11 @@ export function BottomNav({ currentUserId }: { currentUserId: string }) {
       <Link href="/messages" className={itemClass(pathname.startsWith("/messages"))}>
         <MailIcon className="h-5 w-5" />
         메시지
+        {unreadConversations > 0 && (
+          <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
+            {unreadConversations}
+          </span>
+        )}
       </Link>
       <Link
         href={`/profile/${currentUserId}`}
