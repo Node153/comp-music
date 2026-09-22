@@ -7,7 +7,6 @@ import { MessageButton } from "@/components/MessageButton";
 import { EngagementMeter } from "@/components/EngagementMeter";
 import { PostEngagementProvider } from "@/components/PostEngagementContext";
 import { PostVideo } from "@/components/PostVideo";
-import { MockPlayOverlay } from "@/components/MockPlayOverlay";
 import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { ComplexPostChat, type ChatMessage } from "@/components/ComplexPostChat";
 import { ComplexAccessGate } from "@/components/ComplexAccessGate";
@@ -28,7 +27,7 @@ import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
-import { HeartIcon, CommentIcon, MailIcon } from "@/components/icons";
+import { MailIcon } from "@/components/icons";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -45,239 +44,6 @@ const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
 
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 30;
 const FEED_LIMIT = 20;
-
-// Demo(전체공개) 전용 샘플 게시물 — 실제 업로드 없이 볼륨미터/PEAK/타임리밋 UI를 바로 확인할 수
-// 있도록 넣은 데모 데이터. isMock 게시물은 DB에 실제 row가 없어 좋아요/댓글 버튼을 누를 수 없고
-// 숫자만 정적으로 보여준다. Complex(팔로워공개/특정인초대)는 0012_complex_access_and_chat부터
-// 실제 posts/post_access/post_chat_messages로 연동돼서 더 이상 mock 샘플이 없다.
-type MockSample = {
-  postId: string;
-  userId: string;
-  name: string;
-  school: string;
-  positions: string[];
-  // 작품 제목 — caption(부가 설명)과 분리(0052, 2026-09-15).
-  title: string;
-  caption: string;
-  contentType: ContentType;
-  tags: string[];
-  collab: boolean;
-  collabRole: string | null;
-  // 좋아요를 고정 숫자로 박아두면 회원이 늘/줄 때마다 "회원 10명인데 좋아요 71개" 같은 비현실적인
-  // 숫자가 되고, PEAK 기준(회원수/3)도 그때그때 달라져서 매번 다시 손봐야 한다 — 그래서 절대값
-  // 대신 peakThreshold 대비 배수로 갖고 있다가 렌더 시점에 실제 회원 수 기준으로 계산한다.
-  // (아래 목록은 배수를 오름차순으로 둬서 미터가 초록/노랑/빨강/PEAK 구간을 골고루 보여준다.)
-  likesMultiplier: number;
-  // 댓글 수 = 좋아요 수 × 이 비율(원래 데이터의 댓글/좋아요 비율을 그대로 유지).
-  commentRatio: number;
-  publishedHoursAgo: number;
-  expireHours: number | null;
-  gradient: string;
-  demoVideoSrc?: string;
-};
-
-const DEMO_MOCK_SAMPLES: MockSample[] = [
-  {
-    postId: "mock-completion-1",
-    userId: "mock-user-1",
-    name: "정하늘",
-    school: "서울대",
-    positions: ["작곡"],
-    title: "첫 발라드 싱글",
-    caption: "드디어 완성한 첫 발라드 싱글, 앨범 커버까지 다 뽑았어요!",
-    contentType: "composition",
-    tags: ["피아노", "발라드"],
-    collab: false,
-    collabRole: null,
-    likesMultiplier: 0.65,
-    commentRatio: 0.28,
-    publishedHoursAgo: 20,
-    expireHours: null,
-    gradient: "from-gray-700 to-gray-900",
-  },
-  {
-    postId: "mock-completion-2",
-    userId: "mock-user-2",
-    name: "오세준",
-    school: "한예종",
-    positions: ["기타"],
-    title: "합주 최종본",
-    caption: "6개월 준비한 합주 영상 최종본 공개합니다",
-    contentType: "ensemble",
-    tags: ["기타", "밴드"],
-    collab: false,
-    collabRole: null,
-    likesMultiplier: 1.0,
-    commentRatio: 0.24,
-    publishedHoursAgo: 30,
-    expireHours: null,
-    gradient: "from-gray-700 to-gray-900",
-  },
-  {
-    postId: "mock-completion-3",
-    userId: "mock-user-3",
-    name: "한지민",
-    school: "활동자",
-    positions: ["보컬"],
-    title: "보컬 커버",
-    caption: "제 보컬 커버 정식 업로드했어요, 많이 들어주세요!",
-    contentType: "performance",
-    tags: ["보컬"],
-    collab: false,
-    collabRole: null,
-    likesMultiplier: 1.4,
-    commentRatio: 0.35,
-    publishedHoursAgo: 5,
-    expireHours: null,
-    gradient: "from-gray-700 to-gray-900",
-    // Demo 게시물만 우선 재생 가능하게 테스트하기 위한 데모 오디오(하단 GlobalPlayerBar 확인용).
-    demoVideoSrc: "/demo-completion-track.wav",
-  },
-  // 아래 5개는 반응량이 서로 달라서 미터가 초록/노랑/빨강/PEAK 구간을 골고루 보여주도록 넣은 샘플.
-  {
-    postId: "mock-completion-4",
-    userId: "mock-user-4",
-    name: "이서연",
-    school: "한예종",
-    positions: ["보컬"],
-    title: "첫 라이브 클립",
-    caption: "첫 라이브 클립 편집 완료! 떨렸지만 재밌었어요",
-    contentType: "performance",
-    tags: ["보컬", "라이브"],
-    collab: false,
-    collabRole: null,
-    likesMultiplier: 0.1,
-    commentRatio: 0.2,
-    publishedHoursAgo: 2,
-    expireHours: null,
-    gradient: "from-gray-700 to-gray-900",
-  },
-  {
-    postId: "mock-completion-5",
-    userId: "mock-user-5",
-    name: "박지훈",
-    school: "활동자",
-    positions: ["드럼"],
-    title: "드럼 커버",
-    caption: "드럼 커버 영상 새로 올려요, 이번엔 좀 빠른 곡으로",
-    contentType: "performance",
-    tags: ["드럼"],
-    collab: false,
-    collabRole: null,
-    likesMultiplier: 0.3,
-    commentRatio: 0.2,
-    publishedHoursAgo: 9,
-    expireHours: null,
-    gradient: "from-gray-700 to-gray-900",
-  },
-  {
-    postId: "mock-completion-6",
-    userId: "mock-user-6",
-    name: "최민아",
-    school: "경희대",
-    positions: ["피아노/건반"],
-    title: "쇼팽 녹턴",
-    caption: "쇼팽 녹턴 연주 영상입니다, 편안하게 들어주세요",
-    contentType: "performance",
-    tags: ["피아노", "클래식"],
-    collab: false,
-    collabRole: null,
-    likesMultiplier: 0.5,
-    commentRatio: 0.25,
-    publishedHoursAgo: 14,
-    expireHours: null,
-    gradient: "from-gray-700 to-gray-900",
-  },
-  {
-    postId: "mock-completion-7",
-    userId: "mock-user-7",
-    name: "김도윤",
-    school: "서울대",
-    positions: ["작곡"],
-    title: "영화음악 샘플",
-    caption: "영화음악 샘플 트랙 공개합니다, 피드백 환영해요",
-    contentType: "composition",
-    tags: ["작곡", "필름스코어"],
-    collab: false,
-    collabRole: null,
-    likesMultiplier: 0.7,
-    commentRatio: 0.24,
-    publishedHoursAgo: 26,
-    expireHours: null,
-    gradient: "from-gray-700 to-gray-900",
-  },
-  {
-    postId: "mock-completion-8",
-    userId: "mock-user-8",
-    name: "강태오",
-    school: "활동자",
-    positions: ["베이스"],
-    title: "베이스 솔로 챌린지",
-    caption: "베이스 솔로 챌린지 영상, 다들 한번 도전해보세요!",
-    contentType: "improv",
-    tags: ["베이스", "챌린지"],
-    collab: false,
-    collabRole: null,
-    likesMultiplier: 0.85,
-    commentRatio: 0.25,
-    publishedHoursAgo: 40,
-    expireHours: null,
-    gradient: "from-gray-700 to-gray-900",
-  },
-];
-
-function buildDemoMockPosts(
-  samples: MockSample[],
-  userMap: Map<string, { id: string; name: string }>,
-  profileMap: Map<
-    string,
-    { user_id: string; school: string | null; school_public: boolean; instruments: string[] | null }
-  >,
-  likeCountMap: Map<string, number>,
-  commentCountMap: Map<string, number>,
-  weeklyLikeCountMap: Map<string, number>,
-  peakThreshold: number,
-  approvedMemberCount: number,
-) {
-  const now = Date.now();
-  return samples.map((m) => {
-    userMap.set(m.userId, { id: m.userId, name: m.name });
-    profileMap.set(m.userId, { user_id: m.userId, school: m.school, school_public: true, instruments: m.positions });
-    // likesMultiplier × 현재 peakThreshold로 계산 — 좋아요 수가 승인 회원 수를 넘는 비현실적인
-    // 상황이 안 나오게 approvedMemberCount로 한 번 더 clamp한다(실제 likes 테이블도
-    // post_id+user_id 유니크라 회원 수 이상은 물리적으로 불가능).
-    const likes = Math.max(0, Math.min(approvedMemberCount, Math.round(peakThreshold * m.likesMultiplier)));
-    const comments = Math.round(likes * m.commentRatio);
-    likeCountMap.set(m.postId, likes);
-    commentCountMap.set(m.postId, comments);
-    // mock 게시물은 개별 좋아요 row(created_at)가 없어서 "이번 주" 구분이 불가능 — 전체
-    // 좋아요 수를 그대로 이번 주 수로도 쓴다(볼륨미터 데모 목적이니 근사치로 충분).
-    weeklyLikeCountMap.set(m.postId, likes);
-    return {
-      id: m.postId,
-      user_id: m.userId,
-      video_url: "",
-      title: m.title,
-      caption: m.caption,
-      content_type: m.contentType,
-      instrument_tags: m.tags,
-      visibility: "public" as const,
-      collab_available: m.collab,
-      collab_role_needed: m.collabRole,
-      published_at: new Date(now - m.publishedHoursAgo * 3600 * 1000).toISOString(),
-      expires_at: m.expireHours == null ? null : new Date(now + m.expireHours * 3600 * 1000).toISOString(),
-      media_type: "video" as const,
-      videoSrc: null,
-      posterSrc: null,
-      canViewMedia: true,
-      isMock: true as const,
-      gradient: m.gradient,
-      demoVideoSrc: m.demoVideoSrc ?? null,
-      // mock 게시물은 조회수(0052) 실집계가 없어 0 고정 — 목데이터라 재생 자체가 카운트 안 됨.
-      view_count: 0,
-    };
-  });
-}
 
 export default async function FeedPage({
   searchParams,
@@ -595,29 +361,13 @@ export default async function FeedPage({
         videoSrc,
         posterSrc,
         canViewMedia: canView,
-        isMock: false as const,
-        gradient: "",
-        demoVideoSrc: null,
       };
     }),
   );
 
-  const mockPosts = isComplex
-    ? []
-    : buildDemoMockPosts(
-        DEMO_MOCK_SAMPLES,
-        userMap,
-        profileMap,
-        likeCountMap,
-        commentCountMap,
-        weeklyLikeCountMap,
-        peakThreshold,
-        approvedMemberCount ?? 0,
-      );
-
   // memo 탭은 고정된(위 isPinned — 자동 규칙 또는 PinButton 오버라이드) 합작 게시물을
   // 최신순보다 우선해 상단에 둔다(사용자 요청). DEMO는 그대로 최신순.
-  const allPostsUnfiltered = [...postsWithVideo, ...mockPosts].sort((a, b) => {
+  const allPostsUnfiltered = [...postsWithVideo].sort((a, b) => {
     if (isComplex) {
       const pinDiff = Number(isPinned(b)) - Number(isPinned(a));
       if (pinDiff !== 0) return pinDiff;
@@ -769,9 +519,8 @@ export default async function FeedPage({
           // 걸러진 상태라(위 posts 필터) 항상 열람 가능.
           // 재생 가능한(오디오·영상) DEMO 게시물이면 헤더에 "플레이리스트에 담기" 버튼을
           // 붙인다. memo는 담기 금지(사용자 요청 — 한 번 "합작 제외하고 허용"으로 열었다가
-          // 다시 완전히 막기로 정정받음) — !isComplex로 DEMO만 남긴다. mock 게시물은
-          // demoVideoSrc, 실제 게시물은 signed URL(videoSrc).
-          const playlistSrc = post.isMock ? post.demoVideoSrc : post.videoSrc;
+          // 다시 완전히 막기로 정정받음) — !isComplex로 DEMO만 남긴다.
+          const playlistSrc = post.videoSrc;
           const playlistTrack =
             !!currentUser && !isComplex && post.media_type !== "image" && playlistSrc
               ? {
@@ -850,7 +599,7 @@ export default async function FeedPage({
                 // 공동창작 미체크는 DEMO처럼 평범한 카드라 확대할 것도 없다.
                 isComplex={isComplex && post.collab_available}
                 optionsMenu={
-                  isOwnPost && !isComplex && !post.isMock ? (
+                  isOwnPost && !isComplex ? (
                     <PostOptionsMenu
                       postId={post.id}
                       mediaPath={post.image_url ?? post.audio_url ?? post.video_url ?? ""}
@@ -967,27 +716,7 @@ export default async function FeedPage({
                         </div>
                       )}
 
-                      {post.isMock ? (
-                        <div
-                          className={`relative flex w-full items-center justify-center bg-gradient-to-br ${post.gradient} ${
-                            // h-[40svh]는 breakpoint 없이 항상 걸리는 값이라, md:aspect-square가
-                            // 이기려면 먼저 md:h-auto로 그 고정 높이를 지워줘야 한다(안 그러면
-                            // 높이가 이미 정해진 값이라 aspect-ratio가 무시됨 — 2026-09-14
-                            // 실제로 이 버그로 데스크톱에서 657×396으로 깨졌던 걸 발견·수정).
-                            oneScreenFeed ? "h-[40svh] md:h-auto md:aspect-square" : "h-[420px]"
-                          }`}
-                        >
-                          {post.demoVideoSrc && (
-                            <MockPlayOverlay
-                              postId={post.id}
-                              title={post.title || post.caption}
-                              author={author?.name ?? "알 수 없음"}
-                              authorId={post.user_id}
-                              videoSrc={post.demoVideoSrc}
-                            />
-                          )}
-                        </div>
-                      ) : post.videoSrc && post.media_type === "image" ? (
+                      {post.videoSrc && post.media_type === "image" ? (
                         currentUser ? (
                           <DoubleTapLikeArea postId={post.id} userId={currentUser.id}>
                             <img
@@ -1089,15 +818,6 @@ export default async function FeedPage({
                       likeCount={likeCount}
                       commentCount={commentCount}
                     />
-                  ) : post.isMock ? (
-                    <div
-                      className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600 shrink-0 dark:border-gray-800 dark:text-gray-300"
-                      title="샘플 게시물이라 실제로 누를 수는 없어요"
-                    >
-                      {!isComplex && <PostViewCount className="inline-flex items-center gap-1" iconClassName="h-5 w-5" />}
-                      <span className="inline-flex items-center gap-1"><HeartIcon className="h-5 w-5" /> {likeCount > 0 ? likeCount : ""}</span>
-                      <span className="inline-flex items-center gap-1"><CommentIcon className="h-5 w-5" /> {commentCount > 0 ? commentCount : ""}</span>
-                    </div>
                   ) : (
                 currentUser && (
                   // 왼쪽 정렬 아이콘 행(사용자 요청) — 조회수 → 하트 → 댓글 순서. 예전엔
