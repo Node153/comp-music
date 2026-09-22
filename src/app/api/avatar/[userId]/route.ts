@@ -31,11 +31,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
 
   // presigned URL로 리다이렉트하지 않고 바이트를 직접 응답에 실어보낸다 — Safari가 <img>의
   // 리다이렉트 응답을 no-store에도 캐시해버려서(2026-09-17) 새로고침해도 이전 사진이 보이는
-  // 문제가 있었다. R2 응답 자체엔 Cache-Control이 없어(업로드 시 지정 안 함) 어차피
-  // 브라우저가 자체 휴리스틱으로 캐시할 여지가 있었는데, 리다이렉트 없이 우리 라우트가
-  // 직접 no-store를 실어보내면 그 여지 자체가 없어진다.
+  // 문제가 있었다. 리다이렉트가 아니라 우리 라우트가 직접 바이트를 실어보내므로 그 버그는
+  // 재현되지 않는다 — 그래서 일반 Cache-Control을 걸어도 안전하다. 앱 전체 아바타가 이
+  // 라우트 하나를 거치는데 no-store였던 탓에 같은 사진을 볼 때마다 R2→함수 구간 트래픽이
+  // 매번 전부 다시 흘러(Vercel Fast Origin Transfer 무료 한도의 상당 부분을 여기서 소모,
+  // 2026-09-23) max-age+SWR로 완화한다. 본인이 방금 사진을 바꾼 화면(ProfilePhotoForm)은
+  // 로컬 photoVersion으로 매번 다른 URL(?v=)을 만들어 이 캐시와 무관하게 즉시 최신본을 본다.
   const { body, contentType } = await getR2ObjectStream(data.profile_image_url);
-  const headers: Record<string, string> = { "Content-Type": contentType, "Cache-Control": "no-store" };
+  const headers: Record<string, string> = {
+    "Content-Type": contentType,
+    "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
+  };
   // upload-url이 화이트리스트를 강제하기 전(과거)에 올라간 오브젝트가 남아있을 수 있어,
   // 예상 밖의 Content-Type이면 브라우저가 직접 렌더링하지 못하게 다운로드로 강제한다.
   if (!ALLOWED_UPLOAD_CONTENT_TYPES.has(contentType)) {
