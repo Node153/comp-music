@@ -375,3 +375,14 @@ export function MapPinIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// 프로필 게시물 탭의 폴더 칩 아이콘(2026-09) — 현재/보관된/좋아요 같은 상태 필터와 달리
+// "사용자가 직접 모은 묶음"이라는 걸 아이콘으로 구분해준다(사용자 피드백 — 텍스트만
+// 나열되어 있어 구분이 안 된다).
+export function FolderIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    </svg>
+  );
+}

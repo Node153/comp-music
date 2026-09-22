@@ -7,6 +7,7 @@ import { DeletePostButton } from "./DeletePostButton";
 type ManagedPost = {
   id: string;
   videoSrc: string | null;
+  posterSrc?: string | null;
   media_type: string;
   caption: string | null;
   mediaPath: string;
@@ -53,14 +54,24 @@ export function PostsGrid({ posts }: { posts: ManagedPost[] }) {
             {post.videoSrc && post.media_type === "image" ? (
               <img src={post.videoSrc} alt="" className="h-full w-full object-cover" />
             ) : post.videoSrc && post.media_type === "audio" ? (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-demo-bg p-3 text-center">
-                <span className="text-2xl">🎵</span>
-                {post.caption && (
-                  <span className="line-clamp-3 text-xs text-black">{post.caption}</span>
-                )}
-              </div>
+              post.posterSrc ? (
+                <img src={post.posterSrc} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-demo-bg p-3 text-center">
+                  <span className="text-2xl">🎵</span>
+                  {post.caption && (
+                    <span className="line-clamp-3 text-xs text-black">{post.caption}</span>
+                  )}
+                </div>
+              )
             ) : post.videoSrc ? (
-              <video src={post.videoSrc} className="h-full w-full object-cover" muted preload="metadata" />
+              <video
+                src={post.videoSrc}
+                poster={post.posterSrc ?? undefined}
+                className="h-full w-full object-cover"
+                muted
+                preload="metadata"
+              />
             ) : null}
             <DeletePostButton postId={post.id} mediaPath={post.mediaPath} />
           </div>

@@ -11,6 +11,7 @@ import type { ContentType } from "@/types/database";
 import { FolderView, type FolderData } from "./FolderView";
 import { NewFolderButton } from "./NewFolderButton";
 import { ProfileFeedPostCard } from "./ProfileFeedPostCard";
+import { HeartIcon, FolderIcon } from "@/components/icons";
 
 export type FeedPost = {
   id: string;
@@ -26,29 +27,33 @@ export type FeedPost = {
   likeCount: number;
   likedByMe: boolean;
   commentCount: number;
+  // 작성자 정보를 공유 prop이 아니라 게시물 하나하나에 싣는다 — "좋아요" 필터(사운드클라우드
+  // Likes 탭 참고, 2026-09)는 이 프로필 주인이 아니라 다른 사람 게시물도 섞여 나오기 때문.
+  authorName: string;
+  authorId: string;
 };
 
 export function ProfileFeed({
   posts,
+  likedPosts,
   folders,
   isOwnProfile,
   userId,
   currentUserId,
-  authorName,
 }: {
   posts: FeedPost[];
+  likedPosts: FeedPost[];
   folders: FolderData[];
   isOwnProfile: boolean;
   userId: string;
   currentUserId: string | null;
-  authorName: string;
 }) {
   const [tab, setTab] = useState<string>("current");
 
   const currentPosts = posts.filter((post) => !post.isExpired);
   const expiredPosts = posts.filter((post) => post.isExpired);
   const activeFolder = folders.find((f) => f.id === tab);
-  const visiblePosts = tab === "current" ? currentPosts : expiredPosts;
+  const visiblePosts = tab === "current" ? currentPosts : tab === "expired" ? expiredPosts : likedPosts;
 
   return (
     <div className="min-w-0">
@@ -75,17 +80,28 @@ export function ProfileFeed({
         >
           보관된 게시물 <span className={tab === "expired" ? "text-white/70" : "text-active-gray"}>{expiredPosts.length}</span>
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("liked")}
+          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+            tab === "liked" ? "bg-black text-white" : "border border-box-gray text-active-gray hover:opacity-70"
+          }`}
+        >
+          <HeartIcon className="h-3.5 w-3.5" filled={tab === "liked"} />
+          좋아요 <span className={tab === "liked" ? "text-white/70" : "text-active-gray"}>{likedPosts.length}</span>
+        </button>
         {folders.map((folder) => (
           <button
             key={folder.id}
             type="button"
             onClick={() => setTab(folder.id)}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
               tab === folder.id
                 ? "bg-black text-white"
                 : "border border-box-gray text-active-gray hover:opacity-70"
             }`}
           >
+            <FolderIcon className="h-3.5 w-3.5" />
             {folder.name}{" "}
             <span className={tab === folder.id ? "text-white/70" : "text-active-gray"}>{folder.postIds.length}</span>
           </button>
@@ -103,11 +119,11 @@ export function ProfileFeed({
       ) : (
         <div className="mt-4 flex flex-col gap-4">
           {visiblePosts.map((post) => (
-            <ProfileFeedPostCard key={post.id} post={post} authorName={authorName} currentUserId={currentUserId} />
+            <ProfileFeedPostCard key={post.id} post={post} currentUserId={currentUserId} showAuthor={tab === "liked"} />
           ))}
           {visiblePosts.length === 0 && (
             <p className="py-10 text-center text-sm text-active-gray">
-              {tab === "current" ? "현재 게시물이 없습니다" : "보관된 게시물이 없습니다"}
+              {tab === "current" ? "현재 게시물이 없습니다" : tab === "expired" ? "보관된 게시물이 없습니다" : "좋아요한 게시물이 없습니다"}
             </p>
           )}
         </div>

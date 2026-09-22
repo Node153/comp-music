@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getR2SignedUrl } from "@/lib/r2/storage";
+import { getR2SignedUrl, resolveMediaUrl } from "@/lib/r2/storage";
 import { pageTitle, pageCard } from "@/components/ui/styles";
 import { PostsGrid } from "./PostsGrid";
 
@@ -19,7 +19,7 @@ export default async function ManagePostsPage() {
 
   const { data: posts } = await supabase
     .from("posts")
-    .select("id, video_url, image_url, audio_url, media_type, status, caption, expires_at")
+    .select("id, video_url, image_url, audio_url, thumbnail_url, media_type, status, caption, expires_at")
     .eq("user_id", user.id)
     .in("status", ["published", "expired"])
     .order("created_at", { ascending: false });
@@ -31,10 +31,13 @@ export default async function ManagePostsPage() {
     (posts ?? []).map(async (post) => {
       const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
       const videoSrc = mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
+      // 오디오/영상 게시물의 커버 이미지 — 프로필 탭과 같은 버그(2026-09) 수정: 이 값이
+      // 없어서 커버를 올린 오디오 게시물도 무조건 🎵 이모지로만 떴었다.
+      const posterSrc = post.thumbnail_url ? await resolveMediaUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS) : null;
       const isExpired =
         post.status === "expired" ||
         (post.expires_at != null && new Date(post.expires_at).getTime() <= nowMs);
-      return { ...post, videoSrc, mediaPath, isExpired };
+      return { ...post, videoSrc, posterSrc, mediaPath, isExpired };
     }),
   );
 

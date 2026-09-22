@@ -41,7 +41,7 @@ export function NewFolderButton({ userId, onCreated }: { userId: string; onCreat
         onClick={() => setEditing(true)}
         className="flex items-center gap-1 rounded-full border border-box-gray px-3 py-1.5 text-sm font-medium text-active-gray transition hover:opacity-70"
       >
-        <PlusIcon className="h-4 w-4" />
+        <PlusIcon className="h-3.5 w-3.5" />
         폴더
       </button>
     );

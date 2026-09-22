@@ -31,12 +31,14 @@ const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
 
 export function ProfileFeedPostCard({
   post,
-  authorName,
   currentUserId,
+  showAuthor = false,
 }: {
   post: FeedPost;
-  authorName: string;
   currentUserId: string | null;
+  // "좋아요" 필터에서만 켠다 — 현재/보관된/폴더는 항상 이 프로필 주인의 글이라 다시 밝힐
+  // 필요가 없다(2026-09, 사운드클라우드 Likes 탭 참고).
+  showAuthor?: boolean;
 }) {
   return (
     <PostEngagementProvider
@@ -49,9 +51,22 @@ export function ProfileFeedPostCard({
     >
       <article className="relative overflow-hidden rounded-xl border border-box-gray">
         <KickBurst />
-        {post.title && <p className="px-3 pb-0.5 pt-3 text-sm font-bold text-black">{post.title}</p>}
+        {showAuthor && (
+          <Link
+            href={`/profile/${post.authorId}`}
+            className="block px-3 pt-3 text-xs font-medium text-active-gray hover:underline"
+          >
+            {post.authorName}
+          </Link>
+        )}
+        {post.title && (
+          <p className={`px-3 pb-0.5 ${showAuthor ? "pt-1" : "pt-3"} text-sm font-bold text-black`}>{post.title}</p>
+        )}
         {post.caption && (
-          <PostCaption text={post.caption} className={`px-3 ${post.title ? "" : "pt-3"} pb-2 text-sm text-black`} />
+          <PostCaption
+            text={post.caption}
+            className={`px-3 ${post.title ? "" : showAuthor ? "pt-1" : "pt-3"} pb-2 text-sm text-black`}
+          />
         )}
 
         <div className="relative flex w-full items-center justify-center bg-black">
@@ -72,7 +87,7 @@ export function ProfileFeedPostCard({
                 tone="demo"
                 mode={currentUserId ? "global" : "inline"}
                 trackId={post.id}
-                author={authorName}
+                author={post.authorName}
                 viewerId={currentUserId ?? undefined}
               />
             </div>
@@ -81,7 +96,7 @@ export function ProfileFeedPostCard({
               <PostVideo
                 postId={post.id}
                 title={post.title || post.caption || "영상"}
-                author={authorName}
+                author={post.authorName}
                 videoSrc={post.videoSrc}
                 posterSrc={post.posterSrc}
                 tone="demo"

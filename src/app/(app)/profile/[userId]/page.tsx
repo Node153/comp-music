@@ -102,8 +102,86 @@ export default async function ProfilePage({
       const likeCount = (likeRows ?? []).filter((l) => l.post_id === post.id).length;
       const likedByMe = !!currentUser && (likeRows ?? []).some((l) => l.post_id === post.id && l.user_id === currentUser.id);
       const commentCount = (commentRows ?? []).filter((c) => c.post_id === post.id).length;
-      return { ...post, videoSrc, posterSrc, isExpired, likeCount, likedByMe, commentCount };
+      return {
+        ...post,
+        videoSrc,
+        posterSrc,
+        isExpired,
+        likeCount,
+        likedByMe,
+        commentCount,
+        authorName: user.display_name,
+        authorId: userId,
+      };
     }),
+  );
+
+  // "좋아요" 필터(사운드클라우드 Likes 탭 참고, 2026-09 사용자 요청) — 이 프로필 주인이
+  // 좋아요 누른 게시물을 모아서 보여준다. "담기"(재생목록)는 아직 계정이 아니라 브라우저
+  // localStorage에만 있어서(PlaylistContext) 서버 렌더 프로필엔 못 실음 — 사용자 확인 후
+  // 이번엔 좋아요만 구현, 담기는 별도 작업으로 미룸.
+  const { data: likedByUserRows } = await supabase
+    .from("likes")
+    .select("post_id, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  const likedPostIds = (likedByUserRows ?? []).map((r) => r.post_id);
+
+  const { data: likedPostsRaw } =
+    likedPostIds.length > 0
+      ? await supabase
+          .from("posts")
+          .select(
+            "id, user_id, title, video_url, image_url, audio_url, thumbnail_url, media_type, content_type, instrument_tags, status, caption, expires_at, view_count",
+          )
+          .in("id", likedPostIds)
+          .neq("status", "deleted")
+      : { data: [] };
+
+  const likedAuthorIds = [...new Set((likedPostsRaw ?? []).map((p) => p.user_id))];
+  const { data: likedAuthors } =
+    likedAuthorIds.length > 0
+      ? await supabase.from("user_display").select("id, display_name").in("id", likedAuthorIds)
+      : { data: [] };
+  const likedAuthorMap = new Map((likedAuthors ?? []).map((a) => [a.id, a.display_name]));
+
+  const likedRawIds = (likedPostsRaw ?? []).map((p) => p.id);
+  const { data: likedLikeRows } =
+    likedRawIds.length > 0
+      ? await supabase.from("likes").select("post_id, user_id").in("post_id", likedRawIds)
+      : { data: [] };
+  const { data: likedCommentRows } =
+    likedRawIds.length > 0 ? await supabase.from("comments").select("post_id").in("post_id", likedRawIds) : { data: [] };
+
+  // likedPostIds 순서(좋아요 누른 최신순)대로 정렬 — .in() 쿼리는 순서를 보장하지 않는다.
+  const likedPostsById = new Map((likedPostsRaw ?? []).map((p) => [p.id, p]));
+  const likedPostsWithVideo = await Promise.all(
+    likedPostIds
+      .map((id) => likedPostsById.get(id))
+      .filter((post): post is NonNullable<typeof post> => Boolean(post))
+      .map(async (post) => {
+        const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
+        const videoSrc = mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
+        const posterSrc = post.thumbnail_url ? await resolveMediaUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS) : null;
+        const isExpired =
+          post.status === "expired" ||
+          (post.expires_at != null && new Date(post.expires_at).getTime() <= nowMs);
+        const likeCount = (likedLikeRows ?? []).filter((l) => l.post_id === post.id).length;
+        const likedByMe =
+          !!currentUser && (likedLikeRows ?? []).some((l) => l.post_id === post.id && l.user_id === currentUser.id);
+        const commentCount = (likedCommentRows ?? []).filter((c) => c.post_id === post.id).length;
+        return {
+          ...post,
+          videoSrc,
+          posterSrc,
+          isExpired,
+          likeCount,
+          likedByMe,
+          commentCount,
+          authorName: likedAuthorMap.get(post.user_id) ?? "알 수 없음",
+          authorId: post.user_id,
+        };
+      }),
   );
 
   // 게시물 탭의 사용자 정의 폴더(0057, 정태인님 제안) — 현재/보관된처럼 자동 분류가 아니라
@@ -192,16 +270,21 @@ export default async function ProfilePage({
   }
 
   return (
-    <main className={pageCard}>
+    <main className={`${pageCard} md:max-w-[1040px]`}>
       {isOwnProfile && <MarkNotificationsSeen userId={userId} />}
 
       {/* 배너(3단계, 페이스북 참고) — 실제 사진 업로드는 다음 단계, 지금은 자리만 예약한
           flat 플레이스홀더. pageCard의 p-6 패딩을 상쇄하는 음수 마진으로 카드 가장자리까지
           꽉 채운다(모바일은 pageCard 자체가 각짐 없이 화면 폭 그대로라 그냥 화면 끝까지,
           데스크톱은 md:rounded-t-lg로 카드 위쪽 둥근 모서리를 그대로 따라간다). 그레이 단계
-          축소(2026-09)로 새 톤을 안 만들고 이미 페이지 배경에 쓰는 canvas-gray를 재사용. */}
+          축소(2026-09)로 새 톤을 안 만들고 이미 페이지 배경에 쓰는 canvas-gray를 재사용.
+          카드 자체는 4단계에서 1040px로 넓혔지만(사용자 피드백 — "지금은 스레드 같다",
+          페이스북/사운드클라우드처럼 와이드하게) 배너는 그 넓은 폭 그대로 꽉 채운다. */}
       <div className="-mx-6 -mt-6 h-24 bg-canvas-gray md:rounded-t-lg" />
 
+      {/* 이름/소개/버튼 블록은 넓어진 카드 폭까지 늘어나면 어색해서(페이스북도 이 블록은
+          커버사진보다 좁게 유지) 660px로 좁혀 왼쪽에 앉힌다 — 탭+콘텐츠 영역만 카드 전체 폭. */}
+      <div className="md:max-w-[660px]">
       <div className="mt-3 flex items-start gap-4">
         <Avatar
           userId={userId}
@@ -301,11 +384,13 @@ export default async function ProfilePage({
           )
         )}
       </div>
+      </div>
 
       {/* 모바일 — 게시물/소개/Companion 탭으로 세로 스택(기존 구조 그대로). */}
       <div className="md:hidden">
         <ProfileTabs
           posts={postsWithVideo}
+          likedPosts={likedPostsWithVideo}
           folders={folders}
           profile={profile}
           isOwnProfile={isOwnProfile}
@@ -319,7 +404,7 @@ export default async function ProfilePage({
           사이드바 카드로, 오른쪽엔 본인 피드처럼 세로로 넘기는 게시물 카드를 배치한다.
           폴더 탭은 큐레이션 도구 성격이 강해서 오른쪽 피드에서도 기존 썸네일 그리드
           (FolderView)를 그대로 쓴다 — ProfileFeed 내부에서 처리. */}
-      <div className="mt-4 hidden md:grid md:grid-cols-[200px_minmax(0,1fr)] md:gap-4">
+      <div className="mt-4 hidden md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
         {/* 소개+Companion을 상자 두 개로 나누지 않고 한 카드 안에 구분선만 둔다(2026-09,
             "회색 상자가 너무 많이 겹쳐 보인다" 피드백) — Companion은 헤더 통계 줄과 같은
             압축(compact) 형태라 별도 그리드 박스가 필요 없어져서 자연스럽게 합쳐진다. */}
@@ -338,11 +423,11 @@ export default async function ProfilePage({
 
         <ProfileFeed
           posts={postsWithVideo}
+          likedPosts={likedPostsWithVideo}
           folders={folders}
           isOwnProfile={isOwnProfile}
           userId={userId}
           currentUserId={currentUser?.id ?? null}
-          authorName={user.display_name}
         />
       </div>
     </main>

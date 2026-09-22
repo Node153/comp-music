@@ -8,14 +8,17 @@ import { useState } from "react";
 import { PostTile, type ProfilePost } from "./PostTile";
 import { FolderView, type FolderData } from "./FolderView";
 import { NewFolderButton } from "./NewFolderButton";
+import { HeartIcon, FolderIcon } from "@/components/icons";
 
 export function PostsGrid({
   posts,
+  likedPosts,
   folders,
   isOwnProfile,
   userId,
 }: {
   posts: ProfilePost[];
+  likedPosts: ProfilePost[];
   folders: FolderData[];
   isOwnProfile: boolean;
   userId: string;
@@ -25,6 +28,7 @@ export function PostsGrid({
   const currentPosts = posts.filter((post) => !post.isExpired);
   const expiredPosts = posts.filter((post) => post.isExpired);
   const activeFolder = folders.find((f) => f.id === tab);
+  const visiblePosts = tab === "current" ? currentPosts : tab === "expired" ? expiredPosts : tab === "liked" ? likedPosts : [];
 
   return (
     <div className="mt-4">
@@ -51,17 +55,28 @@ export function PostsGrid({
         >
           보관된 게시물 <span className={tab === "expired" ? "text-white/70" : "text-active-gray"}>{expiredPosts.length}</span>
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("liked")}
+          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+            tab === "liked" ? "bg-black text-white" : "border border-box-gray text-active-gray hover:opacity-70"
+          }`}
+        >
+          <HeartIcon className="h-3.5 w-3.5" filled={tab === "liked"} />
+          좋아요 <span className={tab === "liked" ? "text-white/70" : "text-active-gray"}>{likedPosts.length}</span>
+        </button>
         {folders.map((folder) => (
           <button
             key={folder.id}
             type="button"
             onClick={() => setTab(folder.id)}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
               tab === folder.id
                 ? "bg-black text-white"
                 : "border border-box-gray text-active-gray hover:opacity-70"
             }`}
           >
+            <FolderIcon className="h-3.5 w-3.5" />
             {folder.name}{" "}
             <span className={tab === folder.id ? "text-white/70" : "text-active-gray"}>{folder.postIds.length}</span>
           </button>
@@ -78,12 +93,16 @@ export function PostsGrid({
         />
       ) : (
         <div className="mt-4 grid grid-cols-3 gap-1.5">
-          {(tab === "current" ? currentPosts : expiredPosts).map((post) => (
+          {visiblePosts.map((post) => (
             <PostTile key={post.id} post={post} />
           ))}
-          {(tab === "current" ? currentPosts : expiredPosts).length === 0 && (
+          {visiblePosts.length === 0 && (
             <p className="col-span-3 py-10 text-center text-sm text-active-gray">
-              {tab === "current" ? "현재 게시물이 없습니다" : "보관된 게시물이 없습니다"}
+              {tab === "current"
+                ? "현재 게시물이 없습니다"
+                : tab === "expired"
+                  ? "보관된 게시물이 없습니다"
+                  : "좋아요한 게시물이 없습니다"}
             </p>
           )}
         </div>

@@ -20,6 +20,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 export function ProfileTabs({
   posts,
+  likedPosts,
   folders,
   profile,
   isOwnProfile,
@@ -28,6 +29,7 @@ export function ProfileTabs({
   companionPreview,
 }: {
   posts: ProfilePost[];
+  likedPosts: ProfilePost[];
   folders: FolderData[];
   profile: AboutProfile | null;
   isOwnProfile: boolean;
@@ -58,7 +60,7 @@ export function ProfileTabs({
       </div>
 
       {tab === "posts" && (
-        <PostsGrid posts={posts} folders={folders} isOwnProfile={isOwnProfile} userId={userId} />
+        <PostsGrid posts={posts} likedPosts={likedPosts} folders={folders} isOwnProfile={isOwnProfile} userId={userId} />
       )}
       {tab === "about" && <AboutSection profile={profile} isOwnProfile={isOwnProfile} />}
       {tab === "companions" && (
