@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { FeedbackChat, type FeedbackChatMessage } from "@/components/FeedbackChat";
 import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
+import { FeedbackIcon, MegaphoneIcon } from "@/components/icons";
 
 // Help(구 Away) — 공지사항+피드백 창구(0021_announcements_and_feedback).
 // 관리자 페이지 진입은 TopNav 프로필 드롭다운(ProfileMenu)의 "관리자 메뉴"로 옮겼다.
@@ -78,7 +79,9 @@ export default async function HelpPage() {
       {/* 왼쪽: 공지사항 · 오른쪽: 피드백 채팅. 데스크톱은 두 칸, 모바일은 위아래로 쌓임. */}
       <div className="grid gap-6 md:grid-cols-2">
         <section className="flex min-w-0 flex-col gap-3">
-          <h2 className={`${sectionTitle} !text-black`}>📣 공지사항</h2>
+          <h2 className={`${sectionTitle} flex items-center gap-1.5 !text-black`}>
+            <MegaphoneIcon className="h-5 w-5" /> 공지사항
+          </h2>
           <div className="flex flex-col gap-3 overflow-y-auto rounded-xl bg-box-gray p-4 md:h-[600px]">
             {(announcements ?? []).map((a) => (
               <article key={a.id} className="rounded-xl bg-main-gray p-4">
@@ -100,9 +103,11 @@ export default async function HelpPage() {
         </section>
 
         <section className="flex min-w-0 flex-col gap-3">
-          <h2 className={`${sectionTitle} !text-black`}>💬 피드백 채팅</h2>
+          <h2 className={`${sectionTitle} flex items-center gap-1.5 !text-black`}>
+            <FeedbackIcon className="h-5 w-5" /> 피드백 채팅
+          </h2>
           <p className={`${mutedText} !text-active-gray`}>
-            유형을 고르면 더 빨리 확인할 수 있어요. 🔒 운영자에게만 보내면 다른 회원에게는 보이지 않아요.
+            유형을 고르면 더 빨리 확인할 수 있어요. “운영자에게만”으로 보내면 다른 회원에게는 보이지 않아요.
           </p>
           <div className="h-[70vh] md:h-[600px]">
             {user ? (

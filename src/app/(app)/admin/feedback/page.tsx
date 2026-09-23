@@ -103,7 +103,7 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
       <section className="grid gap-2 md:grid-cols-2">
         {pulseSummary.map((p) => (
           <div key={p.trigger} className="rounded-xl border border-gray-200 p-4">
-            <p className="text-sm font-semibold text-gray-900">📊 {PULSE_QUESTIONS[p.trigger]}</p>
+            <p className="text-sm font-semibold text-gray-900">{PULSE_QUESTIONS[p.trigger]}</p>
             <p className={`${mutedText} mt-0.5`}>
               응답 {p.answered}명{p.avg !== null && ` · 평균 ${p.avg.toFixed(1)} / 4`} · 다음에 {p.dismissed}명
             </p>
@@ -154,7 +154,7 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
             </Link>
           ))}
           <Link href={filterHref(current, { category: "none" })} className={chipClass(category === "none")}>
-            💬 일반 대화
+            일반 대화
           </Link>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -163,7 +163,7 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
             최신순
           </Link>
           <Link href={filterHref(current, { sort: "likes" })} className={chipClass(sort === "likes")}>
-            👍 공감순
+            공감순
           </Link>
         </div>
       </div>
@@ -186,8 +186,8 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
                       {FEEDBACK_CATEGORY_LABEL[f.category]}
                     </span>
                   )}
-                  {f.is_private && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">🔒 운영자에게만</span>}
-                  {likes > 0 && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">👍 {likes}</span>}
+                  {f.is_private && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">운영자에게만</span>}
+                  {likes > 0 && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">공감 {likes}</span>}
                 </div>
               )}
               {f.image_path && (

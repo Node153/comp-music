@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { BellIcon, FlameIcon, XIcon } from "@/components/icons";
+import { BellIcon, FeedbackIcon, FlameIcon, XIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
 import { navRowClass, navLabelClass, topBarIconClass } from "@/components/ui/styles";
@@ -228,8 +228,8 @@ export function NotificationsMenu({
                               <FlameIcon className="h-4 w-4 text-white" />
                             </span>
                           ) : item.type === "feedback_update" ? (
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base dark:bg-gray-800">
-                              💬
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                              <FeedbackIcon className="h-4 w-4" />
                             </span>
                           ) : (
                             <Avatar userId={item.actorId} name={item.actorName} className="h-9 w-9 shrink-0 text-sm" />
@@ -240,7 +240,7 @@ export function NotificationsMenu({
                                 "회원님의 게시물이 PEAK에 도달했어요"
                               ) : item.type === "feedback_update" ? (
                                 item.status === "done"
-                                  ? "회원님의 피드백이 반영됐어요 ✅"
+                                  ? "회원님의 피드백이 반영됐어요"
                                   : item.hasReply
                                     ? "운영자가 회원님의 피드백에 답변했어요"
                                     : `회원님의 피드백이 '${FEEDBACK_STATUS_LABEL[item.status]}' 상태가 됐어요`

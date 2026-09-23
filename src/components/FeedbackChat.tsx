@@ -28,6 +28,16 @@ import {
   type FeedbackCategory,
   type FeedbackStatus,
 } from "@/lib/feedback";
+import { FeedbackCategoryIcon, FeedbackStatusIcon } from "@/components/FeedbackIcons";
+import {
+  CornerDownRightIcon,
+  GlobeIcon,
+  ImageIcon,
+  LockIcon,
+  PinIcon,
+  ThumbsUpIcon,
+  XIcon,
+} from "@/components/icons";
 
 export type FeedbackChatMessage = {
   id: string;
@@ -141,6 +151,11 @@ export function FeedbackChat({
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
+    // 비었으면 rows=1 기본 높이로 — 레이아웃 폭이 바뀌는 도중 잰 높이가 남아 커져 있는 것 방지.
+    if (!text) {
+      el.style.height = "";
+      return;
+    }
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 144)}px`;
   }, [text]);
@@ -327,10 +342,12 @@ export function FeedbackChat({
             <span className="font-medium text-black">Compmusic</span>
             <ComperBadge />
             <span>·</span>
-            <span>📌 고정</span>
+            <span className="inline-flex items-center gap-0.5">
+              <PinIcon className="h-3 w-3" /> 고정
+            </span>
           </span>
           <span className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl bg-main-gray px-3.5 py-2 text-sm text-black">
-            {"요즘 Compmusic을 쓰면서 가장 불편했던 점 하나만 알려주세요 🙏\n짧게 한 줄이어도 좋아요. 🔒 운영자에게만 보내면 다른 회원에게는 보이지 않아요.\n화면 캡처를 붙여넣으면 스크린샷도 같이 보낼 수 있어요."}
+            {"요즘 Compmusic을 쓰면서 가장 불편했던 점 하나만 알려주세요.\n짧게 한 줄이어도 좋아요. “운영자에게만”으로 보내면 다른 회원에게는 보이지 않아요.\n화면 캡처를 붙여넣으면 스크린샷도 같이 보낼 수 있어요."}
           </span>
         </div>
         {messages.map((m) => {
@@ -346,8 +363,11 @@ export function FeedbackChat({
                 <span>·</span>
                 <span>{timeAgo(m.createdAt)}</span>
                 {m.isPrivate && (
-                  <span className="rounded-full bg-main-gray px-1.5 py-px text-[10px] text-active-gray" title="작성자와 운영자만 볼 수 있어요">
-                    🔒 운영자에게만
+                  <span
+                    className="inline-flex items-center gap-0.5 rounded-full bg-main-gray px-1.5 py-px text-[10px] text-active-gray"
+                    title="작성자와 운영자만 볼 수 있어요"
+                  >
+                    <LockIcon className="h-2.5 w-2.5" /> 운영자에게만
                   </span>
                 )}
                 {canDelete && (
@@ -356,8 +376,9 @@ export function FeedbackChat({
                     onClick={() => handleDelete(m.id)}
                     className="text-active-gray transition hover:text-red-500"
                     title="삭제"
+                    aria-label="삭제"
                   >
-                    ✕
+                    <XIcon className="h-3 w-3" />
                   </button>
                 )}
               </span>
@@ -367,7 +388,8 @@ export function FeedbackChat({
                 } ${m.isPrivate ? "border border-dashed border-active-gray" : ""}`}
               >
                 {m.category && (
-                  <span className="block text-[11px] font-semibold text-active-gray">
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-active-gray">
+                    <FeedbackCategoryIcon category={m.category} className="h-3 w-3" />
                     {FEEDBACK_CATEGORY_LABEL[m.category]}
                   </span>
                 )}
@@ -376,24 +398,32 @@ export function FeedbackChat({
               </span>
               <span className="flex items-center gap-2 px-1 text-[11px]">
                 {(m.category || m.isPrivate || m.status !== "received") && (
-                  <span className={m.status === "done" ? "font-semibold text-black" : "text-active-gray"}>
+                  <span
+                    className={`inline-flex items-center gap-1 ${m.status === "done" ? "font-semibold text-black" : "text-active-gray"}`}
+                  >
+                    <FeedbackStatusIcon status={m.status} className="h-3 w-3" />
                     {FEEDBACK_STATUS_LABEL[m.status]}
                   </span>
                 )}
                 {/* 나도 👍 — 공개 피드백만. 본인 글엔 버튼 대신 공감 수만 보여준다. */}
                 {!m.isPrivate &&
                   (isMe ? (
-                    m.likers.length > 0 && <span className="text-active-gray">👍 {m.likers.length}명이 공감해요</span>
+                    m.likers.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-active-gray">
+                        <ThumbsUpIcon className="h-3 w-3" /> {m.likers.length}명이 공감해요
+                      </span>
+                    )
                   ) : (
                     <button
                       type="button"
                       aria-pressed={likedByMe}
                       onClick={() => toggleLike(m)}
-                      className={`rounded-full px-2 py-0.5 transition ${
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 transition ${
                         likedByMe ? "bg-black text-white" : "bg-main-gray text-black hover:bg-demo-bg"
                       }`}
                     >
-                      👍 나도{m.likers.length > 0 ? ` ${m.likers.length}` : ""}
+                      <ThumbsUpIcon className="h-3 w-3" filled={likedByMe} />
+                      나도{m.likers.length > 0 ? ` ${m.likers.length}` : ""}
                     </button>
                   ))}
               </span>
@@ -404,7 +434,8 @@ export function FeedbackChat({
                   }`}
                 >
                   <span className="flex items-center gap-1.5 text-[11px] text-active-gray">
-                    ↳ <span className="font-medium text-black">운영자 답변</span>
+                    <CornerDownRightIcon className="h-3 w-3" />
+                    <span className="font-medium text-black">운영자 답변</span>
                     <ComperBadge />
                   </span>
                   <span className="whitespace-pre-wrap break-words text-black">{m.adminReply}</span>
@@ -424,10 +455,11 @@ export function FeedbackChat({
               type="button"
               aria-pressed={active}
               onClick={() => setCategory(active ? null : c.value)}
-              className={`rounded-full px-2.5 py-1 text-xs transition ${
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition ${
                 active ? "bg-black text-white" : "bg-main-gray text-black hover:bg-demo-bg"
               }`}
             >
+              <FeedbackCategoryIcon category={c.value} className="h-3.5 w-3.5" />
               {c.label}
             </button>
           );
@@ -438,9 +470,10 @@ export function FeedbackChat({
           aria-checked={isPrivate}
           onClick={() => setIsPrivate((v) => !v)}
           title={isPrivate ? "작성자와 운영자만 볼 수 있어요" : "전체 회원이 볼 수 있어요"}
-          className="ml-auto rounded-full border border-active-gray px-2.5 py-1 text-xs text-black transition hover:bg-main-gray"
+          className="ml-auto inline-flex items-center gap-1 rounded-full border border-active-gray px-2.5 py-1 text-xs text-black transition hover:bg-main-gray"
         >
-          {isPrivate ? "🔒 운영자에게만" : "🌐 전체 공개"}
+          {isPrivate ? <LockIcon className="h-3.5 w-3.5" /> : <GlobeIcon className="h-3.5 w-3.5" />}
+          {isPrivate ? "운영자에게만" : "전체 공개"}
         </button>
       </div>
       {(imagePreview || imageError) && (
@@ -453,9 +486,9 @@ export function FeedbackChat({
                 type="button"
                 onClick={() => setImage(null)}
                 aria-label="첨부 취소"
-                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black text-[10px] text-white"
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black text-white"
               >
-                ✕
+                <XIcon className="h-3 w-3" />
               </button>
             </span>
           )}
@@ -478,9 +511,9 @@ export function FeedbackChat({
           onClick={() => fileInputRef.current?.click()}
           aria-label="스크린샷 첨부"
           title="스크린샷 첨부 (붙여넣기도 가능)"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-main-gray text-base transition hover:bg-demo-bg"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-main-gray text-black transition hover:bg-demo-bg"
         >
-          🖼
+          <ImageIcon className="h-4 w-4" />
         </button>
         <textarea
           ref={textareaRef}
