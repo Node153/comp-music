@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
 import { useMediaProgress } from "@/lib/useMediaProgress";
 import { PlayIcon, PauseIcon } from "@/components/icons";
+import { useScrub } from "@/lib/useScrub";
 
 // 화면이 넓어질수록(카드 너비 최대 900px) 막대가 굵어 보이지 않도록 넉넉하게 잡음 —
 // flex-1로 폭을 다 채우는 구조라 막대 수가 적으면 넓은 화면에서 각져 보인다.
@@ -73,14 +74,15 @@ export function SoundbarPreview({
     else audio.pause();
   }
 
-  function seekFromClientX(clientX: number, rect: DOMRect) {
+  function seekToRatio(ratio: number) {
     const audio = audioRef.current;
     if (!audio || !duration) return;
-    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     audio.currentTime = ratio * duration;
   }
 
-  const playedRatio = duration > 0 ? currentTime / duration : 0;
+  // 누른 채 드래그 탐색 — 드래그 중엔 손가락 위치를 미리 보여주고 손을 뗄 때 탐색
+  const { scrubRatio, scrubHandlers } = useScrub(seekToRatio);
+  const playedRatio = scrubRatio ?? (duration > 0 ? currentTime / duration : 0);
   const playedBarCount = bars ? Math.round(playedRatio * bars.length) : 0;
 
   return (
@@ -110,7 +112,7 @@ export function SoundbarPreview({
           <p className="truncate text-xs font-semibold text-white">{file.name}</p>
         </div>
         <span className="shrink-0 text-[11px] text-neutral-400">
-          {formatWaveformTime(currentTime)} / {formatWaveformTime(duration)}
+          {formatWaveformTime(playedRatio * duration)} / {formatWaveformTime(duration)}
         </span>
       </div>
 
@@ -120,8 +122,8 @@ export function SoundbarPreview({
       {!failed && !bars && <p className="text-[11px] text-neutral-400">파형 분석 중...</p>}
       {bars && (
         <div
-          className="relative flex h-8 cursor-pointer items-center gap-px"
-          onClick={(e) => seekFromClientX(e.clientX, e.currentTarget.getBoundingClientRect())}
+          className="relative flex h-8 cursor-pointer touch-pan-y items-center gap-px"
+          {...scrubHandlers}
         >
           {bars.map((v, i) => (
             <div

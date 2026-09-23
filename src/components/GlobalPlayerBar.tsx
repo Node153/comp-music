@@ -15,6 +15,7 @@ import { usePlaylist } from "@/components/PlaylistContext";
 import { useMediaProgress } from "@/lib/useMediaProgress";
 import { computeWaveformBars } from "@/lib/waveform";
 import { ExpandedPlayer } from "@/components/ExpandedPlayer";
+import { useScrub } from "@/lib/useScrub";
 import {
   PlayIcon,
   PauseIcon,
@@ -207,20 +208,20 @@ export function GlobalPlayerBar() {
   const playedColor = (v: number) => (isMemoTrack ? memoBandColor(v) : demoBandColor(v));
   const playheadColor = isMemoTrack ? "#c4b5f2" : "#f5d999";
 
-  const pct = duration > 0 ? (progress / duration) * 100 : 0;
-  const playedBarCount = Math.round((pct / 100) * bars.length);
-
   // React state(duration)가 아니라 <video> 엘리먼트의 실시간 값을 직접 읽는다 — 위 duration
-  // 우회 로직이 아직 안 끝났거나 상태 갱신이 한 박자 늦어도 클릭 탐색은 항상 되게.
-  const seek = (e: React.MouseEvent<HTMLButtonElement>) => {
+  // 우회 로직이 아직 안 끝났거나 상태 갱신이 한 박자 늦어도 탐색은 항상 되게.
+  const { scrubRatio, scrubHandlers } = useScrub((ratio) => {
     const video = videoRef.current;
     if (!video) return;
     const d = video.duration;
     if (!Number.isFinite(d) || d <= 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
     video.currentTime = ratio * d;
-  };
+  });
+  // 드래그 중엔 손가락 위치를 그대로 보여준다(플레이헤드·재생 구간·경과 시간).
+  const shownProgress = scrubRatio !== null ? scrubRatio * duration : progress;
+
+  const pct = scrubRatio !== null ? scrubRatio * 100 : duration > 0 ? (progress / duration) * 100 : 0;
+  const playedBarCount = Math.round((pct / 100) * bars.length);
 
   return (
     <>
@@ -298,12 +299,12 @@ export function GlobalPlayerBar() {
         {/* 가운데: 경과 시간 — 파형(탐색) — 총 시간 */}
         <div className="flex min-w-0 items-center gap-2 md:gap-3">
           <span className={`hidden w-9 shrink-0 text-right text-[11px] tabular-nums md:block ${barMuted}`}>
-            {formatTime(progress)}
+            {formatTime(shownProgress)}
           </span>
           <button
-            onClick={seek}
+            {...scrubHandlers}
             disabled={!track}
-            className="relative flex h-8 min-w-0 flex-1 items-center gap-px disabled:cursor-default md:h-9"
+            className="relative flex h-8 min-w-0 flex-1 touch-none items-center gap-px disabled:cursor-default md:h-9"
             aria-label="탐색 바 (파형)"
           >
             {bars.map((v, i) => (
@@ -430,8 +431,8 @@ export function GlobalPlayerBar() {
           unplayedBarColor={unplayedBarColor}
           playheadColor={playheadColor}
           pct={pct}
-          seek={seek}
-          progress={progress}
+          scrubHandlers={scrubHandlers}
+          progress={shownProgress}
           duration={duration}
           onClose={() => setExpanded(false)}
           hasPanel={hasPanel}

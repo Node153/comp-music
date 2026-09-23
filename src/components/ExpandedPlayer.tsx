@@ -9,6 +9,7 @@
 // (피드 카드처럼 서버에서 미리 내려주는 초기값이 없어서, 여기선 클라이언트에서 직접 조회).
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { useScrub } from "@/lib/useScrub";
 import type { NowPlayingTrack } from "@/components/NowPlayingContext";
 import { PostEngagementProvider } from "@/components/PostEngagementContext";
 import { LikeButton } from "@/app/(app)/feed/LikeButton";
@@ -44,7 +45,7 @@ export function ExpandedPlayer({
   unplayedBarColor,
   playheadColor,
   pct,
-  seek,
+  scrubHandlers,
   progress,
   duration,
   onClose,
@@ -65,7 +66,7 @@ export function ExpandedPlayer({
   unplayedBarColor: string;
   playheadColor: string;
   pct: number;
-  seek: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  scrubHandlers: ReturnType<typeof useScrub>["scrubHandlers"];
   progress: number;
   duration: number;
   onClose: () => void;
@@ -152,8 +153,8 @@ export function ExpandedPlayer({
         {/* 파형(탐색) + 시간 */}
         <div className="px-4">
           <button
-            onClick={seek}
-            className="relative flex h-16 w-full items-center gap-px disabled:cursor-default"
+            {...scrubHandlers}
+            className="relative flex h-16 w-full touch-none items-center gap-px disabled:cursor-default"
             aria-label="탐색 바 (파형)"
           >
             {bars.map((v, i) => (

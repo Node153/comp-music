@@ -22,6 +22,7 @@ import { useHeartBurst } from "@/components/HeartBurst";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 import { useGuestSignupPrompt, GUEST_AUDIO_PAUSE_EVENT } from "@/components/GuestSignupPrompt";
 import { GUEST_PREVIEW_SECONDS } from "@/lib/feedConstants";
+import { useScrub } from "@/lib/useScrub";
 
 const SLIM_BAR_COUNT = 200;
 
@@ -211,8 +212,7 @@ export function SoundbarPlayer({
   });
   const posterOnClick = isGlobal && viewerId && trackId ? handleDoubleTapLike : togglePlay;
 
-  function seekFromClientX(clientX: number, rect: DOMRect) {
-    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  function seekToRatio(ratio: number) {
     if (isGlobal) {
       if (isThisTrack && videoRef.current && globalDuration) {
         videoRef.current.currentTime = ratio * globalDuration;
@@ -226,7 +226,9 @@ export function SoundbarPlayer({
     audio.currentTime = ratio * inlineDuration;
   }
 
-  const playedRatio = duration > 0 ? currentTime / duration : 0;
+  // 누른 채 드래그 탐색 — 드래그 중엔 손가락 위치를 미리 보여주고 손을 뗄 때 탐색
+  const { scrubRatio, scrubHandlers } = useScrub(seekToRatio);
+  const playedRatio = scrubRatio ?? (duration > 0 ? currentTime / duration : 0);
   const playedBarCount = bars ? Math.round(playedRatio * bars.length) : 0;
 
   const audioEl = isGlobal ? null : (
@@ -286,7 +288,7 @@ export function SoundbarPlayer({
           {isPlaying ? <PauseIcon className="h-3 w-3" /> : <PlayIcon className="h-3 w-3" />}
         </button>
         <span className="shrink-0 text-[11px] text-neutral-400">
-          {formatWaveformTime(currentTime)} / {formatWaveformTime(duration)}
+          {formatWaveformTime(playedRatio * duration)} / {formatWaveformTime(duration)}
         </span>
         {downloadHref && (
           <a
@@ -304,8 +306,8 @@ export function SoundbarPlayer({
       {!failed && !bars && <p className="text-[11px] text-neutral-400">파형 분석 중...</p>}
       {bars && (
         <div
-          className="relative flex h-8 cursor-pointer items-center gap-px"
-          onClick={(e) => seekFromClientX(e.clientX, e.currentTarget.getBoundingClientRect())}
+          className="relative flex h-8 cursor-pointer touch-pan-y items-center gap-px"
+          {...scrubHandlers}
         >
           {bars.map((v, i) => (
             <div
