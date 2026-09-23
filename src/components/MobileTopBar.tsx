@@ -11,7 +11,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
-import { HelpIcon, SunIcon, MoonIcon } from "@/components/icons";
+import { FeedbackIcon, SunIcon, MoonIcon } from "@/components/icons";
 import { beginThemeTransitionWithSound } from "@/lib/theme";
 
 const FEED_TABS = [
@@ -71,10 +71,10 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
       <div className="flex items-center gap-2 justify-self-end">
         <Link
           href="/help"
-          aria-label="Help"
+          aria-label="피드백"
           className={`shrink-0 ${isFeed ? "text-gray-500 dark:text-gray-400" : "text-black"}`}
         >
-          <HelpIcon className="h-5 w-5" />
+          <FeedbackIcon className="h-5 w-5" />
         </Link>
         <NotificationsMenu userId={currentUserId} isFeed={isFeed} compact />
       </div>

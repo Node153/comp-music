@@ -11,7 +11,7 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { MessagesMenu } from "@/components/MessagesMenu";
 import { SearchMenu } from "@/components/SearchMenu";
-import { HomeIcon, PlusIcon, HelpIcon } from "@/components/icons";
+import { HomeIcon, PlusIcon, FeedbackIcon } from "@/components/icons";
 import { navRowClass, navLabelClass } from "@/components/ui/styles";
 
 export function NavSidebar({
@@ -115,8 +115,8 @@ export function NavSidebar({
           <span className={navLabelClass(expanded)}>만들기</span>
         </Link>
         <Link href="/help" className={navRowClass(pathname === "/help", isFeed, expanded)}>
-          <HelpIcon className="h-6 w-6 shrink-0" />
-          <span className={navLabelClass(expanded)}>Help</span>
+          <FeedbackIcon className="h-6 w-6 shrink-0" />
+          <span className={navLabelClass(expanded)}>피드백</span>
         </Link>
         <ProfileMenu
           userId={currentUserId}

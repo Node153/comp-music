@@ -17,6 +17,7 @@ import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
 import { navRowClass, navLabelClass, topBarIconClass } from "@/components/ui/styles";
 import type { NotificationItem } from "@/lib/notificationList";
+import { FEEDBACK_STATUS_LABEL } from "@/lib/feedback";
 
 // 옛 /notifications 페이지의 카테고리 필터 그대로(2026-09-16 이전엔 URL ?type=으로 했지만,
 // 이제 페이지가 아니라 패널이라 로컬 상태로 바꿨다).
@@ -226,6 +227,10 @@ export function NotificationsMenu({
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-600">
                               <FlameIcon className="h-4 w-4 text-white" />
                             </span>
+                          ) : item.type === "feedback_update" ? (
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base dark:bg-gray-800">
+                              💬
+                            </span>
                           ) : (
                             <Avatar userId={item.actorId} name={item.actorName} className="h-9 w-9 shrink-0 text-sm" />
                           )}
@@ -233,6 +238,12 @@ export function NotificationsMenu({
                             <span className="text-gray-800 dark:text-gray-200">
                               {item.type === "peak" ? (
                                 "회원님의 게시물이 PEAK에 도달했어요"
+                              ) : item.type === "feedback_update" ? (
+                                item.status === "done"
+                                  ? "회원님의 피드백이 반영됐어요 ✅"
+                                  : item.hasReply
+                                    ? "운영자가 회원님의 피드백에 답변했어요"
+                                    : `회원님의 피드백이 '${FEEDBACK_STATUS_LABEL[item.status]}' 상태가 됐어요`
                               ) : (
                                 <>
                                   <span className="font-semibold">{item.actorName}</span>
@@ -243,6 +254,11 @@ export function NotificationsMenu({
                                 </>
                               )}
                             </span>
+                            {item.type === "feedback_update" && (
+                              <span className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
+                                “{item.content}”
+                              </span>
+                            )}
                             {item.type === "comment" && (
                               <span className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
                                 “{item.content}”

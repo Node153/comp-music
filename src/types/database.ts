@@ -589,6 +589,10 @@ export interface Database {
           // 0062 — true면 작성자 본인 + 관리자만 열람(RLS). category null = 일반 대화.
           is_private: boolean;
           category: "bug" | "inconvenience" | "idea" | "praise" | null;
+          // 0063 — 관리자 처리 상태/답변. admin_updated_at = 마지막 상태·답변 변경(알림 기준).
+          status: "received" | "reviewing" | "done" | "on_hold";
+          admin_reply: string | null;
+          admin_updated_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -597,6 +601,9 @@ export interface Database {
           content: string;
           is_private?: boolean;
           category?: "bug" | "inconvenience" | "idea" | "praise" | null;
+          status?: "received" | "reviewing" | "done" | "on_hold";
+          admin_reply?: string | null;
+          admin_updated_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["feedback_messages"]["Insert"]>;

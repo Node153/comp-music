@@ -26,7 +26,7 @@ export default async function HelpPage() {
   const { data: rawFeedback } = user
     ? await supabase
         .from("feedback_messages")
-        .select("id, user_id, content, is_private, category, created_at")
+        .select("id, user_id, content, is_private, category, status, admin_reply, created_at")
         .order("created_at", { ascending: true })
         .limit(200)
     : { data: null };
@@ -46,6 +46,8 @@ export default async function HelpPage() {
     content: m.content,
     isPrivate: m.is_private,
     category: m.category,
+    status: m.status,
+    adminReply: m.admin_reply,
     createdAt: m.created_at,
   }));
 
@@ -56,7 +58,7 @@ export default async function HelpPage() {
     // 같은 원인). 데스크톱은 BottomNav가 없어(md:hidden) 기존 md:pb-6 그대로 둔다.
     <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 bg-main-gray p-6 pb-[7.5rem] md:my-6 md:rounded-lg md:pb-6">
       <div>
-        <h1 className={`${pageTitle} !text-black`}>Help</h1>
+        <h1 className={`${pageTitle} !text-black`}>피드백</h1>
         <p className={`${mutedText} !text-active-gray mt-1`}>공지사항을 확인하고, 하고 싶은 말을 남겨주세요.</p>
       </div>
 

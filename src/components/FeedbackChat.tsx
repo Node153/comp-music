@@ -11,10 +11,20 @@
 // 0062 — 메시지마다 유형(버그/불편/아이디어/좋아요, 선택)과 공개 범위를 고른다. "운영자에게만"
 // (is_private)은 RLS로 작성자 본인+관리자만 조회되고, realtime INSERT도 같은 RLS를 따라 다른
 // 회원에겐 전달되지 않는다. 불만·버그를 편하게 남기도록 기본값은 비공개.
+//
+// 0063 — 관리자가 /admin/feedback에서 단 처리 상태·답변을 말풍선 아래에 보여준다(realtime UPDATE로
+// 즉시 반영). 상태 뱃지는 유형을 고른 메시지·비공개 메시지·상태가 바뀐 메시지에만 — 일반 잡담엔 안 붙인다.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
 import { ComperBadge } from "@/components/ComperBadge";
+import {
+  FEEDBACK_CATEGORIES,
+  FEEDBACK_CATEGORY_LABEL,
+  FEEDBACK_STATUS_LABEL,
+  type FeedbackCategory,
+  type FeedbackStatus,
+} from "@/lib/feedback";
 
 export type FeedbackChatMessage = {
   id: string;
@@ -25,21 +35,21 @@ export type FeedbackChatMessage = {
   content: string;
   isPrivate: boolean;
   category: FeedbackCategory | null;
+  status: FeedbackStatus;
+  adminReply: string | null;
   createdAt: string;
 };
 
-export type FeedbackCategory = "bug" | "inconvenience" | "idea" | "praise";
-
-const CATEGORIES: { value: FeedbackCategory; label: string; placeholder: string }[] = [
-  { value: "bug", label: "🐞 버그", placeholder: "어디서 무엇을 했더니 어떻게 됐나요?" },
-  { value: "inconvenience", label: "😣 불편", placeholder: "어떤 점이 불편했나요? 어떻게 되면 좋을까요?" },
-  { value: "idea", label: "💡 아이디어", placeholder: "있었으면 하는 기능이나 바뀌었으면 하는 점을 알려주세요" },
-  { value: "praise", label: "❤️ 좋아요", placeholder: "마음에 들었던 점을 알려주세요" },
-];
-const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.value, c.label])) as Record<
-  FeedbackCategory,
-  string
->;
+type FeedbackRow = {
+  id: string;
+  user_id: string;
+  content: string;
+  is_private: boolean;
+  category: FeedbackCategory | null;
+  status: FeedbackStatus;
+  admin_reply: string | null;
+  created_at: string;
+};
 
 const MAX_LEN = 2000;
 
@@ -103,14 +113,7 @@ export function FeedbackChat({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "feedback_messages" },
         async (payload) => {
-          const row = payload.new as {
-            id: string;
-            user_id: string;
-            content: string;
-            is_private: boolean;
-            category: FeedbackCategory | null;
-            created_at: string;
-          };
+          const row = payload.new as FeedbackRow;
           const nick = await resolveNick(row.user_id);
           setMessages((prev) =>
             prev.some((m) => m.id === row.id)
@@ -126,9 +129,21 @@ export function FeedbackChat({
                     content: row.content,
                     isPrivate: row.is_private,
                     category: row.category,
+                    status: row.status,
+                    adminReply: row.admin_reply,
                     createdAt: row.created_at,
                   },
                 ],
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "feedback_messages" },
+        (payload) => {
+          const row = payload.new as FeedbackRow;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === row.id ? { ...m, status: row.status, adminReply: row.admin_reply } : m)),
           );
         },
       )
@@ -151,7 +166,8 @@ export function FeedbackChat({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // 새 메시지가 붙을 때만 — 관리자 답변(UPDATE)으로 목록이 바뀔 땐 스크롤을 건드리지 않는다.
+  }, [messages.length]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -161,7 +177,7 @@ export function FeedbackChat({
     const { data, error } = await supabase
       .from("feedback_messages")
       .insert({ user_id: currentUserId, content: trimmed.slice(0, MAX_LEN), is_private: isPrivate, category })
-      .select("id, user_id, content, is_private, category, created_at")
+      .select("id, user_id, content, is_private, category, status, admin_reply, created_at")
       .single();
     setSending(false);
     if (error || !data) return;
@@ -180,6 +196,8 @@ export function FeedbackChat({
               content: data.content,
               isPrivate: data.is_private,
               category: data.category,
+              status: data.status,
+              adminReply: data.admin_reply,
               createdAt: data.created_at,
             },
           ],
@@ -189,7 +207,7 @@ export function FeedbackChat({
   }
 
   const placeholder =
-    (category ? CATEGORIES.find((c) => c.value === category)?.placeholder : null) ??
+    (category ? FEEDBACK_CATEGORIES.find((c) => c.value === category)?.placeholder : null) ??
     (isPrivate ? "운영자에게만 보내기" : "메시지 보내기 (전체 회원에게 공개)");
 
   async function handleDelete(id: string) {
@@ -247,18 +265,38 @@ export function FeedbackChat({
               >
                 {m.category && (
                   <span className="mb-0.5 block text-[11px] font-semibold text-active-gray">
-                    {CATEGORY_LABEL[m.category]}
+                    {FEEDBACK_CATEGORY_LABEL[m.category]}
                   </span>
                 )}
                 {m.content}
               </span>
+              {(m.category || m.isPrivate || m.status !== "received") && (
+                <span
+                  className={`px-1 text-[11px] ${m.status === "done" ? "font-semibold text-black" : "text-active-gray"}`}
+                >
+                  {FEEDBACK_STATUS_LABEL[m.status]}
+                </span>
+              )}
+              {m.adminReply && (
+                <div
+                  className={`mt-0.5 flex max-w-[85%] flex-col gap-0.5 rounded-2xl border border-main-gray bg-box-gray px-3 py-2 text-sm ${
+                    isMe ? "items-end text-right" : "items-start"
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 text-[11px] text-active-gray">
+                    ↳ <span className="font-medium text-black">운영자 답변</span>
+                    <ComperBadge />
+                  </span>
+                  <span className="whitespace-pre-wrap break-words text-black">{m.adminReply}</span>
+                </div>
+              )}
             </div>
           );
         })}
         <div ref={bottomRef} />
       </div>
       <div className="flex flex-wrap items-center gap-1.5 border-t border-main-gray px-2.5 pt-2.5">
-        {CATEGORIES.map((c) => {
+        {FEEDBACK_CATEGORIES.map((c) => {
           const active = category === c.value;
           return (
             <button

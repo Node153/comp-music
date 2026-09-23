@@ -57,12 +57,14 @@ export function SearchIcon({ className }: IconProps) {
   );
 }
 
-export function HelpIcon({ className }: IconProps) {
+// 피드백(/help) 메뉴 — 예전 ?(도움말) 아이콘은 "의견 남기는 곳"으로 안 읽혀서 교체(2026-09-23).
+// 메시지(ChatIcon, 둥근 말풍선)와 헷갈리지 않게 네모 말풍선 + 느낌표.
+export function FeedbackIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <line x1="12" y1="7" x2="12" y2="11" />
+      <line x1="12" y1="14" x2="12.01" y2="14" />
     </svg>
   );
 }

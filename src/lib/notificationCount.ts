@@ -12,7 +12,7 @@ export async function computeUnseenNotificationCount(
   userId: string,
   seenAt: string,
 ): Promise<number> {
-  const [{ data: myPosts }, { data: newCompanionRequests }] = await Promise.all([
+  const [{ data: myPosts }, { data: newCompanionRequests }, { data: newFeedbackUpdates }] = await Promise.all([
     supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", userId),
     supabase
       .from("companions")
@@ -20,6 +20,8 @@ export async function computeUnseenNotificationCount(
       .eq("addressee_id", userId)
       .eq("status", "pending")
       .gt("created_at", seenAt),
+    // 0063 — 내 피드백에 관리자가 상태 변경/답변(notificationList.ts의 feedback_update와 동일 기준).
+    supabase.from("feedback_messages").select("id").eq("user_id", userId).gt("admin_updated_at", seenAt),
   ]);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
@@ -50,5 +52,11 @@ export async function computeUnseenNotificationCount(
     newKnockCount = newKnocks?.length ?? 0;
   }
 
-  return newEngagementCount + newPeakCount + newKnockCount + (newCompanionRequests?.length ?? 0);
+  return (
+    newEngagementCount +
+    newPeakCount +
+    newKnockCount +
+    (newCompanionRequests?.length ?? 0) +
+    (newFeedbackUpdates?.length ?? 0)
+  );
 }

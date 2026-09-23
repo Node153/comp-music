@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { FeedbackStatus } from "@/lib/feedback";
 
 // 알림 아이템 조립 — 원래 (app)/notifications/page.tsx 안에만 있던 로직을 여기로 옮겨
 // 전체 알림 페이지와 TopNav 알림 드롭다운(/api/notifications/list)이 같이 쓴다.
@@ -25,6 +26,15 @@ export type NotificationItem = (
     }
   | { type: "peak"; id: string; postId: string; createdAt: string }
   | { type: "knock"; id: string; postId: string; actorId: string; actorName: string; createdAt: string }
+  // 0063 — 관리자가 내 피드백의 상태를 바꾸거나 답변을 달았을 때. createdAt = admin_updated_at.
+  | {
+      type: "feedback_update";
+      id: string;
+      status: FeedbackStatus;
+      hasReply: boolean;
+      content: string;
+      createdAt: string;
+    }
 ) & { href: string; unread: boolean };
 
 // 정렬만 된, 필터링/자르기 전 전체 목록을 돌려준다 — 카테고리 필터는 자르기 전에 적용돼야
@@ -33,7 +43,7 @@ export async function getNotificationItems(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ items: NotificationItem[]; seenAt: string }> {
-  const [{ data: myPosts }, { data: me }, { data: incomingRequests }] = await Promise.all([
+  const [{ data: myPosts }, { data: me }, { data: incomingRequests }, { data: feedbackUpdates }] = await Promise.all([
     supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", userId),
     supabase.from("users").select("notifications_seen_at").eq("id", userId).single(),
     supabase
@@ -42,6 +52,13 @@ export async function getNotificationItems(
       .eq("addressee_id", userId)
       .eq("status", "pending")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("feedback_messages")
+      .select("id, content, status, admin_reply, admin_updated_at")
+      .eq("user_id", userId)
+      .not("admin_updated_at", "is", null)
+      .order("admin_updated_at", { ascending: false })
+      .limit(50),
   ]);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
@@ -160,6 +177,18 @@ export async function getNotificationItems(
         createdAt: k.created_at,
         href: hrefFor(k.post_id),
         unread: isUnread(k.created_at),
+      }),
+    ),
+    ...(feedbackUpdates ?? []).map(
+      (f): NotificationItem => ({
+        type: "feedback_update",
+        id: f.id,
+        status: f.status,
+        hasReply: !!f.admin_reply,
+        content: f.content,
+        createdAt: f.admin_updated_at as string,
+        href: "/help",
+        unread: isUnread(f.admin_updated_at as string),
       }),
     ),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
