@@ -1,25 +1,43 @@
 "use client";
 
-// 회원가입 이메일 인증 링크 착지 화면 — 링크에는 URL 해시(#access_token=...&type=signup)가
-// 붙어있고, supabase-js 브라우저 클라이언트가 마운트 시점에 이걸 자동으로 읽어 로그인
-// 세션을 만든다(해시는 서버로 전달되지 않으므로 proxy.ts가 이 경로를 항상 public으로
-// 통과시켜야 함 — reset-password/page.tsx와 동일한 패턴). 세션이 만들어지면 /feed로 보내고,
+// 회원가입 이메일 인증 링크 착지 화면. Supabase가 두 가지 방식 중 하나로 토큰을 붙여
+// 보낼 수 있어서 둘 다 처리한다:
+// - 해시 방식(#access_token=...&type=signup): supabase-js 브라우저 클라이언트가 마운트
+//   시점에 자동으로 읽어 세션을 만든다(reset-password/page.tsx와 동일 패턴).
+// - PKCE 방식(?code=...): auth/callback/route.ts의 OAuth 콜백과 동일하게
+//   exchangeCodeForSession을 직접 호출해야 세션이 만들어진다.
+// 둘 다 해시/쿼리가 서버로 안 넘어가거나(해시) 세션 교환 전에 막히면 안 되므로(코드)
+// proxy.ts가 이 경로를 항상 public으로 통과시켜야 한다. 세션이 만들어지면 /feed로 보내고,
 // 그 뒤는 proxy.ts가 status(pending)에 맞춰 자동으로 /status(심사 대기 화면)로 보내준다.
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { pageTitle, mutedText } from "@/components/ui/styles";
 
-export default function AuthConfirmPage() {
+function AuthConfirmContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    // 링크가 만료/이미 사용됨 등으로 실패하면 해시에 error가 붙어서 온다.
-    if (window.location.hash.includes("error")) {
+    // 링크가 만료/이미 사용됨 등으로 실패하면 해시 또는 쿼리에 error가 붙어서 온다.
+    if (window.location.hash.includes("error") || searchParams.get("error")) {
       setFailed(true);
+      return;
+    }
+
+    const code = searchParams.get("code");
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ data: { session } }) => {
+        if (session) {
+          router.push("/feed");
+          router.refresh();
+        } else {
+          setFailed(true);
+        }
+      });
       return;
     }
 
@@ -41,7 +59,7 @@ export default function AuthConfirmPage() {
       listener.subscription.unsubscribe();
       clearTimeout(timeout);
     };
-  }, [supabase, router]);
+  }, [supabase, router, searchParams]);
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
@@ -62,5 +80,13 @@ export default function AuthConfirmPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function AuthConfirmPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthConfirmContent />
+    </Suspense>
   );
 }
