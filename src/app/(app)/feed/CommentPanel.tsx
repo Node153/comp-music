@@ -150,7 +150,7 @@ export function CommentPanel({
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             autoFocus
-            className="rounded-full border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+            className="rounded-full border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
           />
           <div className="flex gap-2 px-1 text-xs font-medium text-gray-500">
             <button onClick={saveEdit} className="hover:underline">
@@ -263,7 +263,7 @@ export function CommentPanel({
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="댓글 달기..."
-                  className="flex-1 rounded-full border border-gray-300 px-3.5 py-2 text-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+                  className="flex-1 rounded-full border border-gray-300 px-3.5 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                 />
                 <button
                   onClick={submitComment}
