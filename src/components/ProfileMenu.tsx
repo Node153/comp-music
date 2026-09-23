@@ -67,7 +67,14 @@ export function ProfileMenu({
             onClick={close}
             className="fixed inset-0 z-40 cursor-default"
           />
-          <div className="absolute left-0 top-full z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-950">
+          {/* 2026-09-24 수정(사용자 제보 — "좌측 메뉴바 잘리는것") — absolute top-full(버튼
+              바로 아래로 펼침)이었는데, 아바타 버튼이 사이드바 아래쪽에 있다 보니 관리자
+              메뉴(ADMIN_LINKS 9개)까지 펼치면 목록 길이가 버튼~화면 아래 사이 남은 공간보다
+              길어질 때가 있었고, 그러면 내용이 그냥 화면 밖으로 잘려서 스크롤할 방법도 없이
+              가려졌다. 버튼 위치 기준(top-full)이 아니라 화면 기준 fixed로 바꿔 플레이어바
+              위쪽에 항상 고정된 여백을 두고, max-h+overflow-y-auto로 넘치는 내용은 그 안에서
+              스크롤되게 했다 — 화면 크기/버튼 위치와 무관하게 항상 전체 메뉴에 닿을 수 있다. */}
+          <div className="fixed bottom-20 left-3 z-50 max-h-[calc(100vh-8rem)] w-56 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-800 dark:bg-gray-950">
             <Link
               href={`/profile/${userId}`}
               onClick={close}
