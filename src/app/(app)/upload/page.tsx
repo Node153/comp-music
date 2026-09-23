@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
-import { LockIcon, EyeIcon, HeartIcon, CommentIcon, SearchIcon, SunIcon, MoonIcon } from "@/components/icons";
+import { LockIcon, EyeIcon, HeartIcon, CommentIcon, SearchIcon, SunIcon, MoonIcon, ArrowUpIcon } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
@@ -198,9 +198,7 @@ function CoverFileButton({ onChange }: { onChange: (e: React.ChangeEvent<HTMLInp
         style={{ width: 160, height: 160 }}
         className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-canvas-gray"
       >
-        <span className="text-2xl" aria-hidden>
-          ⬆
-        </span>
+        <ArrowUpIcon className="h-6 w-6" />
         <span className="text-sm font-bold">이미지 선택</span>
         <span className="text-[11px]">PNG · JPG · WEBP</span>
       </button>
@@ -344,9 +342,7 @@ function UploadDropbox({
           ×
         </button>
       )}
-      <span className="text-3xl" aria-hidden>
-        ⬆
-      </span>
+      <ArrowUpIcon className="h-8 w-8" />
       {file ? (
         <>
           <p className="max-w-full truncate text-sm font-semibold">{file.name}</p>

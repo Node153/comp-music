@@ -88,6 +88,16 @@ export function MoonIcon({ className }: IconProps) {
   );
 }
 
+// 업로드 칸의 굵은 위쪽 화살표 — ⬆(U+2B06)도 ☀와 같은 이유로 iOS에서 파란 이모지 버튼으로
+// 바뀌어 보여서, 데스크톱 글자 모양(속이 찬 화살표)을 SVG로 옮겼다.
+export function ArrowUpIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 3l8 9h-5v9H9v-9H4z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 // 이하 12종 — 이모지로 되어 있던 UI 아이콘을 선 아이콘으로 교체(색은 아직 안 입힘,
 // 나중에 시그니처 컬러 정하면 currentColor 상속 구조라 부모 text-color만 바꾸면 됨).
 // mock 게시물 악기 그림(🎸🥁🎹 등)은 이번 대상에서 제외.
