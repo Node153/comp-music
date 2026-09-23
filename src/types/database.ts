@@ -586,12 +586,17 @@ export interface Database {
           id: string;
           user_id: string;
           content: string;
+          // 0062 — true면 작성자 본인 + 관리자만 열람(RLS). category null = 일반 대화.
+          is_private: boolean;
+          category: "bug" | "inconvenience" | "idea" | "praise" | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
           content: string;
+          is_private?: boolean;
+          category?: "bug" | "inconvenience" | "idea" | "praise" | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["feedback_messages"]["Insert"]>;

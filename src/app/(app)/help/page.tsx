@@ -26,7 +26,7 @@ export default async function HelpPage() {
   const { data: rawFeedback } = user
     ? await supabase
         .from("feedback_messages")
-        .select("id, user_id, content, created_at")
+        .select("id, user_id, content, is_private, category, created_at")
         .order("created_at", { ascending: true })
         .limit(200)
     : { data: null };
@@ -44,6 +44,8 @@ export default async function HelpPage() {
     nicknameTag: nickById.get(m.user_id)?.nickname_tag ?? "",
     isComper: nickById.get(m.user_id)?.role === "admin",
     content: m.content,
+    isPrivate: m.is_private,
+    category: m.category,
     createdAt: m.created_at,
   }));
 
@@ -85,7 +87,7 @@ export default async function HelpPage() {
         <section className="flex min-w-0 flex-col gap-3">
           <h2 className={`${sectionTitle} !text-black`}>💬 피드백 채팅</h2>
           <p className={`${mutedText} !text-active-gray`}>
-            전체 회원이 함께 보는 공간이에요. 무엇이든 편하게 남겨주세요. (닉네임으로 표시됩니다)
+            유형을 고르면 더 빨리 확인할 수 있어요. 🔒 운영자에게만 보내면 다른 회원에게는 보이지 않아요.
           </p>
           <div className="h-[70vh] md:h-[600px]">
             {user ? (
