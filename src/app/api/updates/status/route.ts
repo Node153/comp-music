@@ -15,6 +15,7 @@ export async function GET() {
     supabase
       .from("announcements")
       .select("id, title, kind, created_at")
+      .eq("status", "published")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),

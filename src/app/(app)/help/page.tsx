@@ -87,6 +87,8 @@ export default async function HelpPage() {
     supabase
     .from("announcements")
     .select("id, title, content, kind, pinned, request_summary, link_url, requester_count, like_count, created_at")
+    // 관리자는 RLS상 초안(0070)도 읽을 수 있어서 명시적으로 게시된 것만.
+    .eq("status", "published")
     .order("pinned", { ascending: false })
     .order("created_at", { ascending: false }),
     user ? supabase.rpc("feedback_stats") : Promise.resolve({ data: null }),

@@ -4,6 +4,7 @@ import { AnnouncementForm } from "./AnnouncementForm";
 import { AnnouncementItem } from "./AnnouncementItem";
 
 // 관리자 - 공지사항 작성/삭제(0021_announcements_and_feedback). role=admin만 접근(proxy.ts에서 가드).
+// 0070 — 매일 09:00 크론이 만든 릴리즈 노트 초안(status=draft)을 맨 위에 두고, 수정 후 "게시".
 export default async function AdminAnnouncementsPage() {
   const supabase = await createClient();
   const {
@@ -12,7 +13,8 @@ export default async function AdminAnnouncementsPage() {
 
   const { data: announcements } = await supabase
     .from("announcements")
-    .select("id, title, content, kind, pinned, link_url, created_at")
+    .select("id, title, content, kind, pinned, link_url, status, release_date, created_at")
+    .order("status", { ascending: true }) // "draft" < "published" — 초안 먼저
     .order("created_at", { ascending: false });
 
   return (

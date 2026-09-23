@@ -538,6 +538,9 @@ export interface Database {
           link_url: string | null;
           requester_count: number;
           like_count: number;
+          // 0070 — draft는 관리자만 보임(일일 릴리즈 노트 자동 초안). release_date = 요약한 커밋 날짜(KST).
+          status: "published" | "draft";
+          release_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -552,6 +555,8 @@ export interface Database {
           link_url?: string | null;
           requester_count?: number;
           like_count?: number;
+          status?: "published" | "draft";
+          release_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
