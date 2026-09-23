@@ -65,6 +65,8 @@ export interface Database {
           status: UserStatus;
           role: UserRole;
           notifications_seen_at: string;
+          // 0068 — 피드백 메뉴 "새 소식" 점/홈 배너 판정(마지막으로 업데이트 소식을 본 시각).
+          updates_seen_at: string;
           // 우측 사이드바 온라인/자리비움/오프라인 판정용(0025) — 클라이언트가 주기적으로 갱신,
           // 한 번도 접속 안 했으면 null(오프라인 취급).
           last_seen_at: string | null;
@@ -106,6 +108,7 @@ export interface Database {
           status?: UserStatus;
           role?: UserRole;
           notifications_seen_at?: string;
+          updates_seen_at?: string;
           last_seen_at?: string | null;
           needs_onboarding?: boolean;
           birth_date?: string | null;
@@ -662,6 +665,8 @@ export interface Database {
           admin_updated_at: string | null;
           // 0065 — feedback-images 버킷 경로(`${user_id}/...`). 이미지만 보낼 땐 content가 빈 문자열.
           image_path: string | null;
+          // 0068 — 있으면 반영 공지를 채팅에 자동으로 올린 운영자 메시지(공지 카드로 렌더링).
+          announcement_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -674,6 +679,7 @@ export interface Database {
           admin_reply?: string | null;
           admin_updated_at?: string | null;
           image_path?: string | null;
+          announcement_id?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["feedback_messages"]["Insert"]>;
@@ -738,6 +744,17 @@ export interface Database {
       };
     };
     Functions: {
+      // 0068 — 피드백 처리 현황 집계(숫자만, security definer). 승인 회원만.
+      feedback_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          received: number;
+          reviewing: number;
+          done: number;
+          done_this_month: number;
+          avg_response_hours: number | null;
+        }[];
+      };
       // 회원 관리(0064) — 상태/권한 변경은 전부 이 함수들로(감사 로그 기록). 관리자 전용.
       admin_set_member_status: {
         Args: { p_target: string; p_status: string; p_reason?: string | null; p_until?: string | null };

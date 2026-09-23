@@ -17,6 +17,10 @@
 //
 // 0065 — 공개 피드백에 "나도 👍"(feedback_reactions, 남의 공개 글에만), 스크린샷 1장 첨부
 // (feedback-images 비공개 버킷 → 표시할 때 signed URL). 입력창에 이미지를 붙여넣어도 첨부된다.
+//
+// 0068 — announcement_id가 있는 메시지는 관리자가 반영 공지를 등록할 때 자동으로 올라온 "반영
+// 소식"이라 일반 말풍선 대신 강조 카드로 보여준다(바로가기는 공지의 link_url, 없으면 업데이트 소식).
+// 각 메시지에 id="fb-…" 앵커 — 상단 "지금 만드는 중"에서 해당 의견으로 바로 스크롤한다.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
@@ -30,6 +34,8 @@ import {
 } from "@/lib/feedback";
 import { FeedbackCategoryIcon, FeedbackStatusIcon } from "@/components/FeedbackIcons";
 import {
+  ArrowRightIcon,
+  CheckCircleIcon,
   CornerDownRightIcon,
   GlobeIcon,
   ImageIcon,
@@ -51,6 +57,7 @@ export type FeedbackChatMessage = {
   status: FeedbackStatus;
   adminReply: string | null;
   imagePath: string | null;
+  announcementId: string | null;
   // "나도 👍" 누른 사람 user_id — 개수/내가 눌렀는지 둘 다 여기서. 추가·제거가 멱등이라
   // 낙관적 반영과 realtime 이벤트가 겹쳐도 안전하다.
   likers: string[];
@@ -66,6 +73,7 @@ type FeedbackRow = {
   status: FeedbackStatus;
   admin_reply: string | null;
   image_path: string | null;
+  announcement_id: string | null;
   created_at: string;
 };
 
@@ -74,7 +82,8 @@ type Nick = { nickname: string; nicknameTag: string; isComper: boolean };
 const MAX_LEN = 2000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // feedback-images 버킷 file_size_limit과 동일
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-const ROW_COLUMNS = "id, user_id, content, is_private, category, status, admin_reply, image_path, created_at";
+const ROW_COLUMNS =
+  "id, user_id, content, is_private, category, status, admin_reply, image_path, announcement_id, created_at";
 
 function toMessage(row: FeedbackRow, nick: Nick): FeedbackChatMessage {
   return {
@@ -89,6 +98,7 @@ function toMessage(row: FeedbackRow, nick: Nick): FeedbackChatMessage {
     status: row.status,
     adminReply: row.admin_reply,
     imagePath: row.image_path,
+    announcementId: row.announcement_id,
     likers: [],
     createdAt: row.created_at,
   };
@@ -123,10 +133,13 @@ export function FeedbackChat({
   currentUserId,
   isAdmin,
   initialMessages,
+  announcementLinks = {},
 }: {
   currentUserId: string;
   isAdmin: boolean;
   initialMessages: FeedbackChatMessage[];
+  // 반영 소식 카드의 "보러 가기" — 공지 id → link_url(내부 경로). 없으면 업데이트 소식(#updates)으로.
+  announcementLinks?: Record<string, string | null>;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState<FeedbackChatMessage[]>(initialMessages);
@@ -354,8 +367,47 @@ export function FeedbackChat({
           const isMe = m.userId === currentUserId;
           const canDelete = isMe || isAdmin;
           const likedByMe = m.likers.includes(currentUserId);
+          if (m.announcementId) {
+            const href = announcementLinks[m.announcementId] ?? "#updates";
+            return (
+              <div key={m.id} id={`fb-${m.id}`} className="flex flex-col items-start gap-0.5">
+                <span className="flex items-center gap-1.5 px-1 text-[11px] text-active-gray">
+                  <span className="font-medium text-black">{m.nickname}</span>
+                  <ComperBadge />
+                  <span>·</span>
+                  <span>{timeAgo(m.createdAt)}</span>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(m.id)}
+                      className="text-active-gray transition hover:text-red-500"
+                      title="삭제"
+                      aria-label="삭제"
+                    >
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  )}
+                </span>
+                <a
+                  href={href}
+                  className="flex max-w-[85%] items-center gap-3 rounded-2xl border border-black bg-main-gray px-3.5 py-2.5 text-sm text-black transition hover:bg-demo-bg"
+                >
+                  <CheckCircleIcon className="h-5 w-5 shrink-0" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-[11px] font-semibold text-active-gray">여러분 의견이 반영됐어요</span>
+                    <span className="font-semibold">{m.content}</span>
+                  </span>
+                  <ArrowRightIcon className="h-4 w-4 shrink-0" />
+                </a>
+              </div>
+            );
+          }
           return (
-            <div key={m.id} className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
+            <div
+              key={m.id}
+              id={`fb-${m.id}`}
+              className={`flex scroll-mt-4 flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}
+            >
               <span className="flex items-center gap-1.5 px-1 text-[11px] text-active-gray">
                 {/* 태그번호(#0038)는 피드백 채팅에서 노출하지 않음 (사용자 요청) — 닉네임만. */}
                 <span className="font-medium text-black">{m.nickname}</span>

@@ -18,6 +18,7 @@ import { FeatureGuideModal } from "@/components/FeatureGuideModal";
 import { FeedbackPulse } from "@/components/FeedbackPulse";
 import { NotificationCountProvider } from "@/components/NotificationCountContext";
 import { MessageCountProvider } from "@/components/MessageCountContext";
+import { UpdatesStatusProvider } from "@/components/UpdatesStatusContext";
 import { getCurrentUser, getMyUserRow } from "@/lib/auth";
 
 // 승인된 사용자 전용 화면(S6 피드, S8 업로드, S9 프로필, S12/S13 DM) 공통 레이아웃.
@@ -45,6 +46,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <PlaylistProvider>
             <NotificationCountProvider>
               <MessageCountProvider>
+                {/* 피드백 메뉴 "새 소식" 점·홈 배너 상태(0068) */}
+                <UpdatesStatusProvider userId={user.id}>
                 <SearchOverlayProvider>
                   <PresenceHeartbeat userId={user.id} />
                   {/* 신규 유저 첫 방문 가이드(DEMO/memo/PEAK/노크) — 로그인 화면 어디든 공통으로
@@ -68,6 +71,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   <QueuePanel />
                   <SearchOverlay />
                 </SearchOverlayProvider>
+                </UpdatesStatusProvider>
               </MessageCountProvider>
             </NotificationCountProvider>
           </PlaylistProvider>

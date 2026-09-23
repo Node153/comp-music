@@ -13,6 +13,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { FeedbackIcon, SunIcon, MoonIcon } from "@/components/icons";
 import { beginThemeTransitionWithSound } from "@/lib/theme";
+import { useUpdatesStatus } from "@/components/UpdatesStatusContext";
 
 const FEED_TABS = [
   { value: "completion", label: "DEMO", Icon: SunIcon },
@@ -21,6 +22,7 @@ const FEED_TABS = [
 
 export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
   const pathname = usePathname();
+  const { unseen: updatesUnseen } = useUpdatesStatus();
   const searchParams = useSearchParams();
   const activeFeedTab = searchParams.get("feed") ?? "completion";
   // TopNav와 같은 이유 — 피드 밖 화면은 캔버스가 canvas-gray라 흰 상단바 대신 main-gray를 쓴다.
@@ -72,9 +74,10 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
         <Link
           href="/help"
           aria-label="피드백"
-          className={`shrink-0 ${isFeed ? "text-gray-500 dark:text-gray-400" : "text-black"}`}
+          className={`relative shrink-0 ${isFeed ? "text-gray-500 dark:text-gray-400" : "text-black"}`}
         >
           <FeedbackIcon className="h-5 w-5" />
+          {updatesUnseen && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500" />}
         </Link>
         <NotificationsMenu userId={currentUserId} isFeed={isFeed} compact />
       </div>

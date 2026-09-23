@@ -13,6 +13,7 @@ import { MessagesMenu } from "@/components/MessagesMenu";
 import { SearchMenu } from "@/components/SearchMenu";
 import { HomeIcon, PlusIcon, FeedbackIcon } from "@/components/icons";
 import { navRowClass, navLabelClass } from "@/components/ui/styles";
+import { useUpdatesStatus } from "@/components/UpdatesStatusContext";
 
 export function NavSidebar({
   currentUserId,
@@ -24,6 +25,7 @@ export function NavSidebar({
   isAdmin?: boolean;
 }) {
   const pathname = usePathname();
+  const { unseen: updatesUnseen } = useUpdatesStatus();
   const isFeed = pathname === "/feed" || pathname?.startsWith("/feed/");
 
   // 평소엔 아이콘만 보이는 좁은 레일이다가 마우스를 올리면 라벨까지 보이는 넓은 폭으로
@@ -115,7 +117,11 @@ export function NavSidebar({
           <span className={navLabelClass(expanded)}>만들기</span>
         </Link>
         <Link href="/help" className={navRowClass(pathname === "/help", isFeed, expanded)}>
-          <FeedbackIcon className="h-6 w-6 shrink-0" />
+          {/* 안 본 업데이트 소식이 있으면 아이콘 모서리에 점(0068) — 알림 뱃지와 같은 위치 규칙. */}
+          <span className="relative shrink-0">
+            <FeedbackIcon className="h-6 w-6" />
+            {updatesUnseen && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500" />}
+          </span>
           <span className={navLabelClass(expanded)}>피드백</span>
         </Link>
         <ProfileMenu

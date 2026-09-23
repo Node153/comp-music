@@ -55,7 +55,7 @@ export function UpdatesBoard({ items }: { items: UpdateItem[] }) {
   const visible = items.filter((i) => matches(i, tab));
 
   return (
-    <div className="flex flex-col gap-3 overflow-y-auto rounded-xl bg-box-gray p-4 md:h-[600px]">
+    <div className="flex flex-col gap-3 overflow-y-auto rounded-xl bg-box-gray p-4 md:max-h-[520px]">
       <div className="flex gap-1.5">
         {TABS.map((t) => (
           <button

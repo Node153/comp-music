@@ -1,5 +1,6 @@
 import { RightSidebar } from "@/components/RightSidebar";
 import { getCurrentUser } from "@/lib/auth";
+import { UpdatesBanner } from "@/components/UpdatesBanner";
 
 // 우측(온라인 Companion/금주 PEAK) 사이드바는 "피드를 구경할 때"만 의미 있는 보조 정보라 /feed
 // 전용으로 옮김 — 예전엔 (app)/layout.tsx에 있어서 업로드/메시지/알림/프로필/검색까지 전부
@@ -21,7 +22,11 @@ export default async function FeedLayout({ children }: { children: React.ReactNo
   return (
     <div className="mx-auto md:grid md:max-w-[1600px] md:grid-cols-[220px_minmax(0,1fr)_220px] md:gap-4 md:px-4 md:pt-4">
       <div aria-hidden />
-      <div>{children}</div>
+      <div>
+        {/* 안 본 업데이트 소식 한 줄 배너(0068) */}
+        <UpdatesBanner />
+        {children}
+      </div>
       <RightSidebar currentUserId={user.id} />
     </div>
   );

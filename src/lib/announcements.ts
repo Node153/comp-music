@@ -21,7 +21,8 @@ export function isInternalPath(url: string) {
 // 피드백 여러 건을 묶어 "피드백 반영" 공지를 만든다(관리자 클라이언트에서 호출 — RLS상 관리자만
 // 성공). 요청자 수/공감 수는 관리자가 모든 행을 볼 수 있는 지금 계산해 스냅샷으로 저장한다
 // (회원은 비공개 피드백을 못 읽어서 화면에서 셀 수 없음). markDone이면 선택한 피드백을
-// "반영됨"으로 바꿔 작성자 알림(feedback_update)도 같이 나가게 한다.
+// "반영됨"으로 바꿔 작성자 알림(feedback_update)도 같이 나가게 한다. 0068 — 피드백 채팅에도
+// 운영자 메시지로 "반영됐어요" 카드(announcement_id)를 자동으로 올린다.
 export async function createFeedbackAnnouncement(
   supabase: SupabaseClient,
   input: {
@@ -70,6 +71,14 @@ export async function createFeedbackAnnouncement(
     .from("announcement_feedback")
     .insert(input.feedbackIds.map((feedbackId) => ({ announcement_id: ann.id, feedback_id: feedbackId })));
   if (linkError) return { error: `공지는 등록됐지만 피드백 연결 실패: ${linkError.message}` };
+
+  const { error: chatError } = await supabase.from("feedback_messages").insert({
+    user_id: user.id,
+    content: input.title.trim(),
+    is_private: false,
+    announcement_id: ann.id,
+  });
+  if (chatError) return { error: `공지는 등록됐지만 채팅 소식 게시 실패: ${chatError.message}` };
 
   if (input.markDone) {
     const { error: doneError } = await supabase
