@@ -12,16 +12,34 @@ import { Button } from "@/components/ui/Button";
 import { field, label, errorText } from "@/components/ui/styles";
 import { isInternalPath } from "@/lib/announcements";
 
-export function AnnouncementForm({ authorId }: { authorId: string }) {
+type EditTarget = {
+  id: string;
+  title: string;
+  content: string;
+  kind: "notice" | "update";
+  pinned: boolean;
+  link_url: string | null;
+};
+
+export function AnnouncementForm({
+  authorId,
+  editTarget,
+  onDone,
+}: {
+  authorId: string;
+  editTarget?: EditTarget;
+  onDone?: () => void;
+}) {
   const router = useRouter();
   const supabase = createClient();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [kind, setKind] = useState<"notice" | "update">("notice");
-  const [pinned, setPinned] = useState(false);
-  const [linkUrl, setLinkUrl] = useState("");
+  const [title, setTitle] = useState(editTarget?.title ?? "");
+  const [content, setContent] = useState(editTarget?.content ?? "");
+  const [kind, setKind] = useState<"notice" | "update">(editTarget?.kind ?? "notice");
+  const [pinned, setPinned] = useState(editTarget?.pinned ?? false);
+  const [linkUrl, setLinkUrl] = useState(editTarget?.link_url ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isEdit = !!editTarget;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,29 +50,35 @@ export function AnnouncementForm({ authorId }: { authorId: string }) {
     }
     setSubmitting(true);
     setError(null);
-    const { error: insertError } = await supabase.from("announcements").insert({
-      author_id: authorId,
+    const payload = {
       title: title.trim(),
       content: content.trim(),
       kind,
       pinned,
       link_url: linkUrl.trim() || null,
-    });
+    };
+    const { error: saveError } = isEdit
+      ? await supabase.from("announcements").update(payload).eq("id", editTarget.id)
+      : await supabase.from("announcements").insert({ author_id: authorId, ...payload });
     setSubmitting(false);
-    if (insertError) {
-      setError(`등록 실패: ${insertError.message}`);
+    if (saveError) {
+      setError(`${isEdit ? "수정" : "등록"} 실패: ${saveError.message}`);
       return;
     }
-    setTitle("");
-    setContent("");
-    setPinned(false);
-    setLinkUrl("");
+    if (isEdit) {
+      onDone?.();
+    } else {
+      setTitle("");
+      setContent("");
+      setPinned(false);
+      setLinkUrl("");
+    }
     router.refresh();
   }
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-2 rounded-xl border border-gray-200 p-4">
-      <span className={label}>새 공지 작성</span>
+      <span className={label}>{isEdit ? "공지 수정" : "새 공지 작성"}</span>
       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-800">
         {(["notice", "update"] as const).map((k) => (
           <label key={k} className="flex items-center gap-1.5">
@@ -88,9 +112,16 @@ export function AnnouncementForm({ authorId }: { authorId: string }) {
         className={field}
       />
       {error && <p className={errorText}>{error}</p>}
-      <Button type="submit" disabled={submitting || !title.trim() || !content.trim()} className="self-end px-5">
-        {submitting ? "등록 중..." : "등록"}
-      </Button>
+      <div className="flex justify-end gap-2">
+        {isEdit && (
+          <Button type="button" variant="secondary" onClick={onDone} className="px-5">
+            취소
+          </Button>
+        )}
+        <Button type="submit" disabled={submitting || !title.trim() || !content.trim()} className="px-5">
+          {submitting ? (isEdit ? "수정 중..." : "등록 중...") : isEdit ? "수정 완료" : "등록"}
+        </Button>
+      </div>
     </form>
   );
 }
