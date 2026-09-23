@@ -395,6 +395,7 @@ export default async function ProfilePage({
           profile={profile}
           isOwnProfile={isOwnProfile}
           userId={userId}
+          currentUserId={currentUser?.id ?? null}
           companionCount={companionCount ?? 0}
           companionPreview={companionPreview}
         />

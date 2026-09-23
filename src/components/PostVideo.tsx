@@ -117,16 +117,23 @@ export function PostVideo({
   });
   const overlayOnClick = viewerId ? handleDoubleTapLike : togglePlayPause;
 
+  // iOS Safari는 한 번도 재생 안 한 <video>의 첫 프레임을 그리지 않아서, 커버(poster) 없는 영상
+  // 게시물이 빈 칸으로 보였다(2026-09-23 제보, 모바일 프로필). #t=0.1 미디어 프래그먼트를 붙이면
+  // 브라우저가 그 지점으로 탐색해서 프레임을 그린다 — 프래그먼트는 서버로 안 가서 R2 서명
+  // URL엔 영향 없음. 실제 소리를 내는 전역 플레이어는 track.videoSrc(원본)를 쓰므로 무관.
+  const previewSrc = posterSrc ? videoSrc : `${videoSrc}#t=0.1`;
+
   if (tone === "demo") {
     return (
       <div className="relative">
         <video
           ref={videoRef}
-          src={videoSrc}
+          src={previewSrc}
           poster={posterSrc ?? undefined}
           className="aspect-square w-full object-cover"
           muted
           playsInline
+          preload="metadata"
           onPlay={handlePlay}
           onPause={handlePause}
         />
@@ -147,12 +154,13 @@ export function PostVideo({
 
   return (
     <video
-      src={videoSrc}
+      src={previewSrc}
       poster={posterSrc ?? undefined}
       className="max-h-[780px] w-auto max-w-full object-contain"
       controls
       muted
       playsInline
+      preload="metadata"
       onPlay={handlePlay}
       onPause={handlePause}
     />

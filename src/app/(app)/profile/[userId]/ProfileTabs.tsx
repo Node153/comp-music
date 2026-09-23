@@ -1,11 +1,12 @@
 "use client";
 
 // 프로필 하단 탭 바(페이스북 참고) — 게시물/소개/Companion 세 탭을 전환한다.
-// 탭 바 시각 스타일은 원래 PostsGrid의 현재/만료 서브탭 톤(border-b-2 언더라인)을 그대로 가져왔다 —
-// 게시물 탭 안에서는 그 서브탭이 한 단계 더 있는 중첩 구조.
+// 게시물 탭은 데스크톱과 같은 ProfileFeed(한 게시물씩 세로로 넘기는 피드 카드)를 쓴다 —
+// 예전엔 3열 썸네일 그리드(콜라주)였는데 눌러도 아무 반응이 없어서, DEMO 피드처럼 게시물을
+// 크게 보고 바로 재생/좋아요/댓글할 수 있게 바꿨다(2026-09-23 사용자 요청). 폴더만은
+// 큐레이션 도구라 ProfileFeed 안에서 기존 썸네일 그리드(FolderView)를 그대로 쓴다.
 import { useState } from "react";
-import { PostsGrid } from "./PostsGrid";
-import type { ProfilePost } from "./PostTile";
+import { ProfileFeed, type FeedPost } from "./ProfileFeed";
 import type { FolderData } from "./FolderView";
 import { AboutSection, type AboutProfile } from "./AboutSection";
 import { CompanionPreview, type CompanionPerson } from "./CompanionPreview";
@@ -25,15 +26,17 @@ export function ProfileTabs({
   profile,
   isOwnProfile,
   userId,
+  currentUserId,
   companionCount,
   companionPreview,
 }: {
-  posts: ProfilePost[];
-  likedPosts: ProfilePost[];
+  posts: FeedPost[];
+  likedPosts: FeedPost[];
   folders: FolderData[];
   profile: AboutProfile | null;
   isOwnProfile: boolean;
   userId: string;
+  currentUserId: string | null;
   companionCount: number;
   companionPreview: CompanionPerson[];
 }) {
@@ -60,7 +63,16 @@ export function ProfileTabs({
       </div>
 
       {tab === "posts" && (
-        <PostsGrid posts={posts} likedPosts={likedPosts} folders={folders} isOwnProfile={isOwnProfile} userId={userId} />
+        <div className="mt-4">
+          <ProfileFeed
+            posts={posts}
+            likedPosts={likedPosts}
+            folders={folders}
+            isOwnProfile={isOwnProfile}
+            userId={userId}
+            currentUserId={currentUserId}
+          />
+        </div>
       )}
       {tab === "about" && <AboutSection profile={profile} isOwnProfile={isOwnProfile} />}
       {tab === "companions" && (

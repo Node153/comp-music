@@ -1,4 +1,4 @@
-// 게시물 그리드 타일 — PostsGrid(현재/보관된)와 FolderView(폴더)가 공유하는 순수 표시 컴포넌트.
+// 게시물 그리드 타일 — FolderView(폴더 썸네일 그리드)가 쓰는 순수 표시 컴포넌트.
 // overlay는 폴더 편집 중 우상단에 얹는 ✕(빼기)/＋(담기) 버튼 자리.
 export type ProfilePost = {
   id: string;
@@ -28,11 +28,13 @@ export function PostTile({ post, overlay }: { post: ProfilePost; overlay?: React
           </div>
         )
       ) : post.videoSrc ? (
+        // #t=0.1 + playsInline: iOS Safari가 커버 없는 영상의 첫 프레임을 그리게(PostVideo.tsx 참고).
         <video
-          src={post.videoSrc}
+          src={post.posterSrc ? post.videoSrc : `${post.videoSrc}#t=0.1`}
           poster={post.posterSrc ?? undefined}
           className="h-full w-full object-cover"
           muted
+          playsInline
           preload="metadata"
         />
       ) : null}
