@@ -51,12 +51,31 @@ export function AdminReviewForm({
     }
 
     if (decision === "approved") {
-      // 이메일 발송 실패해도 승인 자체는 이미 끝났으니 화면 진행을 막지 않는다.
-      await fetch("/api/admin/notify-approval", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      }).catch(() => {});
+      // 승인 자체는 이미 끝났으니 메일 발송 실패로 화면 이동까지 막진 않되, 실패 사실은
+      // 알 수 있게 잠깐 멈춰서 보여준다.
+      try {
+        const res = await fetch("/api/admin/notify-approval", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setError(`승인은 됐지만 알림 메일 발송에 실패했어요: ${body.error ?? res.status}`);
+          setTimeout(() => {
+            router.push("/admin/verifications");
+            router.refresh();
+          }, 2500);
+          return;
+        }
+      } catch {
+        setError("승인은 됐지만 알림 메일 발송에 실패했어요 (네트워크 오류)");
+        setTimeout(() => {
+          router.push("/admin/verifications");
+          router.refresh();
+        }, 2500);
+        return;
+      }
     }
 
     router.push("/admin/verifications");

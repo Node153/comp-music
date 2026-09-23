@@ -13,6 +13,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // /auth/callback도 마찬가지 이유로 public — OAuth 콜백이 도착한 시점엔 아직 세션 쿠키가 없고
 // (콜백 라우트 핸들러 안에서 code를 세션으로 교환해야 비로소 생김), 여기서 막으면 그 교환이
 // 일어나기 전에 /login으로 튕겨버린다.
+// /auth/confirm도 /reset-password와 같은 이유로 public — 회원가입 이메일 인증 링크의
+// access_token 해시를 클라이언트가 처리할 시간을 준다(auth/confirm/page.tsx 참고).
 // /terms, /privacy, /community-guidelines, /beta-notice는 법적 고지 문서라 회원 여부와
 // 무관하게 항상 열람 가능해야 한다(가입 전 signup 화면에서도 링크로 걸림).
 const PUBLIC_PATHS = [
@@ -23,6 +25,7 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/auth/callback",
+  "/auth/confirm",
   "/terms",
   "/privacy",
   "/community-guidelines",

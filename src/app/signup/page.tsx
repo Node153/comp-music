@@ -215,7 +215,10 @@ export default function SignupPage() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, nickname: nickname.trim(), birth_date: birthDate } },
+      options: {
+        data: { name, nickname: nickname.trim(), birth_date: birthDate },
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      },
     });
     setLoading(false);
 

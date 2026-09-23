@@ -13,8 +13,13 @@ export function MemberStatusActions({ userId, status }: { userId: string; status
   const supabase = createClient();
   const [loading, setLoading] = useState<"approved" | "rejected" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 승인 자체는 성공했는데 알림 메일만 실패한 경우 — status가 이미 pending이 아니게 돼서
+  // 버튼 자체는 사라지지만, 이 경고만은 남겨서 관리자가 놓치지 않게 한다.
+  const [emailWarning, setEmailWarning] = useState<string | null>(null);
 
-  if (status !== "pending") return null;
+  if (status !== "pending") {
+    return emailWarning ? <p className="text-xs text-amber-600">{emailWarning}</p> : null;
+  }
 
   async function decide(decision: "approved" | "rejected") {
     setError(null);
@@ -31,12 +36,21 @@ export function MemberStatusActions({ userId, status }: { userId: string; status
     }
 
     if (decision === "approved") {
-      // 이메일 발송 실패해도 승인 자체는 이미 끝났으니 화면 진행을 막지 않는다.
-      await fetch("/api/admin/notify-approval", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      }).catch(() => {});
+      // 승인 자체는 이미 끝났으니 메일 발송 실패가 화면 진행을 막진 않되, 조용히 묻히지
+      // 않도록 경고 문구로 남긴다.
+      try {
+        const res = await fetch("/api/admin/notify-approval", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setEmailWarning(`승인은 됐지만 알림 메일 발송에 실패했어요: ${body.error ?? res.status}`);
+        }
+      } catch {
+        setEmailWarning("승인은 됐지만 알림 메일 발송에 실패했어요 (네트워크 오류)");
+      }
     }
 
     router.refresh();
