@@ -20,6 +20,8 @@ import { useDoubleTap } from "@/lib/useDoubleTap";
 import { usePostLike } from "@/lib/usePostLike";
 import { useHeartBurst } from "@/components/HeartBurst";
 import { PlayIcon, PauseIcon } from "@/components/icons";
+import { useGuestSignupPrompt, GUEST_AUDIO_PAUSE_EVENT } from "@/components/GuestSignupPrompt";
+import { GUEST_PREVIEW_SECONDS } from "@/lib/feedConstants";
 
 const SLIM_BAR_COUNT = 200;
 
@@ -110,6 +112,30 @@ export function SoundbarPlayer({
   const [inlinePlaying, setInlinePlaying] = useState(false);
   const [inlineDuration, setInlineDuration] = useState(0);
   const [inlineTime, setInlineTime] = useMediaProgress(audioRef, inlinePlaying);
+  const guestPrompt = useGuestSignupPrompt();
+
+  // 게스트 미리듣기 상한(2026-09-23) — inline 모드는 mode={currentUserId ? "global" :
+  // "inline"} 호출 규칙상 항상 게스트 전용이라 여기서 무조건 적용한다. 상한에 닿으면
+  // 멈추고 가입 유도 팝업도 같이 띄운다(그 팝업이 뜨면 GUEST_AUDIO_PAUSE_EVENT로 다른
+  // 재생 중인 카드도 같이 멈춘다 — 아래 이펙트).
+  function handleInlineTimeUpdate(time: number) {
+    setInlineTime(time);
+    if (!isGlobal && time >= GUEST_PREVIEW_SECONDS) {
+      audioRef.current?.pause();
+      guestPrompt();
+    }
+  }
+
+  // 가입 유도 팝업이 (다른 트리거로) 뜨면 이 게스트 오디오도 같이 멈춘다 — 팝업 밑에서
+  // 계속 들리면 안 됨(사용자 요청).
+  useEffect(() => {
+    if (isGlobal) return;
+    function handlePauseEvent() {
+      audioRef.current?.pause();
+    }
+    window.addEventListener(GUEST_AUDIO_PAUSE_EVENT, handlePauseEvent);
+    return () => window.removeEventListener(GUEST_AUDIO_PAUSE_EVENT, handlePauseEvent);
+  }, [isGlobal]);
 
   // ---- global 모드: 하단 바 공유 ----
   const {
@@ -209,7 +235,7 @@ export function SoundbarPlayer({
       src={src}
       onPlay={() => setInlinePlaying(true)}
       onPause={() => setInlinePlaying(false)}
-      onTimeUpdate={(e) => setInlineTime(e.currentTarget.currentTime)}
+      onTimeUpdate={(e) => handleInlineTimeUpdate(e.currentTarget.currentTime)}
       onLoadedMetadata={(e) => setInlineDuration(e.currentTarget.duration)}
       className="hidden"
     />

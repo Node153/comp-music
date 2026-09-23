@@ -4,6 +4,7 @@ import { NavSidebar } from "@/components/NavSidebar";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { PageCanvas } from "@/components/PageCanvas";
 import { GuestTopNav } from "@/components/GuestTopNav";
+import { GuestBottomBar } from "@/components/GuestBottomBar";
 import { GuestSignupPromptProvider } from "@/components/GuestSignupPrompt";
 import { NowPlayingProvider } from "@/components/NowPlayingContext";
 import { PlaylistProvider } from "@/components/PlaylistContext";
@@ -75,6 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <GuestSignupPromptProvider>
             <GuestTopNav />
             {children}
+            <GuestBottomBar />
           </GuestSignupPromptProvider>
         </div>
       )}

@@ -348,13 +348,20 @@ export default async function FeedPage({
     chatMessagesByPost.set(post_id, list);
   }
 
+  // 게스트(비로그인)에게 내려주는 서명 URL은 훨씬 짧게(2026-09-23, 사용자 요청) — 미공개·
+  // 미등록 저작물을 개발자도구로 URL만 복사해 통째로 받아가는 걸 완전히 막을 순 없지만
+  // (서명 URL을 <audio src>/<video src>에 그대로 꽂는 구조라 URL 자체가 노출 표면),
+  // 유효시간을 30분→2분으로 줄이면 그 노출 창을 크게 줄일 수 있다. 미리듣기 상한(30초,
+  // feedConstants.ts)이 걸리는 시간보다는 여유 있게 둬서 느린 네트워크에서도 재생 시작
+  // 전에 만료되는 일은 없게 한다.
+  const mediaExpirySeconds = currentUser ? SIGNED_URL_EXPIRY_SECONDS : 60 * 2;
   const postsWithVideo = await Promise.all(
     posts.map(async (post) => {
       const canView = canViewMediaFor(post);
       const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
-      const videoSrc = canView && mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
+      const videoSrc = canView && mediaPath ? await getR2SignedUrl(mediaPath, mediaExpirySeconds) : null;
       const posterSrc =
-        canView && post.thumbnail_url ? await resolveMediaUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS) : null;
+        canView && post.thumbnail_url ? await resolveMediaUrl(post.thumbnail_url, mediaExpirySeconds) : null;
       return {
         ...post,
         videoSrc,
