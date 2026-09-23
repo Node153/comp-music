@@ -252,6 +252,10 @@ export default function SignupPage() {
           <br />
           메일 속 링크를 눌러 인증한 뒤 로그인해주세요.
         </p>
+        <p className="rounded-xl bg-gray-50 p-3 text-sm leading-relaxed text-gray-500">
+          이메일 인증 후 로그인하면 가입 심사가 진행돼요. 평균 48시간 정도 걸릴 수 있으니 잠시
+          기다려주세요. 심사가 끝나면 이메일로 알려드리고, 그때부터 서비스를 이용하실 수 있어요.
+        </p>
         <Link
           href="/login"
           className="mt-2 text-sm font-medium text-gray-900 underline-offset-2 hover:underline"

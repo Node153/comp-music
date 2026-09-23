@@ -62,6 +62,7 @@ export default async function StatusPage() {
           </div>
           <h1 className={pageTitle}>심사 대기 중이에요</h1>
           <p className={mutedText}>평균 심사 기한은 48시간입니다.</p>
+          <p className={mutedText}>심사가 끝나면 이메일로 알려드려요.</p>
         </>
       )}
       {status === "withdrawn" && (
