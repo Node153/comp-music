@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { runWithConcurrency } from "@/lib/concurrency";
 
 // 이메일 알림(하루 1회 다이제스트) — Vercel Hobby 플랜 크론이 하루 1회로만 제한돼서(모바일
@@ -32,14 +31,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: usersError.message }, { status: 500 });
   }
 
-  const { count: approvedMemberCount } = await supabase
-    .from("users")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "approved")
-    .neq("role", "admin");
-  const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
-  const weekStartISO = currentWeekStartISO();
-
   let sent = 0;
 
   // 유저마다 최대 7개 쿼리를 하나씩 순차 await 하면(예전 for-loop) 유저 수가 늘수록 함수
@@ -50,7 +41,7 @@ export async function GET(request: NextRequest) {
     const sections: string[] = [];
 
     if (!user.email.endsWith(PLACEHOLDER_EMAIL_SUFFIX)) {
-      const { data: myPosts } = await supabase.from("posts").select("id, visibility").eq("user_id", user.id);
+      const { data: myPosts } = await supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", user.id);
       const myPostIds = (myPosts ?? []).map((p) => p.id);
       const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
 
@@ -111,20 +102,11 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      if (user.email_notify_peak && myPostIds.length > 0) {
-        const { data: weekLikes } = await supabase
-          .from("likes")
-          .select("post_id, created_at")
-          .in("post_id", myPostIds)
-          .gte("created_at", weekStartISO);
-        const weeklyByPost = new Map<string, { count: number; lastAt: string }>();
-        for (const row of weekLikes ?? []) {
-          const prev = weeklyByPost.get(row.post_id);
-          const lastAt = !prev || row.created_at > prev.lastAt ? row.created_at : prev.lastAt;
-          weeklyByPost.set(row.post_id, { count: (prev?.count ?? 0) + 1, lastAt });
-        }
-        const newlyPeaked = [...weeklyByPost.values()].filter((v) => v.count >= peakThreshold && v.lastAt > cursor);
-        if (newlyPeaked.length > 0) sections.push(`PEAK 도달 게시물 ${newlyPeaked.length}개`);
+      if (user.email_notify_peak) {
+        // PEAK 판정은 posts.peaked_at(0056 — 조회수+좋아요*10>=PEAK_VIEW_THRESHOLD에서 한 번
+        // 영구 고정, EngagementMeter/RightSidebar·notificationList.ts와 동일 기준)을 그대로 쓴다.
+        const newlyPeakedCount = (myPosts ?? []).filter((p) => p.peaked_at && p.peaked_at > cursor).length;
+        if (newlyPeakedCount > 0) sections.push(`PEAK 도달 게시물 ${newlyPeakedCount}개`);
       }
 
       if (sections.length > 0) {

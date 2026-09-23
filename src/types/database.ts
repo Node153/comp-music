@@ -241,6 +241,9 @@ export interface Database {
           expires_at: string | null;
           // DEMO(visibility='public') 조회수(0052) — increment_post_view() 함수로만 증가.
           view_count: number;
+          // PEAK 진입 시각(0056) — check_and_set_post_peak()이 조회수+좋아요*10>=1000을
+          // 처음 넘긴 순간 한 번만 찍고 이후 영구 고정(좋아요 취소해도 안 지워짐).
+          peaked_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -264,6 +267,7 @@ export interface Database {
           expire_hours: ExpireHours;
           expires_at?: string | null;
           view_count?: number;
+          peaked_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["posts"]["Insert"]>;

@@ -1,18 +1,19 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
 // 상단/하단 네비의 안읽음 뱃지 숫자. 예전엔 (app)/layout.tsx가 매 페이지 렌더마다
 // 이 계산(쿼리 최대 7개, 주간 likes 전체 스캔 + users count)을 동기로 돌려서
 // 업로드·메시지·프로필 화면 첫 페인트까지 막았다 — 이제 /api/notifications/count로
 // 빼서 클라이언트가 페인트 후 비동기로 가져온다.
+// PEAK 판정은 posts.peaked_at(0056, 조회수+좋아요*10>=PEAK_VIEW_THRESHOLD에서 한 번
+// 영구 고정)을 그대로 쓴다 — src/lib/notificationList.ts와 동일한 기준.
 export async function computeUnseenNotificationCount(
   supabase: SupabaseClient,
   userId: string,
   seenAt: string,
 ): Promise<number> {
   const [{ data: myPosts }, { data: newCompanionRequests }] = await Promise.all([
-    supabase.from("posts").select("id").eq("user_id", userId),
+    supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", userId),
     supabase
       .from("companions")
       .select("id")
@@ -21,35 +22,33 @@ export async function computeUnseenNotificationCount(
       .gt("created_at", seenAt),
   ]);
 
-  const myPostIds = (myPosts ?? []).map((p: { id: string }) => p.id);
+  const myPostIds = (myPosts ?? []).map((p) => p.id);
+  const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
+  const newPeakCount = (myPosts ?? []).filter((p) => p.peaked_at && p.peaked_at > seenAt).length;
+
   let newEngagementCount = 0;
-  let newPeakCount = 0;
+  let newKnockCount = 0;
 
   if (myPostIds.length > 0) {
-    const [{ data: newLikes }, { data: newComments }, { data: weekLikes }, { count: approvedMemberCount }] =
-      await Promise.all([
-        supabase.from("likes").select("id").in("post_id", myPostIds).neq("user_id", userId).gt("created_at", seenAt),
-        supabase.from("comments").select("id").in("post_id", myPostIds).neq("user_id", userId).gt("created_at", seenAt),
-        supabase.from("likes").select("post_id, created_at").in("post_id", myPostIds).gte("created_at", currentWeekStartISO()),
-        supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
-      ]);
-
+    const [{ data: newLikes }, { data: newComments }] = await Promise.all([
+      supabase.from("likes").select("id").in("post_id", myPostIds).neq("user_id", userId).gt("created_at", seenAt),
+      supabase.from("comments").select("id").in("post_id", myPostIds).neq("user_id", userId).gt("created_at", seenAt),
+    ]);
     newEngagementCount = (newLikes?.length ?? 0) + (newComments?.length ?? 0);
-
-    const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
-    const weeklyLikesByPost = new Map<string, { count: number; lastLikedAt: string }>();
-    for (const row of weekLikes ?? []) {
-      const prev = weeklyLikesByPost.get(row.post_id);
-      const isNewer = !prev || new Date(row.created_at) > new Date(prev.lastLikedAt);
-      weeklyLikesByPost.set(row.post_id, {
-        count: (prev?.count ?? 0) + 1,
-        lastLikedAt: isNewer ? row.created_at : prev.lastLikedAt,
-      });
-    }
-    newPeakCount = [...weeklyLikesByPost.values()].filter(
-      (v) => v.count >= peakThreshold && new Date(v.lastLikedAt) > new Date(seenAt),
-    ).length;
   }
 
-  return newEngagementCount + newPeakCount + (newCompanionRequests?.length ?? 0);
+  if (myInviteOnlyPostIds.length > 0) {
+    // 노크 = 내 초대전용 게시물에 status='pending'으로 들어온 post_access 행
+    // (notificationList.ts의 알림 목록과 동일 정의) — 예전엔 이 카운트가 빠져 있어서
+    // 알림 패널엔 표시되는데 뱃지 숫자에는 안 잡히는 불일치가 있었다.
+    const { data: newKnocks } = await supabase
+      .from("post_access")
+      .select("id")
+      .in("post_id", myInviteOnlyPostIds)
+      .eq("status", "pending")
+      .gt("created_at", seenAt);
+    newKnockCount = newKnocks?.length ?? 0;
+  }
+
+  return newEngagementCount + newPeakCount + newKnockCount + (newCompanionRequests?.length ?? 0);
 }

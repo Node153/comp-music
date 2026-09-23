@@ -1,6 +1,5 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 
 // 알림 아이템 조립 — 원래 (app)/notifications/page.tsx 안에만 있던 로직을 여기로 옮겨
 // 전체 알림 페이지와 TopNav 알림 드롭다운(/api/notifications/list)이 같이 쓴다.
@@ -35,7 +34,7 @@ export async function getNotificationItems(
   userId: string,
 ): Promise<{ items: NotificationItem[]; seenAt: string }> {
   const [{ data: myPosts }, { data: me }, { data: incomingRequests }] = await Promise.all([
-    supabase.from("posts").select("id, visibility").eq("user_id", userId),
+    supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", userId),
     supabase.from("users").select("notifications_seen_at").eq("id", userId).single(),
     supabase
       .from("companions")
@@ -50,7 +49,7 @@ export async function getNotificationItems(
   const visibilityByPostId = new Map((myPosts ?? []).map((p) => [p.id, p.visibility]));
   const seenAt = me?.notifications_seen_at ?? new Date(0).toISOString();
 
-  const [{ data: likes }, { data: comments }, { data: weekLikes }, { count: approvedMemberCount }, { data: knocks }] =
+  const [{ data: likes }, { data: comments }, { data: knocks }] =
     myPostIds.length > 0
       ? await Promise.all([
           supabase
@@ -67,9 +66,6 @@ export async function getNotificationItems(
             .neq("user_id", userId)
             .order("created_at", { ascending: false })
             .limit(50),
-          // PEAK 판정용 — EngagementMeter와 동일하게 이번 주(캘린더) 좋아요 수만 쓴다(본인 반응 포함).
-          supabase.from("likes").select("post_id, created_at").in("post_id", myPostIds).gte("created_at", currentWeekStartISO()),
-          supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
           // 노크 = 내 초대전용(invite_only) 게시물에 status='pending'으로 들어온 post_access 행.
           myInviteOnlyPostIds.length > 0
             ? supabase
@@ -81,7 +77,7 @@ export async function getNotificationItems(
                 .limit(50)
             : Promise.resolve({ data: [] }),
         ])
-      : [{ data: [] }, { data: [] }, { data: [] }, { count: 0 }, { data: [] }];
+      : [{ data: [] }, { data: [] }, { data: [] }];
 
   const actorIds = new Set([
     ...(incomingRequests ?? []).map((r) => r.requester_id),
@@ -95,17 +91,9 @@ export async function getNotificationItems(
       : { data: [] };
   const actorNameById = new Map((actors ?? []).map((a) => [a.id, a.display_name]));
 
-  const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
-  const weeklyLikesByPost = new Map<string, { count: number; lastActivityAt: string }>();
-  for (const row of weekLikes ?? []) {
-    const prev = weeklyLikesByPost.get(row.post_id);
-    const isNewer = !prev || new Date(row.created_at) > new Date(prev.lastActivityAt);
-    weeklyLikesByPost.set(row.post_id, {
-      count: (prev?.count ?? 0) + 1,
-      lastActivityAt: isNewer ? row.created_at : prev.lastActivityAt,
-    });
-  }
-  const peakPosts = [...weeklyLikesByPost.entries()].filter(([, v]) => v.count >= peakThreshold);
+  // PEAK 판정은 posts.peaked_at(0056 — 조회수+좋아요*10>=PEAK_VIEW_THRESHOLD에서 한 번
+  // 영구 고정, EngagementMeter/RightSidebar와 동일 기준)을 그대로 쓴다.
+  const peakedPosts = (myPosts ?? []).filter((p) => p.peaked_at);
 
   function hrefFor(postId: string) {
     return `/feed?feed=${visibilityByPostId.get(postId) === "public" ? "completion" : "complex"}#${postId}`;
@@ -140,14 +128,14 @@ export async function getNotificationItems(
         unread: isUnread(c.created_at),
       }),
     ),
-    ...peakPosts.map(
-      ([postId, v]): NotificationItem => ({
+    ...peakedPosts.map(
+      (p): NotificationItem => ({
         type: "peak",
-        id: postId,
-        postId,
-        createdAt: v.lastActivityAt,
-        href: hrefFor(postId),
-        unread: isUnread(v.lastActivityAt),
+        id: p.id,
+        postId: p.id,
+        createdAt: p.peaked_at as string,
+        href: hrefFor(p.id),
+        unread: isUnread(p.peaked_at as string),
       }),
     ),
     ...(incomingRequests ?? []).map(
