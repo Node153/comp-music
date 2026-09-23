@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { OFFICIAL_ACCOUNT_ID } from "@/lib/officialAccount";
 import { findOrCreateConversation } from "@/lib/conversations";
 import { Avatar } from "@/components/Avatar";
 import { field } from "@/components/ui/styles";
@@ -56,6 +57,7 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // 회원이 운영자(comper)에게 바로 메시지를 보낼 수 있게 검색창 하단에 고정 노출한다.
+  // 공식 계정(Compmusic)은 공지·피드백 답장 전용이라 여기서 뺀다.
   const [admins, setAdmins] = useState<Person[]>([]);
   const [dmLoading, setDmLoading] = useState(false);
 
@@ -67,7 +69,8 @@ export function SearchPanel({ onNavigate }: { onNavigate?: () => void }) {
         .from("users")
         .select("id, nickname")
         .eq("role", "admin")
-        .eq("status", "approved");
+        .eq("status", "approved")
+        .neq("id", OFFICIAL_ACCOUNT_ID);
       setAdmins((adminRows ?? []).filter((a) => a.id !== uid));
     });
   }, [supabase]);
