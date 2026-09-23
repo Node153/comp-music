@@ -17,7 +17,7 @@ import { label as labelClass, errorText, pageCard } from "@/components/ui/styles
 import { ALL_GENRES } from "@/lib/genres";
 import { tagColorClass } from "@/lib/feedConstants";
 import type { ExpireHours } from "@/types/database";
-import { trimVideoFile } from "@/lib/trimVideo";
+import { editVideoFile } from "@/lib/trimVideo";
 import { VideoEditor, type TrimRange } from "./VideoEditor";
 
 const MIN_TAGS = 3;
@@ -474,6 +474,9 @@ export default function UploadPage() {
   const [coverFromFrame, setCoverFromFrame] = useState(false);
   // 게시 중 단계 안내 — 다듬기(ffmpeg 로드+자르기)는 수 초~수십 초 걸릴 수 있어서 버튼에 표시.
   const [loadingLabel, setLoadingLabel] = useState("게시 중...");
+  // 영상 소리 편집(2026-09-24) — 원본 소리 끄기, 음원 넣기(영상 길이에 맞춰 잘림).
+  const [muteOriginal, setMuteOriginal] = useState(false);
+  const [musicFile, setMusicFile] = useState<File | null>(null);
 
   // Complex 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
   const [complexFile, setComplexFile] = useState<File | null>(null);
@@ -609,6 +612,8 @@ export default function UploadPage() {
 
   function resetVideoEdit() {
     setTrimRange(null);
+    setMuteOriginal(false);
+    setMusicFile(null);
     setVideoDuration(0);
     setCoverFrameTime(null);
     setCoverFromFrame(false);
@@ -662,12 +667,17 @@ export default function UploadPage() {
     videoDuration > 0 &&
     (trimRange.start > 0.1 || trimRange.end < videoDuration - 0.1);
 
-  async function applyTrimIfNeeded(file: File, kind: DetectedMediaKind): Promise<File> {
-    if (kind !== "video" || !hasMeaningfulTrim || !trimRange) return file;
-    setLoadingLabel("영상 다듬는 중...");
+  // 편집(다듬기·소리)이 하나라도 있을 때만 ffmpeg로 파일을 새로 만든다.
+  async function applyVideoEditIfNeeded(file: File, kind: DetectedMediaKind): Promise<File> {
+    const hasSoundEdit = muteOriginal || musicFile !== null;
+    if (kind !== "video" || (!hasMeaningfulTrim && !hasSoundEdit) || videoDuration <= 0) return file;
+    const range = hasMeaningfulTrim && trimRange ? trimRange : { start: 0, end: videoDuration };
+    setLoadingLabel("영상 편집 중...");
     try {
-      return await trimVideoFile(file, trimRange.start, trimRange.end, (ratio) =>
-        setLoadingLabel(`영상 다듬는 중... ${Math.round(ratio * 100)}%`),
+      return await editVideoFile(
+        file,
+        { start: range.start, end: range.end, muteOriginal, music: musicFile },
+        (ratio) => setLoadingLabel(`영상 편집 중... ${Math.round(ratio * 100)}%`),
       );
     } finally {
       setLoadingLabel("게시 중...");
@@ -824,7 +834,7 @@ export default function UploadPage() {
 
       let complexMediaPath: string;
       try {
-        complexMediaPath = await uploadFileToR2(await applyTrimIfNeeded(complexFile, complexKind));
+        complexMediaPath = await uploadFileToR2(await applyVideoEditIfNeeded(complexFile, complexKind));
       } catch (err) {
         setError(`업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
         setLoading(false);
@@ -932,7 +942,7 @@ export default function UploadPage() {
     // R2로 이전(2026-07-29) — presigned PUT URL을 발급받아 브라우저가 R2에 직접 업로드.
     let mediaPath: string;
     try {
-      mediaPath = await uploadFileToR2(await applyTrimIfNeeded(mediaFile, mediaKind));
+      mediaPath = await uploadFileToR2(await applyVideoEditIfNeeded(mediaFile, mediaKind));
     } catch (err) {
       setError(`업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
       setLoading(false);
@@ -1001,6 +1011,10 @@ export default function UploadPage() {
           coverTime={coverFrameTime}
           onCoverFrame={handleCoverFrame}
           onPickCustomCover={handleCoverChange}
+          muteOriginal={muteOriginal}
+          onMuteOriginalChange={setMuteOriginal}
+          musicFile={musicFile}
+          onMusicFileChange={setMusicFile}
           customCover={
             coverFile && !coverFromFrame && coverObjectUrl ? (
               <div className="flex items-start gap-3">

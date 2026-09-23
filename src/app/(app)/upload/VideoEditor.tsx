@@ -1,13 +1,13 @@
 "use client";
 
 // 업로드 화면의 영상 편집 — 인스타그램 "편집" 단계 참고(2026-09-23, 사용자 요청):
-// 다듬기(시작/끝 핸들로 구간 선택)와 커버 사진(영상 프레임 중 하나 고르기, 또는 컴퓨터에서
-// 이미지 선택). 여기서는 구간·프레임을 고르고 미리보기만 하고, 실제 자르기는 게시 시점에
-// trimVideoFile(ffmpeg.wasm)이 한 번만 수행한다.
+// 다듬기(시작/끝 핸들로 구간 선택), 소리(원본 소리 끄기·음원 넣기, 09-24), 커버 사진(영상
+// 프레임 중 하나 고르기, 또는 컴퓨터에서 이미지 선택). 여기서는 고르고 미리보기만 하고, 실제
+// 편집은 게시 시점에 editVideoFile(ffmpeg.wasm)이 한 번만 수행한다.
 //
 // 로컬 blob URL이라 canvas로 프레임을 읽어도 CORS 문제가 없다(R2 영상에서 프레임을 못 읽는
 // 문제와 무관 — 아직 업로드 전 파일).
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PlayIcon, PauseIcon } from "@/components/icons";
 
 const STRIP_FRAME_COUNT = 10;
@@ -67,6 +67,10 @@ export function VideoEditor({
   onCoverFrame,
   customCover,
   onPickCustomCover,
+  muteOriginal,
+  onMuteOriginalChange,
+  musicFile,
+  onMusicFileChange,
 }: {
   src: string;
   trim: TrimRange | null;
@@ -80,6 +84,11 @@ export function VideoEditor({
   // 컴퓨터에서 고른 커버 이미지가 있으면 프레임 스트립 대신 이걸 보여준다(위치 조정 UI 포함).
   customCover: React.ReactNode | null;
   onPickCustomCover: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  muteOriginal: boolean;
+  onMuteOriginalChange: (muted: boolean) => void;
+  // 넣을 음원 — 다듬은 구간 시작과 함께 0초부터 재생되고, 영상 길이에 맞춰 잘린다.
+  musicFile: File | null;
+  onMusicFileChange: (file: File | null) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const trimStripRef = useRef<HTMLDivElement>(null);
@@ -92,6 +101,21 @@ export function VideoEditor({
   // 드래그 중인 대상 — 커버 드래그 중엔 놓을 때까지 프레임 캡처를 미룬다(매 이동마다 캡처하면 무겁다).
   const [dragging, setDragging] = useState<"start" | "end" | "cover" | null>(null);
   const [dragCoverTime, setDragCoverTime] = useState<number | null>(null);
+  const musicRef = useRef<HTMLAudioElement>(null);
+  const musicInputRef = useRef<HTMLInputElement>(null);
+  const [musicDuration, setMusicDuration] = useState(0);
+  const [musicError, setMusicError] = useState<string | null>(null);
+  const musicUrl = useMemo(() => (musicFile ? URL.createObjectURL(musicFile) : null), [musicFile]);
+  useEffect(() => {
+    return () => {
+      if (musicUrl) URL.revokeObjectURL(musicUrl);
+    };
+  }, [musicUrl]);
+
+  // 원본 소리 끄기는 미리보기에도 그대로 — muted는 React prop으로는 첫 렌더에만 반영돼서 직접 건다.
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.muted = muteOriginal;
+  }, [muteOriginal]);
 
   const range = trim ?? { start: 0, end: duration };
   const effectiveCoverTime = dragCoverTime ?? coverTime ?? range.start;
@@ -167,6 +191,35 @@ export function VideoEditor({
     if (!video) return;
     video.pause();
     video.currentTime = time;
+  }
+
+  // 미리보기 음원을 영상 위치에 맞춘다 — 음원의 0초 = 다듬은 구간의 시작. 영상이 재생 중이고
+  // 음원 길이 안쪽일 때만 소리를 낸다(실제 결과물도 음원이 끝나면 그 뒤는 음원 없음).
+  function syncMusic() {
+    const video = videoRef.current;
+    const music = musicRef.current;
+    if (!video || !music) return;
+    const t = video.currentTime - range.start;
+    const inRange = t >= 0 && (!musicDuration || t < musicDuration);
+    if (Math.abs(music.currentTime - t) > 0.25 && inRange) music.currentTime = t;
+    if (!video.paused && inRange) {
+      if (music.paused) void music.play().catch(() => {});
+    } else if (!music.paused) {
+      music.pause();
+    }
+  }
+
+  function handleMusicPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("audio/")) {
+      setMusicError("음원 파일(mp3·wav)만 넣을 수 있어요.");
+      return;
+    }
+    setMusicError(null);
+    setMusicDuration(0);
+    onMusicFileChange(file);
   }
 
   function handleTrimPointerDown(which: "start" | "end") {
@@ -247,7 +300,7 @@ export function VideoEditor({
   if (loadError) {
     return (
       <p className="rounded-xl bg-main-gray px-3 py-2.5 text-xs text-active-gray">
-        이 브라우저에서 미리볼 수 없는 영상 형식이라 다듬기·커버 선택을 쓸 수 없어요. 영상은 원본 그대로 올라가요.
+        이 브라우저에서 미리볼 수 없는 영상 형식이라 다듬기·소리·커버 편집을 쓸 수 없어요. 영상은 원본 그대로 올라가요.
       </p>
     );
   }
@@ -283,11 +336,19 @@ export function VideoEditor({
               onDuration(d);
             }
           }}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
+          onPlay={() => {
+            setPlaying(true);
+            syncMusic();
+          }}
+          onPause={() => {
+            setPlaying(false);
+            musicRef.current?.pause();
+          }}
+          onSeeked={syncMusic}
           onTimeUpdate={(e) => {
             const video = e.currentTarget;
             if (!video.paused && video.currentTime >= range.end) video.currentTime = range.start;
+            syncMusic();
           }}
           onClick={togglePlay}
         />
@@ -358,6 +419,95 @@ export function VideoEditor({
         </div>
         <p className="text-[11px] text-active-gray">
           영상 구조에 따라 시작점이 1초 남짓 앞당겨지거나, 게시할 때 다듬는 데 시간이 걸릴 수 있어요.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-black">소리</span>
+        <div className="flex items-center justify-between rounded-xl bg-main-gray px-3 py-2.5">
+          <span className="text-sm text-black">원본 소리</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!muteOriginal}
+            aria-label="원본 소리 켜기"
+            onClick={() => onMuteOriginalChange(!muteOriginal)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+              muteOriginal ? "bg-canvas-gray" : "bg-active-gray"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                muteOriginal ? "left-0.5" : "left-[22px]"
+              }`}
+            />
+          </button>
+        </div>
+        <input
+          ref={musicInputRef}
+          type="file"
+          accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav"
+          onChange={handleMusicPick}
+          className="hidden"
+        />
+        {musicFile && musicUrl ? (
+          <div className="flex items-center gap-3 rounded-xl bg-main-gray px-3 py-2.5">
+            <span className="text-lg" aria-hidden>
+              ♪
+            </span>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-medium text-black">{musicFile.name}</span>
+              <span className="text-[11px] text-active-gray">
+                {musicDuration > 0 && musicDuration < range.end - range.start - 0.05
+                  ? `음원(${formatTime(musicDuration)})이 영상보다 짧아서 ${formatTime(musicDuration)} 이후엔 ${
+                      muteOriginal ? "소리가 없어요" : "원본 소리만 나와요"
+                    }`
+                  : `영상 길이(${formatTime(range.end - range.start)})에 맞춰 잘려요`}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => musicInputRef.current?.click()}
+              className="shrink-0 text-xs font-semibold text-black hover:opacity-80"
+            >
+              변경
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                musicRef.current?.pause();
+                onMusicFileChange(null);
+              }}
+              className="shrink-0 text-xs font-semibold text-active-gray hover:opacity-80"
+            >
+              제거
+            </button>
+            <audio
+              ref={musicRef}
+              src={musicUrl}
+              preload="auto"
+              onLoadedMetadata={(e) => {
+                const d = e.currentTarget.duration;
+                if (Number.isFinite(d)) setMusicDuration(d);
+              }}
+              className="hidden"
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => musicInputRef.current?.click()}
+            className="flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray px-3 py-2.5 text-sm font-bold text-active-gray transition-colors hover:bg-canvas-gray"
+          >
+            ♪ 음원 넣기
+            <span className="text-[11px] font-normal">mp3 · wav</span>
+          </button>
+        )}
+        {musicError && <p className="text-xs text-red-600">{musicError}</p>}
+        <p className="text-[11px] text-active-gray">
+          {musicFile && !muteOriginal
+            ? "원본 소리와 음원이 함께 섞여요. 음원만 쓰려면 원본 소리를 꺼주세요."
+            : "음원은 다듬은 영상의 시작부터 재생되고, 영상이 끝나는 지점에서 잘려요."}
         </p>
       </div>
 
