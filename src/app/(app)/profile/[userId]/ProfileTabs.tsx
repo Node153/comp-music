@@ -22,6 +22,7 @@ const TABS: { key: Tab; label: string }[] = [
 export function ProfileTabs({
   posts,
   likedPosts,
+  kickedPosts,
   folders,
   profile,
   isOwnProfile,
@@ -32,6 +33,7 @@ export function ProfileTabs({
 }: {
   posts: FeedPost[];
   likedPosts: FeedPost[];
+  kickedPosts: FeedPost[];
   folders: FolderData[];
   profile: AboutProfile | null;
   isOwnProfile: boolean;
@@ -67,6 +69,7 @@ export function ProfileTabs({
           <ProfileFeed
             posts={posts}
             likedPosts={likedPosts}
+            kickedPosts={kickedPosts}
             folders={folders}
             isOwnProfile={isOwnProfile}
             userId={userId}

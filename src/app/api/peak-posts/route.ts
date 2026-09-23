@@ -33,14 +33,21 @@ export async function GET() {
   }
 
   const postIds = posts.map((p) => p.id);
-  const { data: likeRows } = await supabase.from("likes").select("post_id").in("post_id", postIds);
+  const [{ data: likeRows }, { data: kickRows }] = await Promise.all([
+    supabase.from("likes").select("post_id").in("post_id", postIds),
+    supabase.from("kicks").select("post_id").in("post_id", postIds),
+  ]);
   const likeCountMap = new Map<string, number>();
   for (const row of likeRows ?? []) {
     likeCountMap.set(row.post_id, (likeCountMap.get(row.post_id) ?? 0) + 1);
   }
+  const kickCountMap = new Map<string, number>();
+  for (const row of kickRows ?? []) {
+    kickCountMap.set(row.post_id, (kickCountMap.get(row.post_id) ?? 0) + 1);
+  }
 
   const topPosts = posts
-    .map((p) => ({ ...p, score: peakScore(p.view_count, likeCountMap.get(p.id) ?? 0) }))
+    .map((p) => ({ ...p, score: peakScore(p.view_count, likeCountMap.get(p.id) ?? 0, kickCountMap.get(p.id) ?? 0) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, PEAK_POSTS_VISIBLE_LIMIT);
 

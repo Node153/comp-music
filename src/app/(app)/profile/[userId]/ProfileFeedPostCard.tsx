@@ -13,6 +13,8 @@ import { DoubleTapLikeArea } from "@/components/DoubleTapLikeArea";
 import { PostViewCount } from "@/components/PostViewCount";
 import { GuestEngagementRow } from "@/app/(app)/feed/GuestEngagementRow";
 import { LikeButton } from "@/app/(app)/feed/LikeButton";
+import { KickButton } from "@/app/(app)/feed/KickButton";
+import { KickersLine } from "@/app/(app)/feed/KickersLine";
 import { CommentPanel } from "@/app/(app)/feed/CommentPanel";
 import { tagColorClass } from "@/lib/feedConstants";
 import Link from "next/link";
@@ -36,10 +38,12 @@ export function ProfileFeedPostCard({
 }: {
   post: FeedPost;
   currentUserId: string | null;
-  // "좋아요" 필터에서만 켠다 — 현재/보관된/폴더는 항상 이 프로필 주인의 글이라 다시 밝힐
+  // "좋아요"·"Kick" 필터에서만 켠다 — 현재/보관된/폴더는 항상 이 프로필 주인의 글이라 다시 밝힐
   // 필요가 없다(2026-09, 사운드클라우드 Likes 탭 참고).
   showAuthor?: boolean;
 }) {
+  // Kick(0071)은 DEMO(전체공개) 게시물 전용.
+  const isDemo = post.visibility === "public";
   return (
     <PostEngagementProvider
       initialLikeCount={post.likeCount}
@@ -47,6 +51,9 @@ export function ProfileFeedPostCard({
       initialWeeklyLikeCount={0}
       initialViewCount={post.view_count}
       initialLiked={post.likedByMe}
+      initialKickCount={post.kickCount}
+      initialKicked={post.kickedByMe}
+      initialKickers={post.kickers}
       peakThreshold={0}
     >
       <article className="relative overflow-hidden rounded-xl border border-box-gray">
@@ -126,12 +133,22 @@ export function ProfileFeedPostCard({
         </div>
 
         {!currentUserId ? (
-          <GuestEngagementRow likeCount={post.likeCount} commentCount={post.commentCount} />
+          <GuestEngagementRow
+            likeCount={post.likeCount}
+            kickCount={isDemo ? post.kickCount : undefined}
+            commentCount={post.commentCount}
+          />
         ) : (
-          <div className="flex flex-wrap items-center gap-6 border-t border-main-gray px-4 py-3.5">
-            <PostViewCount className="inline-flex items-center gap-1 text-sm font-semibold text-black" iconClassName="h-4 w-4" />
-            <LikeButton postId={post.id} userId={currentUserId} />
-            <CommentPanel postId={post.id} userId={currentUserId} isDemo />
+          <div className="border-t border-main-gray">
+            <div className="flex flex-wrap items-center gap-6 px-4 py-3.5">
+              <PostViewCount className="inline-flex items-center gap-1 text-sm font-semibold text-black" iconClassName="h-4 w-4" />
+              <LikeButton postId={post.id} userId={currentUserId} />
+              {isDemo && (
+                <KickButton postId={post.id} userId={currentUserId} isOwnPost={post.authorId === currentUserId} />
+              )}
+              <CommentPanel postId={post.id} userId={currentUserId} isDemo />
+            </div>
+            {isDemo && <KickersLine currentUserId={currentUserId} className="-mt-1.5 px-4 pb-3" />}
           </div>
         )}
       </article>

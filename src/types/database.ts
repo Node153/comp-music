@@ -86,6 +86,8 @@ export interface Database {
           email_notify_companion_request: boolean;
           email_notify_message: boolean;
           email_notify_peak: boolean;
+          // 0071 — Kick 받으면 즉시 메일(기본 켜짐, 다이제스트 아님).
+          email_notify_kick: boolean;
           // 이메일 다이제스트 발송 커서(0035) — 크론이 "이 시각 이후로 새로 생긴 것"만 골라
           // 보내고 나면 여기를 now()로 갱신한다.
           last_notification_emailed_at: string;
@@ -120,6 +122,7 @@ export interface Database {
           email_notify_knock?: boolean;
           email_notify_companion_request?: boolean;
           email_notify_message?: boolean;
+          email_notify_kick?: boolean;
           email_notify_peak?: boolean;
           last_notification_emailed_at?: string;
           withdrawn_at?: string | null;
@@ -300,6 +303,26 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["likes"]["Insert"]>;
+        Relationships: [];
+      };
+      // Kick(0071) — 좋아요의 상위 반응. 주 1회(week_start = KST 월요일), 번복 불가.
+      // 쓰기는 give_kick RPC만(INSERT/DELETE 정책 없음).
+      kicks: {
+        Row: {
+          id: string;
+          post_id: string;
+          user_id: string;
+          week_start: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          user_id: string;
+          week_start: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["kicks"]["Insert"]>;
         Relationships: [];
       };
       // 게시물 조회자 기록(0051) — memo 공동창작 미체크 게시물의 "본 사람" 목록용.
@@ -802,6 +825,16 @@ export interface Database {
           total_rank: number | null;
           hide_from_ranking: boolean;
         }[];
+      };
+      // 0071 — Kick 주기(주 1회, 번복 불가). 실패 사유는 예외 메시지 코드로.
+      give_kick: {
+        Args: { pid: string };
+        Returns: undefined;
+      };
+      // 0071 — 게시물별 Kick한 사람(닉네임만, 승인 회원만).
+      post_kickers: {
+        Args: { pids: string[] };
+        Returns: { post_id: string; user_id: string; nickname: string; created_at: string }[];
       };
       // 0068 — 피드백 처리 현황 집계(숫자만, security definer). 승인 회원만.
       feedback_stats: {

@@ -13,6 +13,7 @@ import type { useScrub } from "@/lib/useScrub";
 import type { NowPlayingTrack } from "@/components/NowPlayingContext";
 import { PostEngagementProvider } from "@/components/PostEngagementContext";
 import { LikeButton } from "@/app/(app)/feed/LikeButton";
+import { KickButton } from "@/app/(app)/feed/KickButton";
 import { CommentPanel } from "@/app/(app)/feed/CommentPanel";
 import {
   PlayIcon,
@@ -81,6 +82,11 @@ export function ExpandedPlayer({
     likeCount: number;
     commentCount: number;
     liked: boolean;
+    // Kick(0071) — DEMO 게시물일 때만 버튼을 띄운다(memo도 재생은 될 수 있음).
+    kickCount: number;
+    kicked: boolean;
+    isDemo: boolean;
+    isOwnPost: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -93,7 +99,7 @@ export function ExpandedPlayer({
       } = await supabase.auth.getUser();
       if (cancelled || !user) return;
       setCurrentUserId(user.id);
-      const [likeCountRes, commentCountRes, likedRes] = await Promise.all([
+      const [likeCountRes, commentCountRes, likedRes, kickRowsRes, postRes] = await Promise.all([
         supabase.from("likes").select("*", { count: "exact", head: true }).eq("post_id", track.id),
         supabase.from("comments").select("*", { count: "exact", head: true }).eq("post_id", track.id),
         supabase
@@ -102,12 +108,18 @@ export function ExpandedPlayer({
           .eq("post_id", track.id)
           .eq("user_id", user.id)
           .maybeSingle(),
+        supabase.from("kicks").select("user_id").eq("post_id", track.id),
+        supabase.from("posts").select("user_id, visibility").eq("id", track.id).maybeSingle(),
       ]);
       if (cancelled) return;
       setEngagement({
         likeCount: likeCountRes.count ?? 0,
         commentCount: commentCountRes.count ?? 0,
         liked: !!likedRes.data,
+        kickCount: kickRowsRes.data?.length ?? 0,
+        kicked: (kickRowsRes.data ?? []).some((k) => k.user_id === user.id),
+        isDemo: postRes.data?.visibility === "public",
+        isOwnPost: postRes.data?.user_id === user.id,
       });
     })();
     return () => {
@@ -213,9 +225,14 @@ export function ExpandedPlayer({
               initialCommentCount={engagement.commentCount}
               initialWeeklyLikeCount={0}
               initialLiked={engagement.liked}
+              initialKickCount={engagement.kickCount}
+              initialKicked={engagement.kicked}
               peakThreshold={0}
             >
               <LikeButton postId={track.id} userId={currentUserId} />
+              {engagement.isDemo && (
+                <KickButton postId={track.id} userId={currentUserId} isOwnPost={engagement.isOwnPost} />
+              )}
               <CommentPanel postId={track.id} userId={currentUserId} />
             </PostEngagementProvider>
           ) : (

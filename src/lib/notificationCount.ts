@@ -42,11 +42,21 @@ export async function computeUnseenNotificationCount(
   let newKnockCount = 0;
 
   if (myPostIds.length > 0) {
-    const [{ data: newLikes }, { data: newComments }] = await Promise.all([
-      supabase.from("likes").select("id").in("post_id", myPostIds).neq("user_id", userId).gt("created_at", seenAt),
+    const [{ data: newLikes }, { data: newComments }, { data: newKicks }] = await Promise.all([
+      supabase
+        .from("likes")
+        .select("post_id, user_id")
+        .in("post_id", myPostIds)
+        .neq("user_id", userId)
+        .gt("created_at", seenAt),
       supabase.from("comments").select("id").in("post_id", myPostIds).neq("user_id", userId).gt("created_at", seenAt),
+      // 0071 — Kick(notificationList.ts의 kick과 동일 기준, 본인 글엔 Kick 불가라 neq 불필요).
+      supabase.from("kicks").select("post_id, user_id").in("post_id", myPostIds).gt("created_at", seenAt),
     ]);
-    newEngagementCount = (newLikes?.length ?? 0) + (newComments?.length ?? 0);
+    // Kick에 딸려 자동으로 들어간 좋아요는 알림 목록에서 Kick 한 줄로 합쳐지므로 여기서도 뺀다.
+    const kickKeys = new Set((newKicks ?? []).map((k) => `${k.post_id}:${k.user_id}`));
+    const newLikeCount = (newLikes ?? []).filter((l) => !kickKeys.has(`${l.post_id}:${l.user_id}`)).length;
+    newEngagementCount = newLikeCount + (newComments?.length ?? 0) + (newKicks?.length ?? 0);
   }
 
   if (myInviteOnlyPostIds.length > 0) {

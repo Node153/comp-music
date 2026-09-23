@@ -4,6 +4,9 @@
 // EngagementMeter(볼륨미터+PEAK 배지)가 같은 렌더 트리 안에서 즉시 반응하게 하기 위함.
 import { createContext, useContext, useState, type Dispatch, type SetStateAction } from "react";
 
+// Kick한 사람(0071 post_kickers) — 누가 Kick했는지는 공개(사용자 결정). 최신순.
+export type Kicker = { id: string; name: string };
+
 type PostEngagementContextValue = {
   likeCount: number;
   commentCount: number;
@@ -23,8 +26,15 @@ type PostEngagementContextValue = {
   setWeeklyLikeCount: Dispatch<SetStateAction<number>>;
   setViewCount: Dispatch<SetStateAction<number>>;
   setLiked: Dispatch<SetStateAction<boolean>>;
-  // 좋아요 버튼을 눌렀을 때 게시물 중앙에 "Kick!" 문구를 띄우기 위한 트리거(사용자 요청).
-  // LikeButton(버튼)에서 쏘고 KickBurst(게시물 카드 최상단, article 기준 중앙)가 받아서 그린다.
+  // Kick(0071) — 좋아요의 상위 반응. kicked면 좋아요도 켜진 채 잠긴다(LikeButton).
+  kickCount: number;
+  kicked: boolean;
+  kickers: Kicker[];
+  setKickCount: Dispatch<SetStateAction<number>>;
+  setKicked: Dispatch<SetStateAction<boolean>>;
+  setKickers: Dispatch<SetStateAction<Kicker[]>>;
+  // Kick을 줬을 때 게시물 중앙에 "Kick!" 문구를 띄우기 위한 트리거(사용자 요청).
+  // KickButton에서 쏘고 KickBurst(게시물 카드 최상단, article 기준 중앙)가 받아서 그린다.
   kickKey: number | null;
   triggerKick: () => void;
   clearKick: () => void;
@@ -38,6 +48,9 @@ export function PostEngagementProvider({
   initialWeeklyLikeCount,
   initialViewCount,
   initialLiked,
+  initialKickCount,
+  initialKicked,
+  initialKickers,
   peakThreshold,
   children,
 }: {
@@ -46,6 +59,9 @@ export function PostEngagementProvider({
   initialWeeklyLikeCount: number;
   initialViewCount?: number;
   initialLiked?: boolean;
+  initialKickCount?: number;
+  initialKicked?: boolean;
+  initialKickers?: Kicker[];
   peakThreshold: number;
   children: React.ReactNode;
 }) {
@@ -54,6 +70,9 @@ export function PostEngagementProvider({
   const [weeklyLikeCount, setWeeklyLikeCount] = useState(initialWeeklyLikeCount);
   const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
   const [liked, setLiked] = useState(initialLiked ?? false);
+  const [kickCount, setKickCount] = useState(initialKickCount ?? 0);
+  const [kicked, setKicked] = useState(initialKicked ?? false);
+  const [kickers, setKickers] = useState<Kicker[]>(initialKickers ?? []);
   const [kickKey, setKickKey] = useState<number | null>(null);
   const triggerKick = () => setKickKey((k) => (k ?? 0) + 1);
   const clearKick = () => setKickKey(null);
@@ -72,6 +91,12 @@ export function PostEngagementProvider({
         setWeeklyLikeCount,
         setViewCount,
         setLiked,
+        kickCount,
+        kicked,
+        kickers,
+        setKickCount,
+        setKicked,
+        setKickers,
         kickKey,
         triggerKick,
         clearKick,

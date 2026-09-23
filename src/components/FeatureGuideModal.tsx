@@ -38,7 +38,7 @@ const STEPS: Step[] = [
     panel: "peak",
     eyebrow: "3 · 4 — PEAK",
     title: "볼륨이 꽉 차면, PEAK",
-    desc: "조회수랑 Kick이 쌓이면 볼륨미터가 가득 차면서 PEAK 배지가 붙어요. 지금 제일 핫한 게시물이라는 뜻이에요.",
+    desc: "조회수와 좋아요, 일주일에 한 번뿐인 Kick이 쌓이면 볼륨미터가 가득 차면서 PEAK 배지가 붙어요. 지금 제일 핫한 게시물이라는 뜻이에요.",
     tag: "우측 사이드바 · 실시간 PEAK에서 모아보기",
   },
   {

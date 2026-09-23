@@ -15,6 +15,7 @@ import { ProfileTabs } from "./ProfileTabs";
 import { AboutSection } from "./AboutSection";
 import { CompanionPreview } from "./CompanionPreview";
 import { ProfileFeed } from "./ProfileFeed";
+import type { Kicker } from "@/components/PostEngagementContext";
 
 // 애플 이모지(🎓🎤🏫📍) 대신 다른 아이콘과 같은 선(stroke) 톤으로(2026-09, 사용자 피드백 —
 // 작은 크기에서 이모지가 깨져 보이는 버그도 같이 발견해서 교체).
@@ -72,7 +73,7 @@ export default async function ProfilePage({
   const { data: posts } = await supabase
     .from("posts")
     .select(
-      "id, title, video_url, image_url, audio_url, thumbnail_url, media_type, content_type, instrument_tags, status, caption, expires_at, view_count",
+      "id, title, video_url, image_url, audio_url, thumbnail_url, media_type, content_type, instrument_tags, status, caption, expires_at, view_count, visibility",
     )
     .eq("user_id", userId)
     .in("status", ["published", "expired"])
@@ -132,7 +133,7 @@ export default async function ProfilePage({
       ? await supabase
           .from("posts")
           .select(
-            "id, user_id, title, video_url, image_url, audio_url, thumbnail_url, media_type, content_type, instrument_tags, status, caption, expires_at, view_count",
+            "id, user_id, title, video_url, image_url, audio_url, thumbnail_url, media_type, content_type, instrument_tags, status, caption, expires_at, view_count, visibility",
           )
           .in("id", likedPostIds)
           .neq("status", "deleted")
@@ -183,6 +184,37 @@ export default async function ProfilePage({
         };
       }),
   );
+
+  // Kick(0071) — 화면의 모든 카드(내 게시물+좋아요 목록)의 Kick 수·Kick한 사람, 그리고 이
+  // 프로필 주인이 Kick한 게시물 모음("Kick" 필터 — 주마다 한 곡씩 쌓이는 큐레이션). Kick하면
+  // 좋아요도 같이 켜지고 취소가 안 되니 Kick한 게시물은 항상 좋아요 목록 안에 있다 — 게시물
+  // 데이터는 likedPostsWithVideo에서 그대로 꺼내 쓴다.
+  const kickTargetIds = [...new Set([...postIds, ...likedRawIds])];
+  const [{ data: kickedByUserRows }, { data: kickerRows }] = await Promise.all([
+    supabase.from("kicks").select("post_id").eq("user_id", userId).order("created_at", { ascending: false }),
+    currentUser && kickTargetIds.length > 0
+      ? supabase.rpc("post_kickers", { pids: kickTargetIds })
+      : { data: [] as { post_id: string; user_id: string; nickname: string }[] },
+  ]);
+  const kickersByPost = new Map<string, Kicker[]>();
+  for (const row of kickerRows ?? []) {
+    kickersByPost.set(row.post_id, [...(kickersByPost.get(row.post_id) ?? []), { id: row.user_id, name: row.nickname }]);
+  }
+  function withKicks<T extends { id: string }>(post: T) {
+    const kickers = kickersByPost.get(post.id) ?? [];
+    return {
+      ...post,
+      kickCount: kickers.length,
+      kickedByMe: !!currentUser && kickers.some((k) => k.id === currentUser.id),
+      kickers,
+    };
+  }
+  const ownPostsWithKicks = postsWithVideo.map(withKicks);
+  const likedPostsWithKicks = likedPostsWithVideo.map(withKicks);
+  const likedWithKicksById = new Map(likedPostsWithKicks.map((p) => [p.id, p]));
+  const kickedPosts = (kickedByUserRows ?? [])
+    .map((r) => likedWithKicksById.get(r.post_id))
+    .filter((post): post is NonNullable<typeof post> => Boolean(post));
 
   // 게시물 탭의 사용자 정의 폴더(0057, 정태인님 제안) — 현재/보관된처럼 자동 분류가 아니라
   // 본인이 고른 게시물만 모은 묶음. 이름만 먼저 불러오고, 포함된 게시물 id는 한 번에 조회.
@@ -389,8 +421,9 @@ export default async function ProfilePage({
       {/* 모바일 — 게시물/소개/Companion 탭으로 세로 스택(기존 구조 그대로). */}
       <div className="md:hidden">
         <ProfileTabs
-          posts={postsWithVideo}
-          likedPosts={likedPostsWithVideo}
+          posts={ownPostsWithKicks}
+          likedPosts={likedPostsWithKicks}
+          kickedPosts={kickedPosts}
           folders={folders}
           profile={profile}
           isOwnProfile={isOwnProfile}
@@ -423,8 +456,9 @@ export default async function ProfilePage({
         </div>
 
         <ProfileFeed
-          posts={postsWithVideo}
-          likedPosts={likedPostsWithVideo}
+          posts={ownPostsWithKicks}
+          likedPosts={likedPostsWithKicks}
+          kickedPosts={kickedPosts}
           folders={folders}
           isOwnProfile={isOwnProfile}
           userId={userId}

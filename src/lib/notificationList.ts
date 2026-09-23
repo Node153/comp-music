@@ -7,6 +7,8 @@ import type { FeedbackStatus } from "@/lib/feedback";
 // href/unread를 미리 계산해서 내려주면 두 소비처가 렌더링에만 집중할 수 있다.
 export type NotificationItem = (
   | { type: "like"; id: string; postId: string; actorId: string; actorName: string; createdAt: string }
+  // 0071 — 누군가 이번 주 Kick을 내 게시물에 줬을 때(좋아요와 별도로 강조해서 보여준다).
+  | { type: "kick"; id: string; postId: string; actorId: string; actorName: string; createdAt: string }
   | {
       type: "comment";
       id: string;
@@ -110,7 +112,7 @@ export async function getNotificationItems(
   const visibilityByPostId = new Map((myPosts ?? []).map((p) => [p.id, p.visibility]));
   const seenAt = me?.notifications_seen_at ?? new Date(0).toISOString();
 
-  const [{ data: likes }, { data: comments }, { data: knocks }] =
+  const [{ data: likes }, { data: comments }, { data: knocks }, { data: kicks }] =
     myPostIds.length > 0
       ? await Promise.all([
           supabase
@@ -137,14 +139,21 @@ export async function getNotificationItems(
                 .order("created_at", { ascending: false })
                 .limit(50)
             : Promise.resolve({ data: [] }),
+          supabase
+            .from("kicks")
+            .select("id, post_id, user_id, created_at")
+            .in("post_id", myPostIds)
+            .order("created_at", { ascending: false })
+            .limit(50),
         ])
-      : [{ data: [] }, { data: [] }, { data: [] }];
+      : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
   const actorIds = new Set([
     ...(incomingRequests ?? []).map((r) => r.requester_id),
     ...(likes ?? []).map((l) => l.user_id),
     ...(comments ?? []).map((c) => c.user_id),
     ...(knocks ?? []).map((k) => k.user_id),
+    ...(kicks ?? []).map((k) => k.user_id),
   ]);
   const { data: actors } =
     actorIds.size > 0
@@ -163,8 +172,13 @@ export async function getNotificationItems(
     return new Date(createdAt) > new Date(seenAt);
   }
 
+  // Kick하면 좋아요도 자동으로 같이 들어가서(give_kick) 같은 사람·같은 게시물 알림이 두 줄이
+  // 된다 — Kick 알림 하나만 남긴다.
+  const kickKeys = new Set((kicks ?? []).map((k) => `${k.post_id}:${k.user_id}`));
+  const likesWithoutKicks = (likes ?? []).filter((l) => !kickKeys.has(`${l.post_id}:${l.user_id}`));
+
   const items: NotificationItem[] = [
-    ...(likes ?? []).map(
+    ...likesWithoutKicks.map(
       (l): NotificationItem => ({
         type: "like",
         id: l.id,
@@ -174,6 +188,18 @@ export async function getNotificationItems(
         createdAt: l.created_at,
         href: hrefFor(l.post_id),
         unread: isUnread(l.created_at),
+      }),
+    ),
+    ...(kicks ?? []).map(
+      (k): NotificationItem => ({
+        type: "kick",
+        id: k.id,
+        postId: k.post_id,
+        actorId: k.user_id,
+        actorName: actorNameById.get(k.user_id) ?? "알 수 없음",
+        createdAt: k.created_at,
+        href: hrefFor(k.post_id),
+        unread: isUnread(k.created_at),
       }),
     ),
     ...(comments ?? []).map(

@@ -11,7 +11,7 @@ import Link from "next/link";
 export function GuestBottomBar() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-[#1c1c1e] md:hidden">
-      <p className="text-xs text-gray-600 dark:text-gray-400">가입하면 Kick·댓글 남기고 memo도 볼 수 있어요</p>
+      <p className="text-xs text-gray-600 dark:text-gray-400">가입하면 좋아요·Kick·댓글 남기고 memo도 볼 수 있어요</p>
       <Link
         href="/signup"
         className="shrink-0 rounded-full bg-black px-3.5 py-1.5 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"

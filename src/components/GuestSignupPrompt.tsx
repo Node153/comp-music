@@ -89,7 +89,7 @@ export function GuestSignupPromptProvider({ children }: { children: React.ReactN
                 가입하면 더 많은 걸 할 수 있어요
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Kick·댓글을 남기고, memo(비공개 공간)에서 아는 사람들과 작업물을 나눠보세요.
+                좋아요·Kick·댓글을 남기고, memo(비공개 공간)에서 아는 사람들과 작업물을 나눠보세요.
               </p>
               <div className="mt-2 flex w-full flex-col gap-2">
                 <Link

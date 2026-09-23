@@ -7,10 +7,11 @@
 // 밑줄 탭 대신 알약 필터 칩으로(2026-09 — ProfileTabs 탭 밑줄과 2단으로 겹쳐 보이지 않게).
 import { useState } from "react";
 import type { ContentType } from "@/types/database";
+import type { Kicker } from "@/components/PostEngagementContext";
 import { FolderView, type FolderData } from "./FolderView";
 import { NewFolderButton } from "./NewFolderButton";
 import { ProfileFeedPostCard } from "./ProfileFeedPostCard";
-import { HeartIcon, FolderIcon } from "@/components/icons";
+import { HeartIcon, FolderIcon, KickIcon } from "@/components/icons";
 
 export type FeedPost = {
   id: string;
@@ -26,6 +27,11 @@ export type FeedPost = {
   likeCount: number;
   likedByMe: boolean;
   commentCount: number;
+  // Kick(0071)은 DEMO(public) 게시물에만 — 카드가 KickButton을 띄울지 판단용.
+  visibility: string;
+  kickCount: number;
+  kickedByMe: boolean;
+  kickers: Kicker[];
   // 작성자 정보를 공유 prop이 아니라 게시물 하나하나에 싣는다 — "좋아요" 필터(사운드클라우드
   // Likes 탭 참고, 2026-09)는 이 프로필 주인이 아니라 다른 사람 게시물도 섞여 나오기 때문.
   authorName: string;
@@ -35,6 +41,7 @@ export type FeedPost = {
 export function ProfileFeed({
   posts,
   likedPosts,
+  kickedPosts,
   folders,
   isOwnProfile,
   userId,
@@ -42,6 +49,8 @@ export function ProfileFeed({
 }: {
   posts: FeedPost[];
   likedPosts: FeedPost[];
+  // 이 프로필 주인이 Kick한 게시물(Kick 로그, 최신순) — 주마다 한 곡씩 쌓인다.
+  kickedPosts: FeedPost[];
   folders: FolderData[];
   isOwnProfile: boolean;
   userId: string;
@@ -52,7 +61,9 @@ export function ProfileFeed({
   const currentPosts = posts.filter((post) => !post.isExpired);
   const expiredPosts = posts.filter((post) => post.isExpired);
   const activeFolder = folders.find((f) => f.id === tab);
-  const visiblePosts = tab === "current" ? currentPosts : tab === "expired" ? expiredPosts : likedPosts;
+  const visiblePosts =
+    tab === "current" ? currentPosts : tab === "expired" ? expiredPosts : tab === "kicked" ? kickedPosts : likedPosts;
+  const showAuthor = tab === "liked" || tab === "kicked";
 
   return (
     <div className="min-w-0">
@@ -89,6 +100,16 @@ export function ProfileFeed({
           <HeartIcon className="h-3.5 w-3.5" filled={tab === "liked"} />
           좋아요 <span className={tab === "liked" ? "text-white/70" : "text-active-gray"}>{likedPosts.length}</span>
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("kicked")}
+          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+            tab === "kicked" ? "bg-black text-white" : "border border-box-gray text-active-gray hover:opacity-70"
+          }`}
+        >
+          <KickIcon className={`h-3.5 w-3.5 ${tab === "kicked" ? "text-amber-400" : ""}`} filled={tab === "kicked"} />
+          Kick <span className={tab === "kicked" ? "text-white/70" : "text-active-gray"}>{kickedPosts.length}</span>
+        </button>
         {folders.map((folder) => (
           <button
             key={folder.id}
@@ -118,11 +139,17 @@ export function ProfileFeed({
       ) : (
         <div className="mt-4 flex flex-col gap-4">
           {visiblePosts.map((post) => (
-            <ProfileFeedPostCard key={post.id} post={post} currentUserId={currentUserId} showAuthor={tab === "liked"} />
+            <ProfileFeedPostCard key={post.id} post={post} currentUserId={currentUserId} showAuthor={showAuthor} />
           ))}
           {visiblePosts.length === 0 && (
             <p className="py-10 text-center text-sm text-active-gray">
-              {tab === "current" ? "현재 게시물이 없습니다" : tab === "expired" ? "보관된 게시물이 없습니다" : "좋아요한 게시물이 없습니다"}
+              {tab === "current"
+                ? "현재 게시물이 없습니다"
+                : tab === "expired"
+                  ? "보관된 게시물이 없습니다"
+                  : tab === "kicked"
+                    ? "Kick한 게시물이 없습니다"
+                    : "좋아요한 게시물이 없습니다"}
             </p>
           )}
         </div>

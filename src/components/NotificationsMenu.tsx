@@ -4,7 +4,7 @@
 // (2026-09-16, 사용자 요청 — "굳이 전체 알림보기로 페이지 이동하지 말고 사이드바에서 알림정보
 // 다 볼 수 있게"): 작은 드롭다운 대신 패널로 펼쳐지고, 오늘/어제/이번 주/이번 달/이전 활동으로
 // 묶어서 보여준다. 이어서 "/notifications 페이지 자체를 제거해달라"는 요청을 받아 그 페이지를
-// 지우고(2026-09-16), 그 페이지가 갖고 있던 카테고리 필터(전체/좋아요·댓글/신청/PEAK)와 댓글
+// 지우고(2026-09-16), 그 페이지가 갖고 있던 카테고리 필터(전체/반응/신청/PEAK)와 댓글
 // 미리보기까지 이 패널로 옮겨왔다 — 이제 알림 정보 전부가 여기 하나에서만 보인다.
 // 데스크톱(NavSidebar, compact=false)은 사이드바 오른쪽에 딱 붙는 도킹 패널, 모바일
 // (MobileTopBar, compact=true)은 화면 전체를 덮는 풀스크린 패널 — 같은 컴포넌트를 반응형
@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { BellIcon, CrownIcon, FeedbackIcon, FlameIcon, XIcon } from "@/components/icons";
+import { BellIcon, CrownIcon, FeedbackIcon, FlameIcon, KickIcon, XIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
 import { navRowClass, navLabelClass, topBarIconClass } from "@/components/ui/styles";
@@ -24,13 +24,13 @@ import { FEEDBACK_STATUS_LABEL } from "@/lib/feedback";
 type CategoryFilter = "all" | "engagement" | "request" | "peak";
 const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
   { value: "all", label: "전체" },
-  { value: "engagement", label: "Kick·댓글" },
+  { value: "engagement", label: "좋아요·Kick·댓글" },
   { value: "request", label: "신청" },
   { value: "peak", label: "PEAK" },
 ];
 function matchesCategory(item: NotificationItem, filter: CategoryFilter) {
   if (filter === "all") return true;
-  if (filter === "engagement") return item.type === "like" || item.type === "comment";
+  if (filter === "engagement") return item.type === "like" || item.type === "kick" || item.type === "comment";
   if (filter === "request") return item.type === "companion_request" || item.type === "knock";
   return item.type === "peak";
 }
@@ -235,6 +235,14 @@ export function NotificationsMenu({
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                               <FeedbackIcon className="h-4 w-4" />
                             </span>
+                          ) : item.type === "kick" ? (
+                            // Kick(0071)은 드물고 무거운 반응이라 아바타에 골드 킥드럼 배지를 붙여 강조한다.
+                            <span className="relative h-9 w-9 shrink-0">
+                              <Avatar userId={item.actorId} name={item.actorName} className="h-9 w-9 text-sm" />
+                              <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white ring-2 ring-white dark:ring-gray-950">
+                                <KickIcon className="h-3 w-3" />
+                              </span>
+                            </span>
                           ) : (
                             <Avatar userId={item.actorId} name={item.actorName} className="h-9 w-9 shrink-0 text-sm" />
                           )}
@@ -255,7 +263,14 @@ export function NotificationsMenu({
                               ) : (
                                 <>
                                   <span className="font-semibold">{item.actorName}</span>
-                                  {item.type === "like" && "님이 회원님의 게시물을 Kick했어요"}
+                                  {item.type === "like" && "님이 회원님의 게시물을 좋아해요"}
+                                  {item.type === "kick" && (
+                                    <>
+                                      님이 이번 주{" "}
+                                      <span className="font-semibold text-amber-600 dark:text-amber-400">Kick</span>을
+                                      회원님의 게시물에 줬어요
+                                    </>
+                                  )}
                                   {item.type === "comment" && "님이 댓글을 남겼습니다"}
                                   {item.type === "companion_request" && "님이 Companion을 신청했어요"}
                                   {item.type === "knock" && "님이 비공개 게시물에 노크했어요"}

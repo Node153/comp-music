@@ -1140,7 +1140,7 @@ export default function UploadPage() {
               <p className="col-span-2 px-1 text-xs text-active-gray">
                 {collabAvailable
                   ? "Companion과 음원을 스택으로 쌓아 함께 곡을 만들 수 있어요. 음원 파일(mp3/wav)만 올려주세요."
-                  : "DEMO처럼 영상·음원에 커버 이미지를 더해 올리고, Kick·댓글·조회자 목록을 확인할 수 있어요."}
+                  : "DEMO처럼 영상·음원에 커버 이미지를 더해 올리고, 좋아요·댓글·조회자 목록을 확인할 수 있어요."}
               </p>
             </div>
           )}

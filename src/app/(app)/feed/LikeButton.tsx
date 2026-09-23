@@ -1,6 +1,7 @@
 "use client";
 
-// INTERACT-01: 게시물당 사용자 1회, 토글 가능
+// INTERACT-01: 게시물당 사용자 1회, 토글 가능 — 단, Kick(0071)한 게시물은 좋아요가 켜진 채
+// 잠긴다(Kick 번복 불가 규칙의 연장, DB likes_delete_self 정책도 같은 조건으로 막음).
 // liked 상태는 PostEngagementContext에서 공유 — 더블탭 좋아요(usePostLike)와 같은 값을
 // 봐야 버튼으로 누르든 더블탭하든 화면이 항상 일치한다(초기값은 Provider의 initialLiked).
 import { useState } from "react";
@@ -18,17 +19,20 @@ export function LikeButton({
   className?: string;
 }) {
   const supabase = createClient();
-  const { likeCount, setLikeCount, setWeeklyLikeCount, liked, setLiked, triggerKick } = usePostEngagement();
+  const { likeCount, setLikeCount, setWeeklyLikeCount, liked, setLiked, kicked } = usePostEngagement();
   const [pending, setPending] = useState(false);
+  // 좋아요를 켤 때마다 하트가 톡 튀는 작은 연출 — key를 바꿔 애니메이션을 다시 건다.
+  // (예전엔 여기서 카드 중앙 "Kick!" 연출을 띄웠는데, 이제 그건 Kick 전용이다.)
+  const [bumpKey, setBumpKey] = useState(0);
+  const locked = kicked && liked;
 
   async function toggle() {
-    if (pending) return;
+    if (pending || locked) return;
     setPending(true);
 
     const nextLiked = !liked;
     setLiked(nextLiked);
-    // 좋아요를 켤 때만 게시물 중앙에 "Kick!" 연출(KickBurst)을 띄운다(사용자 요청).
-    if (nextLiked) triggerKick();
+    if (nextLiked) setBumpKey((k) => k + 1);
     setLikeCount((c) => c + (nextLiked ? 1 : -1));
     // 지금 누르는 좋아요/취소는 항상 "이번 주" 안에서 일어나는 일이라 weeklyLikeCount도 같이
     // 맞춰준다 — 다만 몇 주 전에 눌러둔 좋아요를 지금 취소하는 경우엔 그 좋아요가 애초에
@@ -53,11 +57,13 @@ export function LikeButton({
     <button
       onClick={toggle}
       aria-pressed={liked}
+      aria-label="좋아요"
+      title={locked ? "Kick한 게시물은 좋아요를 취소할 수 없어요" : undefined}
       className={`inline-flex items-center gap-1 text-base font-semibold transition ${
         liked ? "text-red-600" : "text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
-      } ${className}`}
+      } ${locked ? "cursor-default" : ""} ${className}`}
     >
-      <HeartIcon className="h-5 w-5" filled={liked} />
+      <HeartIcon key={bumpKey} className={`h-5 w-5 ${bumpKey > 0 ? "animate-like-bump" : ""}`} filled={liked} />
       {likeCount > 0 ? likeCount : ""}
     </button>
   );

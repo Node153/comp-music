@@ -112,6 +112,19 @@ export function HeartIcon({ className, filled = false }: IconProps & { filled?: 
   );
 }
 
+// Kick(0071) — 킥드럼 정면(울림판 + 가운데 로고 원 + 받침 다리 두 개). 다리가 없으면 작은
+// 크기에서 바이닐/과녁처럼 읽혀서 꼭 둔다. filled면 울림판을 채우고 로고 원은 흰 선으로 남긴다.
+export function KickIcon({ className, filled = false }: IconProps & { filled?: boolean }) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="10.5" r="8" fill={filled ? "currentColor" : "none"} />
+      <circle cx="12" cy="10.5" r="3" stroke={filled ? "white" : "currentColor"} />
+      <line x1="6.4" y1="16.2" x2="4.2" y2="21" />
+      <line x1="17.6" y1="16.2" x2="19.8" y2="21" />
+    </svg>
+  );
+}
+
 export function CommentIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden="true">

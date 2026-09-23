@@ -17,8 +17,12 @@ export const PEAK_VIEW_THRESHOLD = 1000;
 // 사이드바 PEAK 목록(RightSidebar)이 이 점수를 똑같이 써야 두 곳의 PEAK 판정이 어긋나지 않는다.
 export const PEAK_LIKE_WEIGHT = 10;
 
-export function peakScore(viewCount: number, likeCount: number): number {
-  return viewCount + likeCount * PEAK_LIKE_WEIGHT;
+// Kick 1개 = 조회수 100(좋아요 10개 몫, 2026-09-24 사용자 결정) — 주 1회만 줄 수 있는 반응이라
+// 훨씬 무겁게 친다. DB의 check_and_set_post_peak(0071)과 반드시 같은 값이어야 한다.
+export const PEAK_KICK_WEIGHT = 100;
+
+export function peakScore(viewCount: number, likeCount: number, kickCount = 0): number {
+  return viewCount + likeCount * PEAK_LIKE_WEIGHT + kickCount * PEAK_KICK_WEIGHT;
 }
 
 // (app)/feed/page.tsx가 PostEngagementProvider에 내려주는 peakThreshold/weeklyLikeCount
@@ -37,6 +41,18 @@ export function currentWeekStartISO(now = new Date()): string {
   const diffToMonday = (day + 6) % 7;
   const kstMondayLabel = Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate() - diffToMonday);
   return new Date(kstMondayLabel - KST_OFFSET_MS).toISOString();
+}
+
+// Kick 주차 키(0071 kicks.week_start, 'YYYY-MM-DD') — currentWeekStartISO와 같은 경계(KST 월요일).
+export function currentKickWeekStart(now = new Date()): string {
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  return new Date(new Date(currentWeekStartISO(now)).getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+// 다음 Kick 충전(다음 주 월요일 0시 KST)까지 남은 일수 — 1~7.
+export function daysUntilNextKick(now = new Date()): number {
+  const nextWeekStart = new Date(currentWeekStartISO(now)).getTime() + 7 * 24 * 60 * 60 * 1000;
+  return Math.max(1, Math.ceil((nextWeekStart - now.getTime()) / (24 * 60 * 60 * 1000)));
 }
 
 // 태그마다 다른 색을 주면(예전 버전) 태그 종류가 늘어날수록 알록달록해져서 UI가 조잡해

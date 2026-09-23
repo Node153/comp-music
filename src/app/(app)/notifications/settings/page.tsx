@@ -3,7 +3,8 @@
 // 이메일 알림 설정(0033) — 모바일 앱이 없어서 실시간 푸시가 불가능해 이메일이 사실상
 // 유일한 알림 채널이다. 다만 이메일은 스팸처럼 느껴지기 쉬워서 종류별로 켜고 끌 수
 // 있게 한다. 토글마다 바로 저장(별도 "저장" 버튼 없음) — 설정 화면에서 흔한 패턴.
-// 실제 발송은 api/cron/send-notification-emails가 하루 1회 다이제스트로 처리한다.
+// 실제 발송은 api/cron/send-notification-emails가 하루 1회 다이제스트로 처리한다 — Kick(0071)만
+// 예외로, 받는 즉시 /api/kicks가 바로 보낸다(드물고 의미가 큰 알림이라).
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -14,6 +15,7 @@ type PreferenceKey =
   | "email_notify_companion_request"
   | "email_notify_message"
   | "email_notify_like"
+  | "email_notify_kick"
   | "email_notify_comment"
   | "email_notify_peak";
 
@@ -25,7 +27,8 @@ const PREFERENCE_ROWS: { key: PreferenceKey; label: string; description: string 
     description: "누군가 Companion을 신청하면 메일로 알려드려요",
   },
   { key: "email_notify_message", label: "메시지", description: "새 메시지가 오면 메일로 알려드려요" },
-  { key: "email_notify_like", label: "Kick", description: "내 게시물에 Kick이 눌리면 메일로 알려드려요" },
+  { key: "email_notify_kick", label: "Kick", description: "내 게시물이 Kick을 받으면 바로 메일로 알려드려요" },
+  { key: "email_notify_like", label: "좋아요", description: "내 게시물에 좋아요가 눌리면 메일로 알려드려요" },
   { key: "email_notify_comment", label: "댓글", description: "내 게시물에 댓글이 달리면 메일로 알려드려요" },
   { key: "email_notify_peak", label: "PEAK", description: "내 게시물이 PEAK에 도달하면 메일로 알려드려요" },
 ];
@@ -44,7 +47,7 @@ export default function NotificationSettingsPage() {
       const { data: row } = await supabase
         .from("users")
         .select(
-          "email_notify_knock, email_notify_companion_request, email_notify_message, email_notify_like, email_notify_comment, email_notify_peak",
+          "email_notify_knock, email_notify_companion_request, email_notify_message, email_notify_like, email_notify_kick, email_notify_comment, email_notify_peak",
         )
         .eq("id", data.user.id)
         .single();
@@ -114,7 +117,7 @@ export default function NotificationSettingsPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <p className="mt-6 text-xs text-active-gray">
-        하루에 한 번, 켜둔 알림을 모아서 보내드려요.
+        Kick은 받는 즉시, 나머지는 하루에 한 번 모아서 보내드려요.
       </p>
     </main>
   );

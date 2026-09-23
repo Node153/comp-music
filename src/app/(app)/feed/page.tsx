@@ -20,6 +20,8 @@ import { PostViewCount } from "@/components/PostViewCount";
 import { DoubleTapLikeArea } from "@/components/DoubleTapLikeArea";
 import { KickBurst } from "@/components/KickBurst";
 import { LikeButton } from "./LikeButton";
+import { KickButton } from "./KickButton";
+import { KickersLine } from "./KickersLine";
 import { PinButton } from "./PinButton";
 import { CommentPanel } from "./CommentPanel";
 import { GuestEngagementRow } from "./GuestEngagementRow";
@@ -145,6 +147,7 @@ export default async function FeedPage({
     { data: commentRows },
     { count: approvedMemberCount },
     { data: pinRows },
+    { data: kickRows },
   ] = await Promise.all([
     userIds.length > 0
       ? isComplex
@@ -167,6 +170,13 @@ export default async function FeedPage({
     currentUser && isComplex && postIds.length > 0
       ? supabase.from("post_pins").select("post_id, pinned").eq("user_id", currentUser.id).in("post_id", postIds)
       : { data: [] as { post_id: string; pinned: boolean }[] },
+    // Kick(0071)은 DEMO 전용. 로그인 회원은 누가 Kick했는지(닉네임)까지 공개 — post_kickers RPC.
+    // 게스트는 숫자만(kicks_select_public_posts 정책).
+    !isComplex && postIds.length > 0
+      ? currentUser
+        ? supabase.rpc("post_kickers", { pids: postIds })
+        : supabase.from("kicks").select("post_id, user_id").in("post_id", postIds)
+      : { data: [] as { post_id: string; user_id: string; nickname?: string }[] },
   ]);
 
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
@@ -186,6 +196,16 @@ export default async function FeedPage({
       weeklyLikeCountMap.set(row.post_id, (weeklyLikeCountMap.get(row.post_id) ?? 0) + 1);
     }
     if (currentUser && row.user_id === currentUser.id) likedByMeSet.add(row.post_id);
+  }
+  const kickCountMap = new Map<string, number>();
+  const kickersMap = new Map<string, { id: string; name: string }[]>();
+  const kickedByMeSet = new Set<string>();
+  for (const row of (kickRows ?? []) as { post_id: string; user_id: string; nickname?: string }[]) {
+    kickCountMap.set(row.post_id, (kickCountMap.get(row.post_id) ?? 0) + 1);
+    if (row.nickname) {
+      kickersMap.set(row.post_id, [...(kickersMap.get(row.post_id) ?? []), { id: row.user_id, name: row.nickname }]);
+    }
+    if (currentUser && row.user_id === currentUser.id) kickedByMeSet.add(row.post_id);
   }
   const commentCountMap = new Map<string, number>();
   for (const row of commentRows ?? []) {
@@ -459,7 +479,7 @@ export default async function FeedPage({
       {!currentUser && (
         <div className="mx-3 mb-4 flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 md:mx-0">
           <p className="text-sm text-gray-600">
-            가입하면 Kick·댓글을 남기고, memo(비공개 공간)도 볼 수 있어요.
+            가입하면 좋아요·Kick·댓글을 남기고, memo(비공개 공간)도 볼 수 있어요.
           </p>
           <Link
             href="/signup"
@@ -586,6 +606,9 @@ export default async function FeedPage({
                 initialWeeklyLikeCount={weeklyLikeCount}
                 initialViewCount={post.view_count}
                 initialLiked={likedByMeSet.has(post.id)}
+                initialKickCount={kickCountMap.get(post.id) ?? 0}
+                initialKicked={kickedByMeSet.has(post.id)}
+                initialKickers={kickersMap.get(post.id)}
                 peakThreshold={peakThreshold}
               >
               <KickBurst />
@@ -816,6 +839,7 @@ export default async function FeedPage({
                     <GuestEngagementRow
                       showViewCount={!isComplex}
                       likeCount={likeCount}
+                      kickCount={isComplex ? undefined : (kickCountMap.get(post.id) ?? 0)}
                       commentCount={commentCount}
                     />
                   ) : (
@@ -824,7 +848,8 @@ export default async function FeedPage({
                   // 버튼마다 flex-basis로 폭을 균등 분할했는데, 조회수 아이콘까지 더해지며
                   // 폭 합이 100%를 넘어 줄바꿈이 꼬였다(제보: "아이콘 꼬였어"). 이제 전부
                   // gap만으로 나란히 놓는 guest/mock 줄과 같은 방식이라 몇 개가 오든 안전하다.
-                  <div className="flex flex-wrap items-center gap-6 border-t border-gray-100 px-4 py-3.5 shrink-0">
+                  <div className="border-t border-gray-100 shrink-0">
+                  <div className="flex flex-wrap items-center gap-6 px-4 py-3.5">
                     {!isComplex && (
                       <PostViewCount
                         className="inline-flex items-center gap-1 text-base font-semibold text-gray-600 dark:text-gray-300"
@@ -832,6 +857,8 @@ export default async function FeedPage({
                       />
                     )}
                     <LikeButton postId={post.id} userId={currentUser.id} />
+                    {/* Kick(0071) — 하트 바로 옆, DEMO 전용 */}
+                    {!isComplex && <KickButton postId={post.id} userId={currentUser.id} isOwnPost={isOwnPost} />}
                     <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isComplex} />
                     {isOwnPost && isComplex && (
                       // memo 공동창작 미체크 본인 글은 이 자리에 조회자 목록(인스타
@@ -842,6 +869,8 @@ export default async function FeedPage({
                         isOwnPost
                       />
                     )}
+                  </div>
+                  {!isComplex && <KickersLine currentUserId={currentUser.id} className="-mt-1.5 px-4 pb-3" />}
                   </div>
                 )
               )}
