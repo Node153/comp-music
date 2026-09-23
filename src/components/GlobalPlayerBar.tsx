@@ -144,12 +144,14 @@ export function GlobalPlayerBar() {
     }
     // 곡이 바뀌어도 사용자가 골라둔 볼륨은 유지 — 매번 초기화하지 않는다.
     video.volume = volumeRef.current;
+    // 같은 src라 메타데이터 이벤트가 다시 안 오는 경우에도 이미 아는 길이로 다시 맞춘다.
+    if (Number.isFinite(video.duration) && video.duration > 0) setDuration(video.duration);
     // ⚠️ 한때 "음소거로 먼저 재생 후 해제" 우회를 넣었었는데, 재생 시작 직후 unmute를
     // 비동기(.then) 콜백에서 하면 브라우저가 그 unmute를 사용자 제스처 밖의 행동으로 보고
     // 오히려 재생을 멈춰버리는 걸 로컬에서 재현·확인해서 되돌렸다(같은 테스트 방식으로
     // 이 트릭 넣기 전엔 항상 재생됐고, 넣은 뒤엔 재현되게 깨졌음 — 명확한 회귀).
     video.play().catch(() => setIsPlaying(false));
-  }, [track, videoRef, setIsPlaying]);
+  }, [track, videoRef, setIsPlaying, setDuration]);
 
   useEffect(() => {
     const video = videoRef.current;

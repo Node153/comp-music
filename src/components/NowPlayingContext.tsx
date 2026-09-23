@@ -55,6 +55,9 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
   // 피드 인라인 재생/최근 들은/담기 큐 재생이 전부 결국 play()를 거치므로 여기 한 곳에서만
   // 재면 어디서 재생을 시작했든 동일하게 처리된다(사용자 요청). memo(expiresAt 있음)는
   // 조회수 개념이 없어서 트랙 id를 세션에 안 실어 아예 재지 않는다.
+  // 지금 재생 중인 트랙 id — play()가 같은 트랙 재호출인지 판단하는 데만 쓴다(state인 track을
+  // 읽으려면 play의 의존성이 바뀌어 매 렌더 새 함수가 되므로 ref로 따로 둔다).
+  const currentTrackIdRef = useRef<string | null>(null);
   const viewSessionRef = useRef<{
     trackId: string | null;
     watchedMs: number;
@@ -65,7 +68,12 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
   const play = useCallback((next: NowPlayingTrack) => {
     setTrack(next);
     setIsPlaying(true);
-    setDuration(0);
+    // 길이는 트랙이 실제로 바뀔 때만 0으로 초기화한다 — 같은 트랙이 다시 play()로 들어오면
+    // (아래 주석의 버퍼링 후 네이티브 onPlay 재발화, 일시정지 후 재개 등) <video> src가 그대로라
+    // loadedmetadata/durationchange가 다시 안 불려서, 여기서 0으로 지우면 끝 시간이 0:00에
+    // 멈추고 진행 바도 안 움직였다(사용자 제보, 2026-09-23 — 영상 게시물 사운드바).
+    if (currentTrackIdRef.current !== next.id) setDuration(0);
+    currentTrackIdRef.current = next.id;
     // 같은 트랙이 다시 play()로 들어오면(예: 영상 미리보기가 버퍼링으로 잠깐 멈췄다 브라우저가
     // 자동으로 다시 발화하는 네이티브 onPlay, 혹은 일시정지 후 재개) 세션을 리셋하지 않고
     // 누적을 그대로 이어간다 — 트랙 id가 바뀔 때만 새로 잰다. 예전엔 play()가 불릴 때마다
@@ -146,6 +154,7 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
 
   const close = useCallback(() => {
     videoRef.current?.pause();
+    currentTrackIdRef.current = null;
     setTrack(null);
     setIsPlaying(false);
     setDuration(0);
