@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, getMyUserRow } from "@/lib/auth";
 import { getAdminIds } from "@/lib/admins";
 import { getR2SignedUrl, resolveMediaUrl } from "@/lib/r2/storage";
-import { MessageButton } from "@/components/MessageButton";
 import { EngagementMeter } from "@/components/EngagementMeter";
 import { PostEngagementProvider } from "@/components/PostEngagementContext";
 import { PostVideo } from "@/components/PostVideo";
@@ -27,7 +26,6 @@ import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
-import { MailIcon } from "@/components/icons";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성
@@ -835,26 +833,14 @@ export default async function FeedPage({
                     )}
                     <LikeButton postId={post.id} userId={currentUser.id} />
                     <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isComplex} />
-                    {!isOwnPost ? (
-                      <MessageButton
-                        currentUserId={currentUser.id}
-                        otherUserId={post.user_id}
-                        sourcePostId={post.id}
-                        className="inline-flex items-center gap-1 text-base font-semibold text-gray-600 transition hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
-                      >
-                        <MailIcon className="h-5 w-5" />
-                        메시지
-                      </MessageButton>
-                    ) : (
-                      // memo 공동창작 미체크 본인 글은 메시지 자리에 조회자 목록(인스타
+                    {isOwnPost && isComplex && (
+                      // memo 공동창작 미체크 본인 글은 이 자리에 조회자 목록(인스타
                       // 스토리 참고, 사용자 요청) — DEMO 본인 글은 이 슬롯 자체가 없다.
-                      isComplex && (
-                        <PostViewedBy
-                          postId={post.id}
-                          currentUserId={currentUser.id}
-                          isOwnPost
-                        />
-                      )
+                      <PostViewedBy
+                        postId={post.id}
+                        currentUserId={currentUser.id}
+                        isOwnPost
+                      />
                     )}
                   </div>
                 )
