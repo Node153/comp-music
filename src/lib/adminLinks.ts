@@ -2,6 +2,7 @@
 // 실제 접근 제어는 proxy.ts(/admin/* 는 role=admin만)가 담당하고, 이 목록은 링크 노출용.
 export const ADMIN_LINKS: { href: string; label: string }[] = [
   { href: "/admin/members", label: "회원 관리" },
+  { href: "/admin/activity", label: "활동 로그" },
   { href: "/admin/verifications", label: "심사 대기열" },
   { href: "/admin/announcements", label: "공지사항 관리" },
   { href: "/admin/feedback", label: "피드백 보기" },

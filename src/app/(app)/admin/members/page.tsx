@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import { getR2UsageBytes } from "@/lib/r2/storage";
 import { presenceStatus } from "@/lib/presence";
 import { pageTitle, mutedText, badge, badgeDark } from "@/components/ui/styles";
@@ -19,6 +20,7 @@ const STATUS_LABEL: Record<string, string> = {
   pending: "대기",
   approved: "승인",
   rejected: "반려",
+  suspended: "정지",
   withdrawn: "탈퇴",
 };
 
@@ -26,6 +28,7 @@ const STATUS_BADGE: Record<string, string> = {
   pending: "rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-700",
   approved: "rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700",
   rejected: "rounded-full bg-red-50 px-2.5 py-1 text-xs text-red-600",
+  suspended: "rounded-full bg-red-600 px-2.5 py-1 text-xs text-white",
   withdrawn: "rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-400",
 };
 
@@ -35,6 +38,7 @@ const STATUS_TABS = [
   { key: "pending", label: "승인 대기" },
   { key: "approved", label: "승인" },
   { key: "rejected", label: "반려" },
+  { key: "suspended", label: "정지" },
   { key: "withdrawn", label: "탈퇴" },
   { key: "all", label: "전체" },
 ] as const;
@@ -100,6 +104,7 @@ export default async function AdminMembersPage({
   const statusTab = sp.status ?? "";
   const page = Math.max(1, Number(sp.page) || 1);
   const supabase = await createClient();
+  const me = await getCurrentUser();
 
   function hrefWith(overrides: Partial<SearchParams>): string {
     const next = new URLSearchParams();
@@ -125,7 +130,7 @@ export default async function AdminMembersPage({
   let query = supabase
     .from("users")
     .select(
-      "id, name, nickname, nickname_tag, email, status, role, birth_date, created_at, last_seen_at",
+      "id, name, nickname, nickname_tag, email, status, role, birth_date, created_at, last_seen_at, suspended_until, status_reason",
       { count: "exact" },
     );
 
@@ -180,6 +185,7 @@ export default async function AdminMembersPage({
     { count: pendingCount },
     { count: approvedCount },
     { count: rejectedCount },
+    { count: suspendedCount },
     { count: withdrawnCount },
     { count: joined7Count },
     { count: seen7Count },
@@ -190,6 +196,7 @@ export default async function AdminMembersPage({
     countUsers().eq("status", "pending"),
     countUsers().eq("status", "approved"),
     countUsers().eq("status", "rejected"),
+    countUsers().eq("status", "suspended"),
     countUsers().eq("status", "withdrawn"),
     countUsers().neq("status", "withdrawn").gte("created_at", daysAgoIso(7)),
     countUsers().neq("status", "withdrawn").gte("last_seen_at", daysAgoIso(7)),
@@ -208,6 +215,7 @@ export default async function AdminMembersPage({
     pending: pendingCount,
     approved: approvedCount,
     rejected: rejectedCount,
+    suspended: suspendedCount,
     withdrawn: withdrawnCount,
     all: (activeCount ?? 0) + (withdrawnCount ?? 0),
   };
@@ -357,7 +365,21 @@ export default async function AdminMembersPage({
                 <td className="whitespace-nowrap px-4 py-3">
                   <div className="flex flex-col items-start gap-1.5">
                     <span className={STATUS_BADGE[m.status] ?? badge}>{STATUS_LABEL[m.status] ?? m.status}</span>
-                    <MemberStatusActions userId={m.id} status={m.status} />
+                    {m.status === "suspended" && (
+                      <span className="max-w-40 whitespace-normal text-xs text-red-600" title={m.status_reason ?? undefined}>
+                        {m.suspended_until ? `${formatDateTime(m.suspended_until)}까지` : "영구 정지"}
+                      </span>
+                    )}
+                    <MemberStatusActions
+                      userId={m.id}
+                      name={m.name}
+                      status={m.status}
+                      role={m.role}
+                      isSelf={m.id === me?.id}
+                    />
+                    <Link href={`/admin/activity?target=${m.id}`} className="text-xs text-gray-400 hover:text-gray-700 hover:underline">
+                      이력
+                    </Link>
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">

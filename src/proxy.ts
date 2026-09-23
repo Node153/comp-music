@@ -73,7 +73,14 @@ export async function proxy(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const status = profile?.status ?? "pending";
+  let status = profile?.status ?? "pending";
+
+  // 기간 정지(0064)가 끝났으면 이 요청에서 바로 풀어준다 — 크론 대신 본인이 접속하는 시점에
+  // 해제(접속 안 하는 사람은 풀릴 필요도 없음). 만료 판정과 해제·감사 로그는 DB 함수가 한다.
+  if (status === "suspended") {
+    const { data: lifted } = await supabase.rpc("lift_my_expired_suspension");
+    if (lifted) status = "approved";
+  }
 
   // 소셜로그인(0027)으로 막 가입한 사용자 — 회원가입 폼의 체크박스 화면을 안 거쳤으므로
   // 실명/닉네임 확정 + 저작권 동의를 여기서 먼저 받는다. status(pending/approved) 판정보다

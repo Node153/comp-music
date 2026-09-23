@@ -4,7 +4,8 @@
 
 // Phase 0: 회원가입 상태 3단계만 사용 (spec 1.4) — supplement_requested는 Phase 1에서 추가됨
 // withdrawn(0046) — 회원 탈퇴. 삭제가 아니라 비활성화+개인정보 파기라 행은 남고 상태만 바뀐다.
-export type UserStatus = "pending" | "approved" | "rejected" | "withdrawn";
+// suspended(0064) — 관리자 정지. approved가 아니므로 미승인 회원과 똑같이 차단된다.
+export type UserStatus = "pending" | "approved" | "rejected" | "withdrawn" | "suspended";
 export type UserRole = "user" | "admin";
 export type UserType = "student" | "activist";
 export type VerificationStatus = "pending" | "approved" | "rejected";
@@ -89,6 +90,10 @@ export interface Database {
           // 신규 가입 심사 요청 Discord 알림을 보낸 시각(0048) — 보내기 전에는 null.
           // /api/admin/notify-signup이 null일 때만 채우고 웹훅을 쏜다(중복 발송 방지).
           admin_notified_at: string | null;
+          // 정지 만료 시각(0064) — null이면 영구 정지(정지 상태가 아니면 항상 null).
+          suspended_until: string | null;
+          // 반려/정지 사유(0064) — 본인 /status 화면에 표시.
+          status_reason: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -113,6 +118,8 @@ export interface Database {
           last_notification_emailed_at?: string;
           withdrawn_at?: string | null;
           admin_notified_at?: string | null;
+          suspended_until?: string | null;
+          status_reason?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -478,6 +485,23 @@ export interface Database {
         Relationships: [];
       };
       // 0021_announcements_and_feedback — Help 메뉴(구 Away)의 공지사항. 관리자만 작성.
+      // 관리자 조치 감사 로그(0064) — admin_set_member_status/role 등 security definer 함수만
+      // 기록한다(클라이언트 insert 경로 없음). admin_id null = 시스템(정지 기간 만료 해제).
+      admin_actions: {
+        Row: {
+          id: number;
+          admin_id: string | null;
+          target_user_id: string | null;
+          action: "status_change" | "role_change" | "suspension_expired";
+          before: Record<string, unknown> | null;
+          after: Record<string, unknown> | null;
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       announcements: {
         Row: {
           id: string;
@@ -671,6 +695,20 @@ export interface Database {
       };
     };
     Functions: {
+      // 회원 관리(0064) — 상태/권한 변경은 전부 이 함수들로(감사 로그 기록). 관리자 전용.
+      admin_set_member_status: {
+        Args: { p_target: string; p_status: string; p_reason?: string | null; p_until?: string | null };
+        Returns: void;
+      };
+      admin_set_member_role: {
+        Args: { p_target: string; p_role: string; p_reason: string };
+        Returns: void;
+      };
+      // lift_my_expired_suspension(0064) — 기간 만료된 본인 정지 해제. proxy.ts가 호출.
+      lift_my_expired_suspension: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
       // 0020_knock_context_is_companion: invite_only 게시물 참여자 요약용 — 참여자 한 명당
       // 표시 이름(뷰어와 Companion이면 실명, 아니면 닉네임) + Companion 여부. 서버(feed/page.tsx)가
       // 뷰어의 참여 여부(canViewMedia)를 보고 "Companion 이름 + 외 n명" 또는 "전원 이름"으로 조립.

@@ -1,6 +1,6 @@
 "use client";
 
-// AUTH-04/06: 승인/반려 처리 시 users.status 갱신 + reviewer_id/reviewed_at 기록
+// AUTH-04/06: 승인/반려 처리 시 users.status 갱신(+감사 로그) + reviewer_id/reviewed_at 기록
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -38,10 +38,12 @@ export function AdminReviewForm({
       })
       .eq("id", verificationId);
 
-    const { error: userError } = await supabase
-      .from("users")
-      .update({ status: decision })
-      .eq("id", userId);
+    // users.status는 감사 로그가 남는 admin_set_member_status(0064)로만 바꾼다.
+    const { error: userError } = await supabase.rpc("admin_set_member_status", {
+      p_target: userId,
+      p_status: decision,
+      p_reason: decision === "rejected" ? reason : null,
+    });
 
     setLoading(false);
 

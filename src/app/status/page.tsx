@@ -1,4 +1,4 @@
-// S5 심사 상태 안내 (대기/반려 공용, Phase 0은 3단계만 사용 — 1.4)
+// S5 심사 상태 안내 (대기/반려/정지/탈퇴 공용 — 정지는 0064)
 // 미승인 사용자가 proxy.ts에서 리다이렉트되는 접근 가능 화면 중 하나
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -17,7 +17,7 @@ export default async function StatusPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("status")
+    .select("status, status_reason, suspended_until")
     .eq("id", user.id)
     .single();
 
@@ -74,14 +74,38 @@ export default async function StatusPage() {
           <p className={mutedText}>그동안 이용해주셔서 감사했어요.</p>
         </>
       )}
+      {status === "suspended" && (
+        <>
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl">
+            ⛔
+          </div>
+          <h1 className={pageTitle}>이용이 정지되었어요</h1>
+          {profile?.status_reason && <p className="text-sm text-gray-700">사유: {profile.status_reason}</p>}
+          <p className={mutedText}>
+            {profile?.suspended_until
+              ? `${new Date(profile.suspended_until).toLocaleString("ko-KR", {
+                  timeZone: "Asia/Seoul",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}에 자동으로 해제돼요.`
+              : "정지 기간이 정해져 있지 않아요."}
+          </p>
+          <p className={mutedText}>이의가 있으면 이메일로 문의해주세요. 운영자가 직접 확인 후 안내드립니다.</p>
+        </>
+      )}
       {status === "rejected" && (
         <>
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl">
             ❌
           </div>
           <h1 className={pageTitle}>인증이 반려되었어요</h1>
-          {latestVerification?.reject_reason && (
-            <p className="text-sm text-gray-700">사유: {latestVerification.reject_reason}</p>
+          {(profile?.status_reason ?? latestVerification?.reject_reason) && (
+            <p className="text-sm text-gray-700">
+              사유: {profile?.status_reason ?? latestVerification?.reject_reason}
+            </p>
           )}
           {/* Phase 0: 재심사 자동화 플로우 없음 — 이메일 문의 안내 (1.4) */}
           <p className={mutedText}>문의사항은 이메일로 남겨주세요. 운영자가 직접 확인 후 안내드립니다.</p>
