@@ -17,6 +17,8 @@ import { label as labelClass, errorText, pageCard } from "@/components/ui/styles
 import { ALL_GENRES } from "@/lib/genres";
 import { tagColorClass } from "@/lib/feedConstants";
 import type { ExpireHours } from "@/types/database";
+import { trimVideoFile } from "@/lib/trimVideo";
+import { VideoEditor, type TrimRange } from "./VideoEditor";
 
 const MIN_TAGS = 3;
 
@@ -462,6 +464,17 @@ export default function UploadPage() {
   const [coverGifUrl, setCoverGifUrl] = useState<string | null>(null);
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
 
+  // 영상 편집(VideoEditor, 2026-09-23) — DEMO/memo 단독 공용. trimRange=null이면 원본 전체.
+  // 영상 커버는 coverFile을 그대로 재사용한다: 프레임에서 고르면 그 프레임 JPEG가,
+  // "컴퓨터에서 선택"이면 고른 이미지가 coverFile이 되고 coverFromFrame으로 둘을 구분한다.
+  // coverFrameTime=null은 "아직 직접 안 고름"(다듬기 시작점 프레임이 기본 커버로 따라감).
+  const [trimRange, setTrimRange] = useState<TrimRange | null>(null);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [coverFrameTime, setCoverFrameTime] = useState<number | null>(null);
+  const [coverFromFrame, setCoverFromFrame] = useState(false);
+  // 게시 중 단계 안내 — 다듬기(ffmpeg 로드+자르기)는 수 초~수십 초 걸릴 수 있어서 버튼에 표시.
+  const [loadingLabel, setLoadingLabel] = useState("게시 중...");
+
   // Complex 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
   const [complexFile, setComplexFile] = useState<File | null>(null);
   const [complexKind, setComplexKind] = useState<DetectedMediaKind | null>(null);
@@ -594,12 +607,20 @@ export default function UploadPage() {
     setUploadType(next);
   }
 
+  function resetVideoEdit() {
+    setTrimRange(null);
+    setVideoDuration(0);
+    setCoverFrameTime(null);
+    setCoverFromFrame(false);
+  }
+
   function handleFileChange(file: File | null) {
     setMediaFileError(null);
     setCoverFile(null);
     setCoverFileError(null);
     setCoverPosition({ x: 50, y: 50 });
     setCoverGifUrl(null);
+    resetVideoEdit();
     if (file && file.size > MAX_FILE_SIZE_BYTES) {
       setMediaFile(null);
       setMediaKind(null);
@@ -618,8 +639,39 @@ export default function UploadPage() {
     // 안 됨"). 원본을 그대로 들고 있다가 드래그로 위치를 고르게 하고, 실제 정사각형 크롭은
     // 제출 시점에(handleSubmit) coverPosition을 반영해서 한다.
     setCoverFile(file);
+    setCoverFromFrame(false);
     setCoverPosition({ x: 50, y: 50 });
     if (file) setCoverGifUrl(null);
+  }
+
+  // VideoEditor에서 프레임 커버가 잡혔을 때 — 프레임은 영상 화면(가운데 정사각형으로 보임)과
+  // 같은 기준이어야 해서 노출 위치는 항상 가운데로 둔다.
+  function handleCoverFrame(time: number | null, file: File) {
+    setCoverFrameTime(time);
+    setCoverFile(file);
+    setCoverFromFrame(true);
+    setCoverFileError(null);
+    setCoverPosition({ x: 50, y: 50 });
+    setCoverGifUrl(null);
+  }
+
+  // 다듬기 구간이 원본과 실질적으로 다를 때만 실제 자르기를 한다(핸들을 살짝 건드렸다 되돌린
+  // 정도로 ffmpeg를 받게 하지 않음).
+  const hasMeaningfulTrim =
+    trimRange !== null &&
+    videoDuration > 0 &&
+    (trimRange.start > 0.1 || trimRange.end < videoDuration - 0.1);
+
+  async function applyTrimIfNeeded(file: File, kind: DetectedMediaKind): Promise<File> {
+    if (kind !== "video" || !hasMeaningfulTrim || !trimRange) return file;
+    setLoadingLabel("영상 다듬는 중...");
+    try {
+      return await trimVideoFile(file, trimRange.start, trimRange.end, (ratio) =>
+        setLoadingLabel(`영상 다듬는 중... ${Math.round(ratio * 100)}%`),
+      );
+    } finally {
+      setLoadingLabel("게시 중...");
+    }
   }
 
   function handleSelectGif(gif: { url: string; width: number; height: number }) {
@@ -635,6 +687,11 @@ export default function UploadPage() {
   // 영상/음원 다 허용 + 커버 이미지 필수 + 좋아요/댓글/조회자 목록으로 게시.
   function handleComplexFileChange(file: File | null) {
     setComplexFileError(null);
+    setCoverFile(null);
+    setCoverFileError(null);
+    setCoverPosition({ x: 50, y: 50 });
+    setCoverGifUrl(null);
+    resetVideoEdit();
     if (file && file.size > MAX_FILE_SIZE_BYTES) {
       setComplexFile(null);
       setComplexKind(null);
@@ -705,7 +762,13 @@ export default function UploadPage() {
   const activeFile = uploadType === "demo" ? mediaFile : complexFile;
   const activeKind = uploadType === "demo" ? mediaKind : complexKind;
   const activeObjectUrl = uploadType === "demo" ? mediaObjectUrl : complexObjectUrl;
-  const previewVideoSrc = showsFeedLikePreview && activeKind === "video" ? activeObjectUrl : null;
+  // 미리보기도 다듬은 구간만 재생되게 media fragment(#t=시작,끝)를 붙인다.
+  const previewVideoSrc =
+    showsFeedLikePreview && activeKind === "video" && activeObjectUrl
+      ? hasMeaningfulTrim && trimRange
+        ? `${activeObjectUrl}#t=${trimRange.start.toFixed(2)},${trimRange.end.toFixed(2)}`
+        : activeObjectUrl
+      : null;
   // 인스타그램처럼 "게시하면 이렇게 보여요"를 실시간으로 보여주는 미리보기 — 커버 이미지가
   // 이제 DEMO의 메인 비주얼이라, 영상이 없어도(음원만 골랐거나 아직 아무것도 안 골랐어도)
   // 커버+캡션+해시태그만으로 미리보기를 띄운다.
@@ -761,7 +824,7 @@ export default function UploadPage() {
 
       let complexMediaPath: string;
       try {
-        complexMediaPath = await uploadFileToR2(complexFile);
+        complexMediaPath = await uploadFileToR2(await applyTrimIfNeeded(complexFile, complexKind));
       } catch (err) {
         setError(`업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
         setLoading(false);
@@ -869,7 +932,7 @@ export default function UploadPage() {
     // R2로 이전(2026-07-29) — presigned PUT URL을 발급받아 브라우저가 R2에 직접 업로드.
     let mediaPath: string;
     try {
-      mediaPath = await uploadFileToR2(mediaFile);
+      mediaPath = await uploadFileToR2(await applyTrimIfNeeded(mediaFile, mediaKind));
     } catch (err) {
       setError(`업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
       setLoading(false);
@@ -923,6 +986,46 @@ export default function UploadPage() {
     }
 
     router.push("/feed");
+  }
+
+  // 영상 편집 섹션 — DEMO와 memo 단독 업로드 박스 양쪽에서 같은 걸 쓴다.
+  function renderVideoEditor(src: string) {
+    return (
+      <div className="border-t border-box-gray pt-3">
+        <VideoEditor
+          key={src}
+          src={src}
+          trim={trimRange}
+          onTrimChange={setTrimRange}
+          onDuration={setVideoDuration}
+          coverTime={coverFrameTime}
+          onCoverFrame={handleCoverFrame}
+          onPickCustomCover={handleCoverChange}
+          customCover={
+            coverFile && !coverFromFrame && coverObjectUrl ? (
+              <div className="flex items-start gap-3">
+                <CoverPositionPicker src={coverObjectUrl} position={coverPosition} onChange={setCoverPosition} />
+                <div className="flex flex-col items-start gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      // 프레임 커버로 되돌림 — coverFrameTime=null이라 VideoEditor가 시작점 프레임을 다시 잡는다.
+                      setCoverFile(null);
+                      setCoverFrameTime(null);
+                      setCoverPosition({ x: 50, y: 50 });
+                    }}
+                    className="text-sm"
+                  >
+                    영상 장면으로 되돌리기
+                  </Button>
+                </div>
+              </div>
+            ) : null
+          }
+        />
+      </div>
+    );
   }
 
   return (
@@ -1069,6 +1172,7 @@ export default function UploadPage() {
                   tone="demo"
                 />
               )}
+              {mediaKind === "video" && mediaObjectUrl && renderVideoEditor(mediaObjectUrl)}
               {/* 커버 이미지는 음원일 때만 — 영상은 그 자체가 화면이라 버튼 자체를 안 보여준다
                   (사용자 요청: "없어도 되는 게 아니라 없어야 해"). 평소(파일 선택 전)에도 숨김. */}
               {mediaKind === "audio" && (
@@ -1170,6 +1274,7 @@ export default function UploadPage() {
                   src={complexObjectUrl}
                 />
               )}
+              {!collabAvailable && complexKind === "video" && complexObjectUrl && renderVideoEditor(complexObjectUrl)}
               {/* 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 음원일 때만 커버 이미지
                   버튼을 보여준다 — 영상은 그 자체가 화면이라 버튼 자체를 숨긴다. */}
               {!collabAvailable && complexKind === "audio" && (
@@ -1386,7 +1491,7 @@ export default function UploadPage() {
 
           {error && <p className={errorText}>{error}</p>}
           <Button type="submit" disabled={loading} className={`mt-1 w-full ${primaryButtonClass}`}>
-            {loading ? "게시 중..." : <span suppressHydrationWarning>&quot;{submitPhrase}&quot;</span>}
+            {loading ? loadingLabel : <span suppressHydrationWarning>&quot;{submitPhrase}&quot;</span>}
           </Button>
         </form>
       </main>
