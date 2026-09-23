@@ -7,13 +7,13 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { beginThemeTransitionWithSound } from "@/lib/theme";
+import { SunIcon, MoonIcon } from "@/components/icons";
 
 // 전체공개(Demo, 노출시간 영구·설정불가) / 비공개(Complex, 노출시간 설정 필수 — 팔로워공개 또는
-// 특정인 초대) 두 피드 탭.
-// 아직 UI만 있고 실제 필터링·업로드 연동은 데이터 연결 단계에서 진행 예정.
+// 특정인 초대) 두 피드 탭. 아이콘은 ☀/☾ 문자 대신 SVG(icons.tsx 설명 참고 — iOS 이모지 문제).
 const FEED_TABS = [
-  { value: "completion", label: "DEMO", icon: "☀" },
-  { value: "complex", label: "memo", icon: "☾" },
+  { value: "completion", label: "DEMO", Icon: SunIcon },
+  { value: "complex", label: "memo", Icon: MoonIcon },
 ];
 
 export function TopNav() {
@@ -56,7 +56,7 @@ export function TopNav() {
                     : "border-transparent text-black hover:bg-box-gray/40"
               }`}
             >
-              <span className="text-base">{tab.icon}</span>
+              <tab.Icon className="h-4 w-4" />
               {tab.label}
             </Link>
           );

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
-import { LockIcon, EyeIcon, HeartIcon, CommentIcon, SearchIcon } from "@/components/icons";
+import { LockIcon, EyeIcon, HeartIcon, CommentIcon, SearchIcon, SunIcon, MoonIcon } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
@@ -57,9 +57,13 @@ const COLLAB_EXPIRE_HOURS_OPTIONS: { hours: ExpireHours; label: string }[] = [
 // 초대는 post_access, 채팅은 post_chat_messages에 별도로 쌓인다.
 type UploadType = "demo" | "complex";
 
-const UPLOAD_TYPE_OPTIONS: { value: UploadType; label: string; icon: string }[] = [
-  { value: "demo", label: "DEMO", icon: "☀" },
-  { value: "complex", label: "memo", icon: "☾" },
+const UPLOAD_TYPE_OPTIONS: {
+  value: UploadType;
+  label: string;
+  Icon: (props: { className?: string }) => React.ReactNode;
+}[] = [
+  { value: "demo", label: "DEMO", Icon: SunIcon },
+  { value: "complex", label: "memo", Icon: MoonIcon },
 ];
 
 // demo = 전체공개·노출시간 영구(만료 없음) / Complex = 팔로워공개 or 특정 사람 초대공개·노출시간 필수설정.
@@ -947,7 +951,7 @@ export default function UploadPage() {
                     "flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold transition",
                   )}
                 >
-                  <span className="text-base">{option.icon}</span>
+                  <option.Icon className="h-4 w-4" />
                   {option.label}
                 </button>
               ))}

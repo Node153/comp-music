@@ -12,10 +12,11 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { beginThemeTransitionWithSound } from "@/lib/theme";
+import { SunIcon, MoonIcon } from "@/components/icons";
 
 const FEED_TABS = [
-  { value: "completion", label: "DEMO", icon: "☀" },
-  { value: "complex", label: "memo", icon: "☾" },
+  { value: "completion", label: "DEMO", Icon: SunIcon },
+  { value: "complex", label: "memo", Icon: MoonIcon },
 ];
 
 export function GuestTopNav() {
@@ -57,7 +58,7 @@ export function GuestTopNav() {
                   : "border-transparent text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900"
               }`}
             >
-              <span className="text-base">{tab.icon}</span>
+              <tab.Icon className="h-4 w-4" />
               {tab.label}
             </Link>
           );

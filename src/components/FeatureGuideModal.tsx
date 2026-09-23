@@ -7,7 +7,7 @@
 // 네이밍 컨벤션) — 계정별로 한 번만 보이게 userId를 키에 포함한다(같은 브라우저를 여러
 // 계정이 쓰는 경우 대비).
 import { useEffect, useState } from "react";
-import { FlameIcon, XIcon } from "@/components/icons";
+import { FlameIcon, XIcon, SunIcon, MoonIcon } from "@/components/icons";
 
 type PanelKind = "demo" | "memo" | "peak" | "knock";
 
@@ -23,14 +23,14 @@ const STEPS: Step[] = [
   {
     panel: "demo",
     eyebrow: "1 · 4 — DEMO 탭",
-    title: "☀ 낮엔 데모, 다 보여드려요",
+    title: "낮엔 데모, 다 보여드려요",
     desc: "전체공개 게시물이 모이는 곳이에요. 노출 시간이 영구라서 언제 들어와도 구경할 수 있어요.",
     tag: "전체공개 · 노출 시간 영구",
   },
   {
     panel: "memo",
     eyebrow: "2 · 4 — memo 탭",
-    title: "☾ 밤엔 memo, Companion끼리만",
+    title: "밤엔 memo, Companion끼리만",
     desc: "Companion으로 연결된 사람들에게만 보이는 공간이에요. 노출 시간을 직접 정해서 살짝만 열어둘 수 있어요.",
     tag: "Companion 공개 · 노출 시간 설정 필수",
   },
@@ -63,15 +63,17 @@ function Panel({ step }: { step: Step }) {
   if (step.panel === "demo") {
     return (
       <div className="flex h-36 items-center justify-center bg-demo-gold/15">
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow">☀</span>
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-demo-gold shadow">
+          <SunIcon className="h-8 w-8" />
+        </span>
       </div>
     );
   }
   if (step.panel === "memo") {
     return (
       <div className="flex h-36 items-center justify-center bg-[#1c1c1e]">
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#2a2a2d] text-3xl text-violet-400 shadow">
-          ☾
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#2a2a2d] text-violet-400 shadow">
+          <MoonIcon className="h-7 w-7" />
         </span>
       </div>
     );
@@ -151,7 +153,11 @@ export function FeatureGuideModal({ userId }: { userId: string }) {
 
         <div className="px-6 pb-2 pt-5">
           <p className={`mb-2 text-[11px] font-bold uppercase tracking-wide ${eyebrowColor(s.panel)}`}>{s.eyebrow}</p>
-          <h2 className="mb-2 text-lg font-bold text-gray-900 dark:text-gray-100">{s.title}</h2>
+          <h2 className="mb-2 flex items-center gap-1.5 text-lg font-bold text-gray-900 dark:text-gray-100">
+            {s.panel === "demo" && <SunIcon className="h-5 w-5 shrink-0 text-demo-gold" />}
+            {s.panel === "memo" && <MoonIcon className="h-5 w-5 shrink-0 text-violet-500" />}
+            {s.title}
+          </h2>
           <p className="mb-3 text-sm leading-relaxed text-active-gray dark:text-gray-400">{s.desc}</p>
           <span className="inline-block rounded-lg bg-box-gray px-2.5 py-1 text-[11px] font-medium text-active-gray dark:bg-gray-800 dark:text-gray-300">
             {s.tag}

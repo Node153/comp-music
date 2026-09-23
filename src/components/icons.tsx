@@ -67,9 +67,30 @@ export function HelpIcon({ className }: IconProps) {
   );
 }
 
+// DEMO/memo 탭 아이콘 — 예전엔 ☀/☾ 문자를 썼는데, iOS Safari는 ☀(U+2600)를 컬러 이모지로
+// 강제 렌더링해서 데스크톱(단색 글자, 탭 색을 그대로 물려받음)과 모양·색이 달라졌다
+// (2026-09-23 제보). 데스크톱 글자 모양(속이 찬 해+광선 / 속이 찬 초승달)을 그대로 SVG로
+// 옮겨서 어느 브라우저에서든 똑같이, currentColor로 탭 색을 따라가게 했다.
+export function SunIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none" />
+      <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+    </svg>
+  );
+}
+
+export function MoonIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 // 이하 12종 — 이모지로 되어 있던 UI 아이콘을 선 아이콘으로 교체(색은 아직 안 입힘,
 // 나중에 시그니처 컬러 정하면 currentColor 상속 구조라 부모 text-color만 바꾸면 됨).
-// DEMO/memo 관련(☀/☾)과 mock 게시물 악기 그림(🎸🥁🎹 등)은 이번 대상에서 제외.
+// mock 게시물 악기 그림(🎸🥁🎹 등)은 이번 대상에서 제외.
 
 export function HeartIcon({ className, filled = false }: IconProps & { filled?: boolean }) {
   return (

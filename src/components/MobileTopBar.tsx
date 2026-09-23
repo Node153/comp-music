@@ -11,12 +11,12 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { NotificationsMenu } from "@/components/NotificationsMenu";
-import { HelpIcon } from "@/components/icons";
+import { HelpIcon, SunIcon, MoonIcon } from "@/components/icons";
 import { beginThemeTransitionWithSound } from "@/lib/theme";
 
 const FEED_TABS = [
-  { value: "completion", label: "DEMO", icon: "☀" },
-  { value: "complex", label: "memo", icon: "☾" },
+  { value: "completion", label: "DEMO", Icon: SunIcon },
+  { value: "complex", label: "memo", Icon: MoonIcon },
 ];
 
 export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
@@ -27,18 +27,21 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
   const isFeed = pathname === "/feed" || pathname?.startsWith("/feed/");
 
   return (
+    // 3열 그리드(1fr · auto · 1fr): 좌우 열 폭이 항상 같아서 가운데 탭이 화면 정중앙에 온다.
+    // 예전 flex(로고 · flex-1 탭 · 아이콘들)는 로고와 우측 아이콘 폭이 달라서 탭이 오른쪽으로
+    // 치우쳐 보였다(2026-09-23 제보).
     <header
-      className={`sticky top-0 z-40 flex h-12 items-center gap-2 border-b px-3 md:hidden ${
+      className={`sticky top-0 z-40 grid h-12 grid-cols-[1fr_auto_1fr] items-center border-b px-3 md:hidden ${
         isFeed
           ? "border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1c1c1e]"
           : "border-box-gray bg-main-gray"
       }`}
     >
-      <Link href="/feed" className="shrink-0 text-sm font-bold text-gray-900 dark:text-gray-100">
+      <Link href="/feed" className="justify-self-start text-sm font-bold text-gray-900 dark:text-gray-100">
         Compmusic
       </Link>
 
-      <nav className="flex h-full flex-1 items-center justify-center gap-1">
+      <nav className="flex h-full items-center gap-1">
         {FEED_TABS.map((tab) => {
           const isActive = pathname === "/feed" && activeFeedTab === tab.value;
           return (
@@ -56,7 +59,7 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
                     : "border-transparent text-black"
               }`}
             >
-              <span>{tab.icon}</span>
+              <tab.Icon className="h-3.5 w-3.5" />
               {tab.label}
             </Link>
           );
@@ -65,14 +68,16 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
 
       {/* Help가 하단 탭(BottomNav)에서 빠지면서(2026-09, 사용자 요청 — 하단 탭 맨 앞은
           "홈"이어야 해서 자리 재배치) 모바일에서 갈 곳이 없어지지 않도록 여기로 옮겨왔다. */}
-      <Link
-        href="/help"
-        aria-label="Help"
-        className={`shrink-0 ${isFeed ? "text-gray-500 dark:text-gray-400" : "text-black"}`}
-      >
-        <HelpIcon className="h-5 w-5" />
-      </Link>
-      <NotificationsMenu userId={currentUserId} isFeed={isFeed} compact />
+      <div className="flex items-center gap-2 justify-self-end">
+        <Link
+          href="/help"
+          aria-label="Help"
+          className={`shrink-0 ${isFeed ? "text-gray-500 dark:text-gray-400" : "text-black"}`}
+        >
+          <HelpIcon className="h-5 w-5" />
+        </Link>
+        <NotificationsMenu userId={currentUserId} isFeed={isFeed} compact />
+      </div>
     </header>
   );
 }
