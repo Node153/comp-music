@@ -97,7 +97,9 @@ export default async function AdminMembersPage({
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-400">
             <tr>
-              <th className="whitespace-nowrap px-4 py-3 font-medium">이름 / 닉네임</th>
+              <th className="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-gray-50 px-4 py-3 font-medium">
+                이름 / 닉네임
+              </th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">이메일</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">생년월일</th>
               <th className="whitespace-nowrap px-4 py-3 font-medium">유형</th>
@@ -114,7 +116,7 @@ export default async function AdminMembersPage({
               const userType = userTypeMap.get(m.id);
               return (
               <tr key={m.id}>
-                <td className="px-4 py-3">
+                <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3">
                   <div className="font-medium text-gray-900">{m.name}</div>
                   <div className={mutedText}>
                     {m.nickname} <span className="text-gray-400">#{m.nickname_tag}</span>

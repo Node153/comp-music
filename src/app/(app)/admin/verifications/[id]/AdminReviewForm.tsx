@@ -50,6 +50,15 @@ export function AdminReviewForm({
       return;
     }
 
+    if (decision === "approved") {
+      // 이메일 발송 실패해도 승인 자체는 이미 끝났으니 화면 진행을 막지 않는다.
+      await fetch("/api/admin/notify-approval", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      }).catch(() => {});
+    }
+
     router.push("/admin/verifications");
     router.refresh();
   }
