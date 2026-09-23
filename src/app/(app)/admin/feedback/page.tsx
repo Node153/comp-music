@@ -13,6 +13,7 @@ import {
 } from "@/lib/feedback";
 import { FeedbackImage } from "@/components/FeedbackChat";
 import { FeedbackAdminControls } from "./FeedbackAdminControls";
+import { AnnounceComposer, AnnounceSelectionProvider, SelectForAnnounce } from "./AnnounceSelection";
 
 // 관리자 - 피드백 단체 채팅 로그(0047_feedback_group_chat). role=admin만 접근(proxy.ts에서 가드).
 // 앱 /help에서는 닉네임으로만 보이지만, 관리 화면은 관례대로 실명을 바로 조회해 최신순으로 훑는다.
@@ -22,6 +23,7 @@ import { FeedbackAdminControls } from "./FeedbackAdminControls";
 // 상단 필터(?status=, ?category=)로 처리할 것만 추려 본다.
 //
 // 0065 — "나도 👍" 수(?sort=likes로 공감순 정렬), 첨부 스크린샷, 상황별 짧은 설문 결과 요약.
+// 0067 — 여러 건을 골라 "피드백 반영" 공지 하나로 묶기(AnnounceSelection). 이미 공지된 건 표시.
 type SearchParams = { status?: string; category?: string; sort?: string };
 
 function filterHref(current: SearchParams, patch: SearchParams) {
@@ -61,12 +63,16 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
   else if (category) query = query.eq("category", category);
   const { data: rawRows } = await query;
 
-  const [{ data: reactions }, { data: pulses }] = await Promise.all([
+  const [{ data: reactions }, { data: pulses }, { data: announcedLinks }] = await Promise.all([
     (rawRows ?? []).length > 0
       ? supabase.from("feedback_reactions").select("feedback_id").in("feedback_id", (rawRows ?? []).map((f) => f.id))
       : Promise.resolve({ data: [] as { feedback_id: string }[] }),
     supabase.from("feedback_pulses").select("trigger, score, comment, created_at").order("created_at", { ascending: false }),
+    (rawRows ?? []).length > 0
+      ? supabase.from("announcement_feedback").select("feedback_id").in("feedback_id", (rawRows ?? []).map((f) => f.id))
+      : Promise.resolve({ data: [] as { feedback_id: string }[] }),
   ]);
+  const announcedIds = new Set((announcedLinks ?? []).map((l) => l.feedback_id));
   const likeCount = new Map<string, number>();
   for (const r of reactions ?? []) likeCount.set(r.feedback_id, (likeCount.get(r.feedback_id) ?? 0) + 1);
   const feedbackRows =
@@ -168,50 +174,58 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {feedbackRows.map((f) => {
-          const sender = userMap.get(f.user_id);
-          const likes = likeCount.get(f.id) ?? 0;
-          return (
-            <div key={f.id} className="rounded-xl border border-gray-200 p-4">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-medium text-gray-900">{sender?.name ?? "알 수 없음"}</span>
-                <span className={mutedText}>{new Date(f.created_at).toLocaleString("ko-KR")}</span>
+      <AnnounceSelectionProvider>
+        <div className="flex flex-col gap-2">
+          {feedbackRows.map((f) => {
+            const sender = userMap.get(f.user_id);
+            const likes = likeCount.get(f.id) ?? 0;
+            return (
+              <div key={f.id} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-medium text-gray-900">{sender?.name ?? "알 수 없음"}</span>
+                  <span className="flex items-center gap-3">
+                    <SelectForAnnounce id={f.id} />
+                    <span className={mutedText}>{new Date(f.created_at).toLocaleString("ko-KR")}</span>
+                  </span>
+                </div>
+                {sender?.email && <span className="text-xs text-gray-400">{sender.email}</span>}
+                {(f.category || f.is_private || likes > 0 || announcedIds.has(f.id)) && (
+                  <div className="mt-2 flex gap-1.5 text-xs">
+                    {f.category && (
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">
+                        {FEEDBACK_CATEGORY_LABEL[f.category]}
+                      </span>
+                    )}
+                    {f.is_private && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">운영자에게만</span>}
+                    {likes > 0 && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">공감 {likes}</span>}
+                    {announcedIds.has(f.id) && (
+                      <span className="rounded-full bg-gray-900 px-2 py-0.5 text-white">반영 공지됨</span>
+                    )}
+                  </div>
+                )}
+                {f.image_path && (
+                  <div className="mt-2">
+                    <FeedbackImage path={f.image_path} />
+                  </div>
+                )}
+                {f.content && <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{f.content}</p>}
+                <FeedbackAdminControls
+                  id={f.id}
+                  initialStatus={f.status}
+                  initialReply={f.admin_reply ?? ""}
+                  adminUpdatedAt={f.admin_updated_at}
+                />
               </div>
-              {sender?.email && <span className="text-xs text-gray-400">{sender.email}</span>}
-              {(f.category || f.is_private || likes > 0) && (
-                <div className="mt-2 flex gap-1.5 text-xs">
-                  {f.category && (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">
-                      {FEEDBACK_CATEGORY_LABEL[f.category]}
-                    </span>
-                  )}
-                  {f.is_private && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">운영자에게만</span>}
-                  {likes > 0 && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">공감 {likes}</span>}
-                </div>
-              )}
-              {f.image_path && (
-                <div className="mt-2">
-                  <FeedbackImage path={f.image_path} />
-                </div>
-              )}
-              {f.content && <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{f.content}</p>}
-              <FeedbackAdminControls
-                id={f.id}
-                content={f.content}
-                initialStatus={f.status}
-                initialReply={f.admin_reply ?? ""}
-                adminUpdatedAt={f.admin_updated_at}
-              />
-            </div>
-          );
-        })}
-        {feedbackRows.length === 0 && (
-          <p className="py-10 text-center text-sm text-gray-400">
-            {status || category ? "조건에 맞는 피드백이 없습니다" : "아직 받은 피드백이 없습니다"}
-          </p>
-        )}
-      </div>
+            );
+          })}
+          {feedbackRows.length === 0 && (
+            <p className="py-10 text-center text-sm text-gray-400">
+              {status || category ? "조건에 맞는 피드백이 없습니다" : "아직 받은 피드백이 없습니다"}
+            </p>
+          )}
+        </div>
+        <AnnounceComposer />
+      </AnnounceSelectionProvider>
     </main>
   );
 }

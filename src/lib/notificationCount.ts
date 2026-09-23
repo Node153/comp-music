@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getLikedFeedbackAnnouncements } from "@/lib/notificationList";
 
 // 상단/하단 네비의 안읽음 뱃지 숫자. 예전엔 (app)/layout.tsx가 매 페이지 렌더마다
 // 이 계산(쿼리 최대 7개, 주간 likes 전체 스캔 + users count)을 동기로 돌려서
@@ -12,7 +13,8 @@ export async function computeUnseenNotificationCount(
   userId: string,
   seenAt: string,
 ): Promise<number> {
-  const [{ data: myPosts }, { data: newCompanionRequests }, { data: newFeedbackUpdates }] = await Promise.all([
+  const [{ data: myPosts }, { data: newCompanionRequests }, { data: newFeedbackUpdates }, newLikedAnnouncements] =
+    await Promise.all([
     supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", userId),
     supabase
       .from("companions")
@@ -22,6 +24,8 @@ export async function computeUnseenNotificationCount(
       .gt("created_at", seenAt),
     // 0063 — 내 피드백에 관리자가 상태 변경/답변(notificationList.ts의 feedback_update와 동일 기준).
     supabase.from("feedback_messages").select("id").eq("user_id", userId).gt("admin_updated_at", seenAt),
+    // 0067 — 내가 공감한 피드백의 반영 공지(notificationList.ts와 동일 정의).
+    getLikedFeedbackAnnouncements(supabase, userId, seenAt),
   ]);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
@@ -57,6 +61,7 @@ export async function computeUnseenNotificationCount(
     newPeakCount +
     newKnockCount +
     (newCompanionRequests?.length ?? 0) +
-    (newFeedbackUpdates?.length ?? 0)
+    (newFeedbackUpdates?.length ?? 0) +
+    newLikedAnnouncements.length
   );
 }

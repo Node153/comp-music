@@ -227,7 +227,7 @@ export function NotificationsMenu({
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-600">
                               <FlameIcon className="h-4 w-4 text-white" />
                             </span>
-                          ) : item.type === "feedback_update" ? (
+                          ) : item.type === "feedback_update" || item.type === "liked_feedback_announced" ? (
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                               <FeedbackIcon className="h-4 w-4" />
                             </span>
@@ -238,6 +238,8 @@ export function NotificationsMenu({
                             <span className="text-gray-800 dark:text-gray-200">
                               {item.type === "peak" ? (
                                 "회원님의 게시물이 PEAK에 도달했어요"
+                              ) : item.type === "liked_feedback_announced" ? (
+                                "공감한 의견이 반영됐어요"
                               ) : item.type === "feedback_update" ? (
                                 item.status === "done"
                                   ? "회원님의 피드백이 반영됐어요"
@@ -254,6 +256,11 @@ export function NotificationsMenu({
                                 </>
                               )}
                             </span>
+                            {item.type === "liked_feedback_announced" && (
+                              <span className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
+                                {item.title}
+                              </span>
+                            )}
                             {item.type === "feedback_update" && (
                               <span className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
                                 “{item.content}”

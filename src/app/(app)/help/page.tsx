@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { FeedbackChat, type FeedbackChatMessage } from "@/components/FeedbackChat";
 import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
-import { FeedbackIcon, MegaphoneIcon } from "@/components/icons";
+import { FeedbackIcon, SparkleIcon } from "@/components/icons";
+import { UpdatesBoard, type UpdateItem } from "@/components/UpdatesBoard";
 
 // Help(구 Away) — 공지사항+피드백 창구(0021_announcements_and_feedback).
+// 0067 — 왼쪽 칸은 "업데이트 소식"(UpdatesBoard): 공지/업데이트/피드백 반영 카드, 고정 공지 먼저.
 // 관리자 페이지 진입은 TopNav 프로필 드롭다운(ProfileMenu)의 "관리자 메뉴"로 옮겼다.
 // 여기서 isAdmin은 피드백 채팅 메시지 삭제 권한 판정에만 쓴다.
 export default async function HelpPage() {
@@ -19,8 +21,21 @@ export default async function HelpPage() {
 
   const { data: announcements } = await supabase
     .from("announcements")
-    .select("id, title, content, created_at")
+    .select("id, title, content, kind, pinned, request_summary, link_url, requester_count, like_count, created_at")
+    .order("pinned", { ascending: false })
     .order("created_at", { ascending: false });
+  const updates: UpdateItem[] = (announcements ?? []).map((a) => ({
+    id: a.id,
+    kind: a.kind,
+    title: a.title,
+    content: a.content,
+    pinned: a.pinned,
+    requestSummary: a.request_summary,
+    linkUrl: a.link_url,
+    requesterCount: a.requester_count,
+    likeCount: a.like_count,
+    createdAt: a.created_at,
+  }));
 
   // 피드백 단체 채팅(0047) — 최근 200개만. 닉네임은 users에서 별도 조회(관리자/admin 페이지와
   // 동일 패턴, PostgREST embed 대신 2쿼리). 표시는 무조건 닉네임.
@@ -73,33 +88,16 @@ export default async function HelpPage() {
     <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 bg-main-gray p-6 pb-[7.5rem] md:my-6 md:rounded-lg md:pb-6">
       <div>
         <h1 className={`${pageTitle} !text-black`}>피드백</h1>
-        <p className={`${mutedText} !text-active-gray mt-1`}>공지사항을 확인하고, 하고 싶은 말을 남겨주세요.</p>
+        <p className={`${mutedText} !text-active-gray mt-1`}>여러분의 의견으로 바뀐 것들을 확인하고, 하고 싶은 말을 남겨주세요.</p>
       </div>
 
-      {/* 왼쪽: 공지사항 · 오른쪽: 피드백 채팅. 데스크톱은 두 칸, 모바일은 위아래로 쌓임. */}
+      {/* 왼쪽: 업데이트 소식 · 오른쪽: 피드백 채팅. 데스크톱은 두 칸, 모바일은 위아래로 쌓임. */}
       <div className="grid gap-6 md:grid-cols-2">
         <section className="flex min-w-0 flex-col gap-3">
           <h2 className={`${sectionTitle} flex items-center gap-1.5 !text-black`}>
-            <MegaphoneIcon className="h-5 w-5" /> 공지사항
+            <SparkleIcon className="h-5 w-5" /> 업데이트 소식
           </h2>
-          <div className="flex flex-col gap-3 overflow-y-auto rounded-xl bg-box-gray p-4 md:h-[600px]">
-            {(announcements ?? []).map((a) => (
-              <article key={a.id} className="rounded-xl bg-main-gray p-4">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="font-semibold text-black">{a.title}</h3>
-                  <span className="shrink-0 text-xs text-active-gray">
-                    {new Date(a.created_at).toLocaleDateString("ko-KR")}
-                  </span>
-                </div>
-                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-black">
-                  {a.content}
-                </p>
-              </article>
-            ))}
-            {(announcements ?? []).length === 0 && (
-              <p className="py-6 text-center text-sm text-active-gray">아직 공지사항이 없습니다</p>
-            )}
-          </div>
+          <UpdatesBoard items={updates} />
         </section>
 
         <section className="flex min-w-0 flex-col gap-3">

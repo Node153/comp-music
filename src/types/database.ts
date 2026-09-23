@@ -525,6 +525,13 @@ export interface Database {
           author_id: string;
           title: string;
           content: string;
+          // 0067 — 공지 종류/고정/피드백 반영 카드용 필드. counts는 작성 시점 스냅샷.
+          kind: "notice" | "update" | "feedback";
+          pinned: boolean;
+          request_summary: string | null;
+          link_url: string | null;
+          requester_count: number;
+          like_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -533,10 +540,29 @@ export interface Database {
           author_id: string;
           title: string;
           content: string;
+          kind?: "notice" | "update" | "feedback";
+          pinned?: boolean;
+          request_summary?: string | null;
+          link_url?: string | null;
+          requester_count?: number;
+          like_count?: number;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["announcements"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0067 — 피드백 반영 공지 ↔ 반영된 피드백(여러 건 → 공지 하나).
+      announcement_feedback: {
+        Row: {
+          announcement_id: string;
+          feedback_id: string;
+        };
+        Insert: {
+          announcement_id: string;
+          feedback_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["announcement_feedback"]["Insert"]>;
         Relationships: [];
       };
       // DEMO 피드 상단 힐링 멘트. 읽기는 전체 공개, 쓰기는 관리자만(/admin/feed-hero).

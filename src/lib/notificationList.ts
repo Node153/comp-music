@@ -35,7 +35,41 @@ export type NotificationItem = (
       content: string;
       createdAt: string;
     }
+  // 0067 — 내가 👍 공감한 피드백이 "피드백 반영" 공지로 올라왔을 때. id/createdAt = 공지.
+  | { type: "liked_feedback_announced"; id: string; title: string; createdAt: string }
 ) & { href: string; unread: boolean };
+
+// 내가 공감(feedback_reactions)한 피드백과 연결된 "피드백 반영" 공지 — 알림 목록과 뱃지 숫자
+// (notificationCount.ts)가 같은 정의를 쓴다. since가 있으면 그 이후 공지만.
+export async function getLikedFeedbackAnnouncements(
+  supabase: SupabaseClient,
+  userId: string,
+  since?: string,
+): Promise<{ id: string; title: string; created_at: string }[]> {
+  const { data: myReactions } = await supabase
+    .from("feedback_reactions")
+    .select("feedback_id")
+    .eq("user_id", userId)
+    .limit(500);
+  const feedbackIds = (myReactions ?? []).map((r) => r.feedback_id);
+  if (feedbackIds.length === 0) return [];
+  const { data: links } = await supabase
+    .from("announcement_feedback")
+    .select("announcement_id")
+    .in("feedback_id", feedbackIds);
+  const announcementIds = [...new Set((links ?? []).map((l) => l.announcement_id))];
+  if (announcementIds.length === 0) return [];
+  let query = supabase
+    .from("announcements")
+    .select("id, title, created_at")
+    .in("id", announcementIds)
+    .eq("kind", "feedback")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (since) query = query.gt("created_at", since);
+  const { data } = await query;
+  return data ?? [];
+}
 
 // 정렬만 된, 필터링/자르기 전 전체 목록을 돌려준다 — 카테고리 필터는 자르기 전에 적용돼야
 // 하므로(예: "신청" 탭이 50개보다 적으면 안 잘리게) 호출하는 쪽이 각자 filter+slice 한다.
@@ -43,7 +77,8 @@ export async function getNotificationItems(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{ items: NotificationItem[]; seenAt: string }> {
-  const [{ data: myPosts }, { data: me }, { data: incomingRequests }, { data: feedbackUpdates }] = await Promise.all([
+  const [{ data: myPosts }, { data: me }, { data: incomingRequests }, { data: feedbackUpdates }, likedAnnouncements] =
+    await Promise.all([
     supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", userId),
     supabase.from("users").select("notifications_seen_at").eq("id", userId).single(),
     supabase
@@ -59,6 +94,7 @@ export async function getNotificationItems(
       .not("admin_updated_at", "is", null)
       .order("admin_updated_at", { ascending: false })
       .limit(50),
+    getLikedFeedbackAnnouncements(supabase, userId),
   ]);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
@@ -189,6 +225,16 @@ export async function getNotificationItems(
         createdAt: f.admin_updated_at as string,
         href: "/help",
         unread: isUnread(f.admin_updated_at as string),
+      }),
+    ),
+    ...likedAnnouncements.map(
+      (a): NotificationItem => ({
+        type: "liked_feedback_announced",
+        id: a.id,
+        title: a.title,
+        createdAt: a.created_at,
+        href: "/help",
+        unread: isUnread(a.created_at),
       }),
     ),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
