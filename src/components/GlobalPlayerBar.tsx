@@ -257,7 +257,10 @@ export function GlobalPlayerBar() {
         // 모바일 바 높이는 최대한 줄인다(2026-09-23 사용자 요청 — "높이를 최대한 줄여봐") —
         // h-16(64px) 대신 h-11(44px). 데스크톱은 그대로 h-16 유지, 안의 커버·재생버튼·파형도
         // 이 높이에 맞춰 모바일에서만 한 단계씩 축소(각 요소 className 참고).
-        className={`fixed inset-x-0 bottom-14 z-50 grid h-11 grid-cols-[32px_minmax(0,1fr)_120px] items-center gap-1.5 border-t px-2.5 transition-colors md:bottom-0 md:h-16 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg} ${barText} ${barBorder}`}
+        // z-40(BottomNav와 동일): 예전 z-50이었을 땐 레이아웃상 페이지 콘텐츠보다 DOM이 뒤라
+        // 같은 z-50인 모달·바텀시트(댓글창·알림·가이드 팝업·집중모드 등) 위를 덮어 그 하단
+        // 입력칸/버튼을 가렸다(2026-09-23). 모달이 항상 이 바 위로 오도록 한 단계 내렸다.
+        className={`fixed inset-x-0 bottom-14 z-40 grid h-11 grid-cols-[32px_minmax(0,1fr)_120px] items-center gap-1.5 border-t px-2.5 transition-colors md:bottom-0 md:h-16 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg} ${barText} ${barBorder}`}
       >
         {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
             justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}

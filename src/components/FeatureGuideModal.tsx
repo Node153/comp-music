@@ -127,8 +127,11 @@ export function FeatureGuideModal({ userId }: { userId: string }) {
   const isLast = step === STEPS.length - 1;
 
   return (
+    // z-[70]: GlobalPlayerBar(z-50, DOM상 이 모달보다 뒤라 같은 z면 위에 그려짐)와
+    // ExpandedPlayer(z-[60])보다 위 — 같은 z-50이었을 땐 모바일에서 사운드바가 하단의
+    // 다음/건너뛰기 버튼을 덮어 누를 수 없었다(2026-09-23 제보).
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] md:items-center md:pb-4"
       onClick={dismiss}
     >
       <div

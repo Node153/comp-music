@@ -13,7 +13,11 @@
 // "재생목록" 토글을 넣은 적이 있는데, 같은 날 둘 다 사용자 요청으로 되돌렸다 — 홈은 다시
 // 맨 앞으로, 재생목록 토글은 제거(그 유일한 진입점이 없어지면 GlobalPlayerBar의 접힘 상태
 // 자체가 켜질 방법이 없어져서, 관련 코드까지 함께 정리했다 — NowPlayingContext.tsx 참고).
-import { usePathname } from "next/navigation";
+// 배경색은 GlobalPlayerBar와 완전히 같은 기준(ThemeSync와 동일한 pathname + ?feed=complex)으로
+// 지금 보고 있는 사이트 테마를 따른다(2026-09-23 사용자 요청 — DEMO/memo 배경과 동일하게):
+// memo 탭이면 #1c1c1e 다크, 그 외(DEMO 포함)는 demo-bg 라이트. 바로 위 사운드바와 한 덩어리로
+// 이어져 보이고, 탭 전환 시 globals.css .theme-transition으로 같이 부드럽게 바뀐다.
+import { usePathname, useSearchParams } from "next/navigation";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { useNotificationCount } from "@/components/NotificationCountContext";
 import { useMessageCount } from "@/components/MessageCountContext";
@@ -25,12 +29,18 @@ const itemClass = (active: boolean) =>
 
 export function BottomNav({ currentUserId }: { currentUserId: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const search = useSearchOverlay();
   const unseenNotifications = useNotificationCount();
   const unreadConversations = useMessageCount();
+  const isMemoTheme = pathname === "/feed" && searchParams.get("feed") === "complex";
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-white/10 bg-[#1c1c1e]/80 text-white backdrop-blur md:hidden">
+    <nav
+      className={`fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t transition-colors md:hidden ${
+        isMemoTheme ? "border-white/10 bg-[#1c1c1e] text-white" : "border-black/10 bg-demo-bg text-black"
+      }`}
+    >
       <Link href="/feed" className={itemClass(pathname === "/feed")}>
         <HomeIcon className="h-5 w-5" />
         홈
@@ -47,7 +57,7 @@ export function BottomNav({ currentUserId }: { currentUserId: string }) {
         <MailIcon className="h-5 w-5" />
         메시지
         {unreadConversations > 0 && (
-          <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
+          <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
             {unreadConversations}
           </span>
         )}
@@ -59,7 +69,7 @@ export function BottomNav({ currentUserId }: { currentUserId: string }) {
         <UserIcon className="h-5 w-5" />
         프로필
         {unseenNotifications > 0 && (
-          <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px]">
+          <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
             {unseenNotifications}
           </span>
         )}
