@@ -20,8 +20,9 @@ const FALLBACK_MESSAGES: HeroMessage[] = [
   },
 ];
 
-// snap=true면 모바일 릴스식 스냅 피드의 첫 칸으로 들어가므로 화면 한 판(h-full)에 맞춘다.
-// 아니면(비로그인 미리보기 등) 기존처럼 min-h-svh로 한 판을 비운다.
+// 모바일은 snap 값과 무관하게 항상 min-h-svh로 화면 한 판을 비운다(2026-09-23 — 모바일
+// 릴스식 스냅 피드 자체가 없어져서, 예전에 snap=true일 때 쓰던 max-md:h-full·snap-start는
+// 더 이상 의미가 없다). 데스크톱만 snap=true(oneScreenFeed)면 고정 높이(calc)를 쓴다.
 export function FeedHero({ messages, snap = false }: { messages?: HeroMessage[]; snap?: boolean }) {
   const list = messages && messages.length > 0 ? messages : FALLBACK_MESSAGES;
 
@@ -42,10 +43,8 @@ export function FeedHero({ messages, snap = false }: { messages?: HeroMessage[];
 
   return (
     <section
-      className={`flex flex-col items-center justify-center gap-6 px-6 py-16 text-center ${
-        snap
-          ? "max-md:h-full max-md:shrink-0 max-md:snap-start md:h-[calc(100dvh_-_7rem)]"
-          : "min-h-svh"
+      className={`flex flex-col items-center justify-center gap-6 px-6 py-16 text-center max-md:min-h-svh ${
+        snap ? "md:h-[calc(100dvh_-_7rem)]" : "md:min-h-svh"
       }`}
     >
       <div className={`transition-opacity duration-700 ease-in-out ${shown ? "opacity-100" : "opacity-0"}`}>

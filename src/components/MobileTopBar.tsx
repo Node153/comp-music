@@ -38,7 +38,7 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
         Compmusic
       </Link>
 
-      <nav className="flex flex-1 items-center justify-center gap-1">
+      <nav className="flex h-full flex-1 items-center justify-center gap-1">
         {FEED_TABS.map((tab) => {
           const isActive = pathname === "/feed" && activeFeedTab === tab.value;
           return (
@@ -46,14 +46,14 @@ export function MobileTopBar({ currentUserId }: { currentUserId: string }) {
               key={tab.value}
               href={`/feed?feed=${tab.value}`}
               onClick={() => beginThemeTransitionWithSound(tab.value === "complex")}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold transition ${
+              className={`flex h-full items-center gap-1 border-b-2 px-3 text-xs font-bold transition ${
                 isActive
                   ? tab.value === "complex"
-                    ? "bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300"
-                    : "bg-demo-gold/15 text-demo-gold"
+                    ? "border-violet-500 text-violet-600 dark:text-violet-300"
+                    : "border-demo-gold text-demo-gold"
                   : isFeed
-                    ? "text-gray-400"
-                    : "text-black"
+                    ? "border-transparent text-gray-400"
+                    : "border-transparent text-black"
               }`}
             >
               <span>{tab.icon}</span>

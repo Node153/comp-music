@@ -399,13 +399,11 @@ export default async function FeedPage({
     : { data: [] as { question: string; answer: string }[] };
   const heroMessages = (heroRows ?? []).map((r) => ({ q: r.question, a: r.answer }));
 
-  // 한 게시물 = 한 화면. 게시물마다 고정 프레임 높이 안에 컴팩트하게 담고 세로 가운데 정렬한다.
-  //   · 모바일(md 미만): 릴스/쇼츠식 스냅 스크롤. 프레임 = 100svh − MobileTopBar(h-12) −
-  //     GlobalPlayerBar(h-16, bottom-14로 BottomNav 바로 위에 뜸) − BottomNav(h-14) − iOS
-  //     하단 세이프에어리어(2026-09-18 수정 — 이 calc가 원래 GlobalPlayerBar 도입 전에 짜여
-  //     BottomNav만 빼고 있어서, 맨 마지막 게시물이 사운드바에 가려 잘리는 문제가 있었다).
-  //     dvh가 아니라 svh인 이유: 주소창이 보일 때(가장 작을 때) 기준으로 잡아야 좋아요/댓글
-  //     줄이 하단 탭바 뒤로 안 잘림.
+  // 게시물 프레임 높이 규칙.
+  //   · 모바일(md 미만): 2026-09-23 사용자 요청으로 릴스/쇼츠식 한 화면=한 게시물 스냅
+  //     스크롤을 걷어내고 일반 스크롤로 바꿨다 — 게시물마다 내용물 높이 그대로 자연스럽게
+  //     쌓이고, 위아래로 자유롭게 스크롤한다(스냅 없음). 이전엔 프레임 높이를 100svh에서
+  //     상하단 바들을 뺀 값으로 딱 맞춰 스냅시켰었는데, 그 계산 전부를 걷어냈다.
   //   · 데스크톱(md 이상): **완전 고정 px, 뷰포트 크기 무관**(2026-09-14 확정, 사용자 요청 —
   //     "모니터 기준 1440×990 고정, 카드 가로·세로 고정"). 1440×990 모니터에서 TopNav(h-14)
   //     + 상하 여백(≈3.5rem) = 7rem(112px)을 뺀 878px을 세로로 잡고, 카드 비율을 4:3 세로
@@ -423,15 +421,13 @@ export default async function FeedPage({
   //     캡션·태그 길이가 게시물마다 달라 그 차이가 매번 다르기 때문에 둘 다 고정하면서
   //     여백을 완전히 없앨 방법이 없다 — 그래서 카드 높이 쪽을 내용물에 맞춰 자연스럽게
   //     줄여서(878px보다 살짝 작게, 게시물마다 조금씩 다름) 여백 자체가 생기지 않게 했다.
-  //     memo(합작 포함) 카드는 안의 채팅 목록이 스크롤 프레임으로 878px 고정이 계속
-  //     필요해서 그대로 둔다(아래 articleSnapClass).
+  //     memo(합작 포함) 카드는 데스크톱에서 안의 채팅 목록이 스크롤 프레임으로 878px 고정이
+  //     계속 필요해서 그대로 둔다(아래 articleSnapClass, md:에만 적용).
   //   · 비로그인 미리보기는 상단바/탭바 구성이 달라(GuestTopNav만) 높이 계산이 어긋나므로
   //     기존 카드 피드(자연 높이)를 그대로 둔다.
   const oneScreenFeed = !!currentUser;
-  const feedListClass = oneScreenFeed
-    ? "flex flex-col md:gap-6 max-md:h-[calc(100svh_-_10.5rem_-_env(safe-area-inset-bottom,0px))] max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:overscroll-contain max-md:[scrollbar-width:none]"
-    : "flex flex-col gap-6";
-  // 모바일: article이 정확히 스냅 프레임 높이(h-full)라 스냅이 게시물 top에 딱 맞는다.
+  const feedListClass = "flex flex-col gap-4 md:gap-6";
+  // 모바일: 스냅·고정 높이 없이 article이 내용물 높이 그대로 쌓인다(위 설명 참고).
   // 데스크톱: 카드 659×878px 고정(위 설명 참고) — memo(합작 포함)도 2026-09-14부터 같은
   //   폭 캡을 적용해 DEMO와 동일한 카드 크기 기준을 따른다(사용자 요청, "합작 게시물도
   //   우리가 정한 게시물 크기 기준으로"). 합작 게시물의 "집중 모드"(확대, PostFocusToggle)는
@@ -440,26 +436,26 @@ export default async function FeedPage({
   const articleSnapClass = !oneScreenFeed
     ? ""
     : isComplex
-      // memo: article 자체를 flex-col로 만들어야 안의 ComplexPostChat이 grow로 남는 세로
-      // 공간을 흡수해서 메시지 입력칸을 프레임 맨 아래로 밀어낼 수 있다(사용자 요청) —
-      // 예전엔 block이라 채팅 내용이 짧으면 입력칸이 그 바로 아래 뜨고 그 밑으로 빈
-      // 공간이 남았다. 채팅이 프레임보다 길면(shrink-0) article의 overflow-y-auto가 그대로
-      // 전체 스크롤을 맡는다(내부 이중 스크롤 없음).
-      ? "flex flex-col shrink-0 overflow-y-auto h-full md:h-[878px] md:mx-auto md:w-full md:max-w-[659px] max-md:snap-start max-md:snap-always"
+      // memo: 데스크톱에서만 article 자체를 flex-col 고정 프레임(878px)으로 만들어야 안의
+      // ComplexPostChat이 grow로 남는 세로 공간을 흡수해서 메시지 입력칸을 프레임 맨 아래로
+      // 밀어낼 수 있다(사용자 요청). 채팅이 프레임보다 길면 article의 overflow-y-auto가
+      // 그대로 스크롤을 맡는다(내부 이중 스크롤 없음). 모바일은 고정 프레임이 없어서 채팅
+      // 목록이 페이지 스크롤에 자연스럽게 얹힌다.
+      ? "flex flex-col shrink-0 md:overflow-y-auto md:h-[878px] md:mx-auto md:w-full md:max-w-[659px]"
       // DEMO는 md:h-auto — 878px로 늘리지 않고 내용물 높이 그대로(위 설명 참고).
-      : "flex shrink-0 flex-col h-full md:h-auto md:mx-auto md:w-full md:max-w-[659px] max-md:snap-start max-md:snap-always";
+      : "flex shrink-0 flex-col md:h-auto md:mx-auto md:w-full md:max-w-[659px]";
 
   return (
     <main
-      // 하단 여백 = GlobalPlayerBar 클리어런스. 로그인 시에만 그 바가 떠 있으므로(비로그인은
-      // 없음, AppLayout 참고) oneScreenFeed일 때만 넉넉히 잡는다 — 데스크톱은 pageCard(공유
-      // 스타일, ui/styles.ts)와 같은 md:pb-24(96px = 바 h-16/64px + 여유 32px) 기준으로
-      // 통일했다(2026-09-18 수정 — 기존 md:pb-8=32px로는 바 높이(64px)를 못 가려 맨 마지막
-      // 게시물이 잘려 보였다, DEMO/memo 탭 공통 문제라 여기 한 곳만 고치면 둘 다 해결됨).
-      // 모바일은 max-md:pb-0 그대로 두고, 대신 프레임 높이 calc 자체(위 feedListClass의
-      // 10.5rem)에서 바 높이를 빼서 처리한다.
+      // 하단 여백 = 고정 바 클리어런스. 로그인 시에만 그 바들이 떠 있으므로(비로그인은 없음,
+      // AppLayout 참고) oneScreenFeed일 때만 넉넉히 잡는다 — 데스크톱은 pageCard(공유 스타일,
+      // ui/styles.ts)와 같은 md:pb-24(96px = 바 h-16/64px + 여유 32px) 기준으로 통일했다
+      // (2026-09-18 수정 — 기존 md:pb-8=32px로는 바 높이(64px)를 못 가려 맨 마지막 게시물이
+      // 잘려 보였다, DEMO/memo 탭 공통 문제라 여기 한 곳만 고치면 둘 다 해결됨).
+      // 모바일은 이제(스냅 스크롤 제거, 2026-09-23) 일반 페이지 스크롤이라 pb-[6.25rem]
+      // (100px = GlobalPlayerBar h-11/44px + BottomNav h-14/56px)로 직접 클리어런스를 준다.
       className={`mx-auto max-w-[900px] px-0 pt-0 md:px-4 md:pt-4 ${
-        oneScreenFeed ? "max-md:pb-0 md:pb-24" : "pb-24 md:pb-8"
+        oneScreenFeed ? "pb-[6.25rem] md:pb-24" : "pb-24 md:pb-8"
       }`}
     >
       {!currentUser && (

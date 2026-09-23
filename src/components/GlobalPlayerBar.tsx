@@ -254,7 +254,10 @@ export function GlobalPlayerBar() {
         // bottom-16까지만 뻗게 줄여서(NavSidebar.tsx 참고) 이 바와 세로로 아예 안 겹치게
         // 했으므로, 여기 있던 left 오프셋도 걷어내고 항상 화면 맨 왼쪽부터 꽉 채운다 — 두
         // 요소가 물리적으로 안 겹치니 어떤 z-index/트랜지션 상황에서도 가려질 수가 없다.
-        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t px-3 transition-colors md:bottom-0 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg} ${barText} ${barBorder}`}
+        // 모바일 바 높이는 최대한 줄인다(2026-09-23 사용자 요청 — "높이를 최대한 줄여봐") —
+        // h-16(64px) 대신 h-11(44px). 데스크톱은 그대로 h-16 유지, 안의 커버·재생버튼·파형도
+        // 이 높이에 맞춰 모바일에서만 한 단계씩 축소(각 요소 className 참고).
+        className={`fixed inset-x-0 bottom-14 z-50 grid h-11 grid-cols-[32px_minmax(0,1fr)_120px] items-center gap-1.5 border-t px-2.5 transition-colors md:bottom-0 md:h-16 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg} ${barText} ${barBorder}`}
       >
         {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
             justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}
@@ -271,9 +274,13 @@ export function GlobalPlayerBar() {
             onClick={track ? toggle : () => playAt(0)}
             disabled={!track && !hasQueue}
             aria-label={isPlaying ? "일시정지" : "재생"}
-            className={`flex h-9 w-9 items-center justify-center rounded-full transition disabled:opacity-30 ${playButtonBg}`}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition disabled:opacity-30 md:h-9 md:w-9 ${playButtonBg}`}
           >
-            {isPlaying ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
+            {isPlaying ? (
+              <PauseIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            ) : (
+              <PlayIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            )}
           </button>
           <button
             onClick={() => playNext()}
@@ -293,7 +300,7 @@ export function GlobalPlayerBar() {
           <button
             onClick={seek}
             disabled={!track}
-            className="relative flex h-9 min-w-0 flex-1 items-center gap-px disabled:cursor-default"
+            className="relative flex h-8 min-w-0 flex-1 items-center gap-px disabled:cursor-default md:h-9"
             aria-label="탐색 바 (파형)"
           >
             {bars.map((v, i) => (
@@ -329,12 +336,14 @@ export function GlobalPlayerBar() {
             aria-label="플레이어 펼치기"
             className="flex min-w-0 flex-1 items-center gap-1.5 text-left disabled:cursor-default md:gap-2"
           >
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded ${coverBg}`}>
+            <span
+              className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded md:h-9 md:w-9 ${coverBg}`}
+            >
               {track?.posterSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={track.posterSrc} alt="" className="h-full w-full object-cover" />
               ) : (
-                <HeadphonesIcon className={`h-4 w-4 ${coverIcon}`} />
+                <HeadphonesIcon className={`h-3.5 w-3.5 md:h-4 md:w-4 ${coverIcon}`} />
               )}
             </span>
             <div className="flex min-w-0 flex-1 flex-col">
