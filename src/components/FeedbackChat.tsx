@@ -528,7 +528,11 @@ export function FeedbackChat({
           aria-checked={isPrivate}
           onClick={() => setIsPrivate((v) => !v)}
           title={isPrivate ? "작성자와 운영자만 볼 수 있어요" : "전체 회원이 볼 수 있어요"}
-          className="ml-auto inline-flex items-center gap-1 rounded-full border border-active-gray px-2.5 py-1 text-xs text-black transition hover:bg-main-gray"
+          className={`ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition ${
+            isPrivate
+              ? "border-violet-500 text-violet-600 hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-950/30"
+              : "border-demo-gold text-demo-gold hover:bg-demo-gold/10"
+          }`}
         >
           {isPrivate ? <LockIcon className="h-3.5 w-3.5" /> : <GlobeIcon className="h-3.5 w-3.5" />}
           {isPrivate ? "운영자에게만" : "전체 공개"}
