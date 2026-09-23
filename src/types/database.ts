@@ -593,6 +593,8 @@ export interface Database {
           status: "received" | "reviewing" | "done" | "on_hold";
           admin_reply: string | null;
           admin_updated_at: string | null;
+          // 0065 — feedback-images 버킷 경로(`${user_id}/...`). 이미지만 보낼 땐 content가 빈 문자열.
+          image_path: string | null;
           created_at: string;
         };
         Insert: {
@@ -604,9 +606,46 @@ export interface Database {
           status?: "received" | "reviewing" | "done" | "on_hold";
           admin_reply?: string | null;
           admin_updated_at?: string | null;
+          image_path?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["feedback_messages"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0065 — 공개 피드백 "나도 👍". (feedback_id, user_id) PK.
+      feedback_reactions: {
+        Row: {
+          feedback_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          feedback_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["feedback_reactions"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0065 — 상황별 짧은 설문. score null = "다음에"로 닫음. (user_id, trigger) 유니크.
+      feedback_pulses: {
+        Row: {
+          id: string;
+          user_id: string;
+          trigger: "upload" | "day7";
+          score: number | null;
+          comment: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          trigger: "upload" | "day7";
+          score?: number | null;
+          comment?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["feedback_pulses"]["Insert"]>;
         Relationships: [];
       };
     };

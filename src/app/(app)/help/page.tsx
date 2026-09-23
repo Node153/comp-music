@@ -26,7 +26,7 @@ export default async function HelpPage() {
   const { data: rawFeedback } = user
     ? await supabase
         .from("feedback_messages")
-        .select("id, user_id, content, is_private, category, status, admin_reply, created_at")
+        .select("id, user_id, content, is_private, category, status, admin_reply, image_path, created_at")
         .order("created_at", { ascending: true })
         .limit(200)
     : { data: null };
@@ -37,6 +37,17 @@ export default async function HelpPage() {
       ? await supabase.from("users").select("id, nickname, nickname_tag, role").in("id", feedbackSenderIds)
       : { data: [] };
   const nickById = new Map((feedbackNicks ?? []).map((u) => [u.id, u]));
+
+  // 0065 — "나도 👍" 누른 사람들(RLS상 볼 수 있는 피드백의 반응만 온다).
+  const feedbackIds = (rawFeedback ?? []).map((m) => m.id);
+  const { data: reactions } =
+    feedbackIds.length > 0
+      ? await supabase.from("feedback_reactions").select("feedback_id, user_id").in("feedback_id", feedbackIds)
+      : { data: [] };
+  const likersById = new Map<string, string[]>();
+  for (const r of reactions ?? []) {
+    likersById.set(r.feedback_id, [...(likersById.get(r.feedback_id) ?? []), r.user_id]);
+  }
   const feedbackMessages: FeedbackChatMessage[] = (rawFeedback ?? []).map((m) => ({
     id: m.id,
     userId: m.user_id,
@@ -48,6 +59,8 @@ export default async function HelpPage() {
     category: m.category,
     status: m.status,
     adminReply: m.admin_reply,
+    imagePath: m.image_path,
+    likers: likersById.get(m.id) ?? [],
     createdAt: m.created_at,
   }));
 

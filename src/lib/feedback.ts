@@ -24,3 +24,18 @@ export const FEEDBACK_STATUSES: { value: FeedbackStatus; label: string }[] = [
 export const FEEDBACK_STATUS_LABEL = Object.fromEntries(
   FEEDBACK_STATUSES.map((s) => [s.value, s.label]),
 ) as Record<FeedbackStatus, string>;
+
+// 0065 — 상황별 짧은 설문(feedback_pulses). score 1~4, null = "다음에"로 닫음.
+export type PulseTrigger = "upload" | "day7";
+
+export const PULSE_QUESTIONS: Record<PulseTrigger, string> = {
+  upload: "트랙 올리기는 어땠나요?",
+  day7: "Compmusic을 일주일 써보니 어떠세요?",
+};
+
+export const PULSE_SCORES: { score: number; emoji: string; label: string }[] = [
+  { score: 1, emoji: "😞", label: "별로예요" },
+  { score: 2, emoji: "😐", label: "그저 그래요" },
+  { score: 3, emoji: "🙂", label: "괜찮아요" },
+  { score: 4, emoji: "😍", label: "최고예요" },
+];

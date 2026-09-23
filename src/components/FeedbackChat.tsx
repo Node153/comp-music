@@ -2,9 +2,9 @@
 
 // /help의 "피드백" — 예전엔 1:1 제출 폼(feedback 테이블)이었는데, 승인 회원 전원이 함께
 // 보는 실시간 단체 채팅으로 바뀌었다(0047_feedback_group_chat). DM(ConversationView)과 같은
-// Supabase Realtime(postgres_changes) 패턴 — 텍스트 전용이라 INSERT/DELETE 신호만으로
-// 로컬 상태를 갱신하고 서버 왕복은 없다(단, realtime payload엔 닉네임이 없어서 처음 보는
-// user_id는 닉네임을 한 번 조회해 캐시한다).
+// Supabase Realtime(postgres_changes) 패턴 — INSERT/UPDATE/DELETE 신호만으로 로컬 상태를
+// 갱신하고 서버 왕복은 없다(단, realtime payload엔 닉네임이 없어서 처음 보는 user_id는 닉네임을
+// 한 번 조회해 캐시한다).
 //
 // 표시는 무조건 닉네임(users.nickname) + 동명이인 구분용 #태그. 실명은 절대 안 보여준다.
 //
@@ -14,6 +14,9 @@
 //
 // 0063 — 관리자가 /admin/feedback에서 단 처리 상태·답변을 말풍선 아래에 보여준다(realtime UPDATE로
 // 즉시 반영). 상태 뱃지는 유형을 고른 메시지·비공개 메시지·상태가 바뀐 메시지에만 — 일반 잡담엔 안 붙인다.
+//
+// 0065 — 공개 피드백에 "나도 👍"(feedback_reactions, 남의 공개 글에만), 스크린샷 1장 첨부
+// (feedback-images 비공개 버킷 → 표시할 때 signed URL). 입력창에 이미지를 붙여넣어도 첨부된다.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
@@ -37,6 +40,10 @@ export type FeedbackChatMessage = {
   category: FeedbackCategory | null;
   status: FeedbackStatus;
   adminReply: string | null;
+  imagePath: string | null;
+  // "나도 👍" 누른 사람 user_id — 개수/내가 눌렀는지 둘 다 여기서. 추가·제거가 멱등이라
+  // 낙관적 반영과 realtime 이벤트가 겹쳐도 안전하다.
+  likers: string[];
   createdAt: string;
 };
 
@@ -48,10 +55,59 @@ type FeedbackRow = {
   category: FeedbackCategory | null;
   status: FeedbackStatus;
   admin_reply: string | null;
+  image_path: string | null;
   created_at: string;
 };
 
+type Nick = { nickname: string; nicknameTag: string; isComper: boolean };
+
 const MAX_LEN = 2000;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // feedback-images 버킷 file_size_limit과 동일
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const ROW_COLUMNS = "id, user_id, content, is_private, category, status, admin_reply, image_path, created_at";
+
+function toMessage(row: FeedbackRow, nick: Nick): FeedbackChatMessage {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    nickname: nick.nickname,
+    nicknameTag: nick.nicknameTag,
+    isComper: nick.isComper,
+    content: row.content,
+    isPrivate: row.is_private,
+    category: row.category,
+    status: row.status,
+    adminReply: row.admin_reply,
+    imagePath: row.image_path,
+    likers: [],
+    createdAt: row.created_at,
+  };
+}
+
+// 비공개 버킷 이미지 — 마운트 시 1시간짜리 signed URL을 받아 보여준다. 누르면 원본을 새 탭으로.
+export function FeedbackImage({ path }: { path: string }) {
+  const supabase = useMemo(() => createClient(), []);
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    supabase.storage
+      .from("feedback-images")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (!cancelled) setUrl(data?.signedUrl ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, path]);
+  if (!url) return <span className="block h-24 w-32 animate-pulse rounded-lg bg-box-gray" />;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+      {/* eslint-disable-next-line @next/next/no-img-element -- signed URL이라 next/image 최적화 대상 아님 */}
+      <img src={url} alt="첨부 이미지" className="max-h-60 max-w-full rounded-lg object-contain" />
+    </a>
+  );
+}
 
 export function FeedbackChat({
   currentUserId,
@@ -68,8 +124,18 @@ export function FeedbackChat({
   const [sending, setSending] = useState(false);
   const [category, setCategory] = useState<FeedbackCategory | null>(null);
   const [isPrivate, setIsPrivate] = useState(true);
+  const [image, setImage] = useState<File | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const imagePreview = useMemo(() => (image ? URL.createObjectURL(image) : null), [image]);
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
 
   // 입력 높이 자동 조절 — 한 줄에서 시작해 최대 약 6줄(144px)까지 늘고 그 이상은 내부 스크롤.
   useEffect(() => {
@@ -80,7 +146,7 @@ export function FeedbackChat({
   }, [text]);
 
   // user_id → 닉네임 캐시. 초기 목록으로 seed, realtime에서 처음 보는 사람만 조회.
-  const nickCache = useRef<Map<string, { nickname: string; nicknameTag: string; isComper: boolean }>>(
+  const nickCache = useRef<Map<string, Nick>>(
     new Map(
       initialMessages.map((m) => [
         m.userId,
@@ -106,6 +172,17 @@ export function FeedbackChat({
     return resolved;
   }
 
+  function setLiked(feedbackId: string, userId: string, liked: boolean) {
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== feedbackId) return m;
+        const has = m.likers.includes(userId);
+        if (liked === has) return m;
+        return { ...m, likers: liked ? [...m.likers, userId] : m.likers.filter((u) => u !== userId) };
+      }),
+    );
+  }
+
   useEffect(() => {
     const channel = supabase
       .channel("feedback-chat")
@@ -115,26 +192,7 @@ export function FeedbackChat({
         async (payload) => {
           const row = payload.new as FeedbackRow;
           const nick = await resolveNick(row.user_id);
-          setMessages((prev) =>
-            prev.some((m) => m.id === row.id)
-              ? prev
-              : [
-                  ...prev,
-                  {
-                    id: row.id,
-                    userId: row.user_id,
-                    nickname: nick.nickname,
-                    nicknameTag: nick.nicknameTag,
-                    isComper: nick.isComper,
-                    content: row.content,
-                    isPrivate: row.is_private,
-                    category: row.category,
-                    status: row.status,
-                    adminReply: row.admin_reply,
-                    createdAt: row.created_at,
-                  },
-                ],
-          );
+          setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, toMessage(row, nick)]));
         },
       )
       .on(
@@ -155,55 +213,99 @@ export function FeedbackChat({
           setMessages((prev) => prev.filter((m) => m.id !== old.id));
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "feedback_reactions" },
+        (payload) => {
+          const row = payload.new as { feedback_id: string; user_id: string };
+          setLiked(row.feedback_id, row.user_id, true);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "feedback_reactions" },
+        (payload) => {
+          // DELETE payload엔 PK 컬럼만 온다 — (feedback_id, user_id)가 PK라 충분.
+          const old = payload.old as { feedback_id?: string; user_id?: string };
+          if (old.feedback_id && old.user_id) setLiked(old.feedback_id, old.user_id, false);
+        },
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-    // resolveNick은 마운트 시점 함수 참조로 충분(내부 캐시는 ref) — 재구독 유발 안 함.
+    // resolveNick/setLiked는 마운트 시점 함수 참조로 충분(내부 캐시는 ref, 상태는 함수형 업데이트).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    // 새 메시지가 붙을 때만 — 관리자 답변(UPDATE)으로 목록이 바뀔 땐 스크롤을 건드리지 않는다.
+    // 새 메시지가 붙을 때만 — 관리자 답변(UPDATE)/👍로 목록이 바뀔 땐 스크롤을 건드리지 않는다.
   }, [messages.length]);
+
+  function pickImage(file: File | null | undefined) {
+    setImageError(null);
+    if (!file) return;
+    if (!IMAGE_TYPES.includes(file.type)) {
+      setImageError("PNG·JPG·WEBP·GIF 이미지만 첨부할 수 있어요");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError("5MB 이하 이미지만 첨부할 수 있어요");
+      return;
+    }
+    setImage(file);
+  }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if ((!trimmed && !image) || sending) return;
     setSending(true);
+    setImageError(null);
+
+    let imagePath: string | null = null;
+    if (image) {
+      const ext = image.type.split("/")[1] === "jpeg" ? "jpg" : image.type.split("/")[1];
+      imagePath = `${currentUserId}/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("feedback-images")
+        .upload(imagePath, image, { contentType: image.type });
+      if (uploadError) {
+        setSending(false);
+        setImageError("이미지 업로드에 실패했어요. 다시 시도해 주세요.");
+        return;
+      }
+    }
+
     const { data, error } = await supabase
       .from("feedback_messages")
-      .insert({ user_id: currentUserId, content: trimmed.slice(0, MAX_LEN), is_private: isPrivate, category })
-      .select("id, user_id, content, is_private, category, status, admin_reply, created_at")
+      .insert({
+        user_id: currentUserId,
+        content: trimmed.slice(0, MAX_LEN),
+        is_private: isPrivate,
+        category,
+        image_path: imagePath,
+      })
+      .select(ROW_COLUMNS)
       .single();
     setSending(false);
     if (error || !data) return;
     const me = await resolveNick(currentUserId);
-    setMessages((prev) =>
-      prev.some((m) => m.id === data.id)
-        ? prev
-        : [
-            ...prev,
-            {
-              id: data.id,
-              userId: data.user_id,
-              nickname: me.nickname,
-              nicknameTag: me.nicknameTag,
-              isComper: me.isComper,
-              content: data.content,
-              isPrivate: data.is_private,
-              category: data.category,
-              status: data.status,
-              adminReply: data.admin_reply,
-              createdAt: data.created_at,
-            },
-          ],
-    );
+    setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, toMessage(data, me)]));
     setText("");
     setCategory(null);
+    setImage(null);
+  }
+
+  async function toggleLike(m: FeedbackChatMessage) {
+    const liked = m.likers.includes(currentUserId);
+    setLiked(m.id, currentUserId, !liked);
+    const { error } = liked
+      ? await supabase.from("feedback_reactions").delete().eq("feedback_id", m.id).eq("user_id", currentUserId)
+      : await supabase.from("feedback_reactions").insert({ feedback_id: m.id, user_id: currentUserId });
+    if (error) setLiked(m.id, currentUserId, liked);
   }
 
   const placeholder =
@@ -228,12 +330,13 @@ export function FeedbackChat({
             <span>📌 고정</span>
           </span>
           <span className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl bg-main-gray px-3.5 py-2 text-sm text-black">
-            {"요즘 Compmusic을 쓰면서 가장 불편했던 점 하나만 알려주세요 🙏\n짧게 한 줄이어도 좋아요. 🔒 운영자에게만 보내면 다른 회원에게는 보이지 않아요."}
+            {"요즘 Compmusic을 쓰면서 가장 불편했던 점 하나만 알려주세요 🙏\n짧게 한 줄이어도 좋아요. 🔒 운영자에게만 보내면 다른 회원에게는 보이지 않아요.\n화면 캡처를 붙여넣으면 스크린샷도 같이 보낼 수 있어요."}
           </span>
         </div>
         {messages.map((m) => {
           const isMe = m.userId === currentUserId;
           const canDelete = isMe || isAdmin;
+          const likedByMe = m.likers.includes(currentUserId);
           return (
             <div key={m.id} className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}>
               <span className="flex items-center gap-1.5 px-1 text-[11px] text-active-gray">
@@ -259,24 +362,41 @@ export function FeedbackChat({
                 )}
               </span>
               <span
-                className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm ${
+                className={`flex max-w-[85%] flex-col gap-1.5 whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm ${
                   isMe ? "bg-demo-bg text-black" : "bg-main-gray text-black"
                 } ${m.isPrivate ? "border border-dashed border-active-gray" : ""}`}
               >
                 {m.category && (
-                  <span className="mb-0.5 block text-[11px] font-semibold text-active-gray">
+                  <span className="block text-[11px] font-semibold text-active-gray">
                     {FEEDBACK_CATEGORY_LABEL[m.category]}
                   </span>
                 )}
-                {m.content}
+                {m.imagePath && <FeedbackImage path={m.imagePath} />}
+                {m.content && <span>{m.content}</span>}
               </span>
-              {(m.category || m.isPrivate || m.status !== "received") && (
-                <span
-                  className={`px-1 text-[11px] ${m.status === "done" ? "font-semibold text-black" : "text-active-gray"}`}
-                >
-                  {FEEDBACK_STATUS_LABEL[m.status]}
-                </span>
-              )}
+              <span className="flex items-center gap-2 px-1 text-[11px]">
+                {(m.category || m.isPrivate || m.status !== "received") && (
+                  <span className={m.status === "done" ? "font-semibold text-black" : "text-active-gray"}>
+                    {FEEDBACK_STATUS_LABEL[m.status]}
+                  </span>
+                )}
+                {/* 나도 👍 — 공개 피드백만. 본인 글엔 버튼 대신 공감 수만 보여준다. */}
+                {!m.isPrivate &&
+                  (isMe ? (
+                    m.likers.length > 0 && <span className="text-active-gray">👍 {m.likers.length}명이 공감해요</span>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-pressed={likedByMe}
+                      onClick={() => toggleLike(m)}
+                      className={`rounded-full px-2 py-0.5 transition ${
+                        likedByMe ? "bg-black text-white" : "bg-main-gray text-black hover:bg-demo-bg"
+                      }`}
+                    >
+                      👍 나도{m.likers.length > 0 ? ` ${m.likers.length}` : ""}
+                    </button>
+                  ))}
+              </span>
               {m.adminReply && (
                 <div
                   className={`mt-0.5 flex max-w-[85%] flex-col gap-0.5 rounded-2xl border border-main-gray bg-box-gray px-3 py-2 text-sm ${
@@ -323,12 +443,58 @@ export function FeedbackChat({
           {isPrivate ? "🔒 운영자에게만" : "🌐 전체 공개"}
         </button>
       </div>
+      {(imagePreview || imageError) && (
+        <div className="flex items-center gap-2 px-2.5 pt-2">
+          {imagePreview && (
+            <span className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- 로컬 blob 미리보기 */}
+              <img src={imagePreview} alt="첨부할 이미지" className="h-16 w-16 rounded-lg object-cover" />
+              <button
+                type="button"
+                onClick={() => setImage(null)}
+                aria-label="첨부 취소"
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black text-[10px] text-white"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+          {imageError && <span className="text-xs text-red-500">{imageError}</span>}
+        </div>
+      )}
       <form onSubmit={handleSend} className="flex items-end gap-2 p-2.5">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={IMAGE_TYPES.join(",")}
+          className="hidden"
+          onChange={(e) => {
+            pickImage(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label="스크린샷 첨부"
+          title="스크린샷 첨부 (붙여넣기도 가능)"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-main-gray text-base transition hover:bg-demo-bg"
+        >
+          🖼
+        </button>
         <textarea
           ref={textareaRef}
           rows={1}
           value={text}
           onChange={(e) => setText(e.target.value)}
+          // 화면 캡처(Cmd+Shift+Ctrl+4 등)를 바로 붙여넣으면 첨부로 받는다.
+          onPaste={(e) => {
+            const file = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
+            if (file) {
+              e.preventDefault();
+              pickImage(file);
+            }
+          }}
           // Enter 전송 · Shift+Enter 줄바꿈. 한글 조합 중(isComposing) Enter는 글자 확정이라 무시.
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -342,10 +508,10 @@ export function FeedbackChat({
         />
         <button
           type="submit"
-          disabled={sending || !text.trim()}
+          disabled={sending || (!text.trim() && !image)}
           className="shrink-0 rounded-full bg-demo-bg px-4 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:opacity-50"
         >
-          전송
+          {sending ? "보내는 중" : "전송"}
         </button>
       </form>
     </div>
