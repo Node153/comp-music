@@ -12,6 +12,9 @@ import { PlayIcon, PauseIcon } from "@/components/icons";
 
 const STRIP_FRAME_COUNT = 10;
 const STRIP_HEIGHT = 64;
+// 음원 파형 막대 개수·높이 — 음원 구간 선택 스트립.
+const MUSIC_BAR_COUNT = 80;
+const MUSIC_STRIP_HEIGHT = 44;
 // 다듬기 최소 길이(초) — 핸들 두 개가 겹쳐서 0초짜리 영상이 되는 걸 막는다.
 const MIN_TRIM_SECONDS = 1;
 
@@ -71,6 +74,8 @@ export function VideoEditor({
   onMuteOriginalChange,
   musicFile,
   onMusicFileChange,
+  musicStart,
+  onMusicStartChange,
 }: {
   src: string;
   trim: TrimRange | null;
@@ -86,9 +91,12 @@ export function VideoEditor({
   onPickCustomCover: (e: React.ChangeEvent<HTMLInputElement>) => void;
   muteOriginal: boolean;
   onMuteOriginalChange: (muted: boolean) => void;
-  // 넣을 음원 — 다듬은 구간 시작과 함께 0초부터 재생되고, 영상 길이에 맞춰 잘린다.
+  // 넣을 음원 — 다듬은 구간 시작에 musicStart 지점이 맞춰져 재생되고, 영상 길이에 맞춰 잘린다.
   musicFile: File | null;
   onMusicFileChange: (file: File | null) => void;
+  // 음원에서 쓸 구간의 시작(초) — 파형 위의 창을 끌어서 고른다(2026-09-24, 사용자 요청).
+  musicStart: number;
+  onMusicStartChange: (seconds: number) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const trimStripRef = useRef<HTMLDivElement>(null);
@@ -105,6 +113,40 @@ export function VideoEditor({
   const musicInputRef = useRef<HTMLInputElement>(null);
   const [musicDuration, setMusicDuration] = useState(0);
   const [musicError, setMusicError] = useState<string | null>(null);
+  // 음원 파형(0~1 막대 높이) — 로컬 파일을 decodeAudioData로 한 번만 분석한다.
+  const [musicPeaks, setMusicPeaks] = useState<number[]>([]);
+  const musicStripRef = useRef<HTMLDivElement>(null);
+  const musicDragRef = useRef<{ startX: number; startValue: number } | null>(null);
+  useEffect(() => {
+    if (!musicFile) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const ctx = new AudioContext();
+        const buffer = await ctx.decodeAudioData(await musicFile.arrayBuffer());
+        void ctx.close();
+        const data = buffer.getChannelData(0);
+        const bucket = Math.max(1, Math.floor(data.length / MUSIC_BAR_COUNT));
+        const peaks: number[] = [];
+        for (let i = 0; i < MUSIC_BAR_COUNT; i++) {
+          let max = 0;
+          // 구간 전체를 다 훑으면 긴 wav에서 느려서 일정 간격으로만 샘플링한다.
+          for (let j = i * bucket; j < (i + 1) * bucket && j < data.length; j += 64) {
+            max = Math.max(max, Math.abs(data[j]));
+          }
+          peaks.push(max);
+        }
+        const top = Math.max(...peaks, 0.001);
+        if (!cancelled) setMusicPeaks(peaks.map((p) => p / top));
+      } catch {
+        // 파형을 못 그려도 기능은 그대로 — 빈 막대로 보인다.
+        if (!cancelled) setMusicPeaks([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [musicFile]);
   const musicUrl = useMemo(() => (musicFile ? URL.createObjectURL(musicFile) : null), [musicFile]);
   useEffect(() => {
     return () => {
@@ -200,8 +242,9 @@ export function VideoEditor({
     const music = musicRef.current;
     if (!video || !music) return;
     const t = video.currentTime - range.start;
-    const inRange = t >= 0 && (!musicDuration || t < musicDuration);
-    if (Math.abs(music.currentTime - t) > 0.25 && inRange) music.currentTime = t;
+    const pos = musicStart + t;
+    const inRange = t >= 0 && (!musicDuration || pos < musicDuration);
+    if (Math.abs(music.currentTime - pos) > 0.25 && inRange) music.currentTime = pos;
     if (!video.paused && inRange) {
       if (music.paused) void music.play().catch(() => {});
     } else if (!music.paused) {
@@ -219,7 +262,39 @@ export function VideoEditor({
     }
     setMusicError(null);
     setMusicDuration(0);
+    setMusicPeaks([]);
     onMusicFileChange(file);
+  }
+
+  // 음원 구간 창 드래그 — 창 폭은 영상 길이만큼 고정이고, 시작 지점만 움직인다.
+  const clipLength = range.end - range.start;
+  const maxMusicStart = Math.max(0, musicDuration - clipLength);
+  // 다듬기 구간을 늘려서 창이 음원 끝을 넘어가게 되면 시작 지점을 안쪽으로 당긴다.
+  useEffect(() => {
+    if (musicDuration > 0 && musicStart > maxMusicStart + 0.01) onMusicStartChange(maxMusicStart);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [musicDuration, musicStart, maxMusicStart]);
+
+  function handleMusicPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    musicDragRef.current = { startX: e.clientX, startValue: musicStart };
+    videoRef.current?.pause();
+  }
+  function handleMusicPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const drag = musicDragRef.current;
+    const strip = musicStripRef.current;
+    if (!drag || !strip || !musicDuration) return;
+    const deltaSeconds = ((e.clientX - drag.startX) / strip.getBoundingClientRect().width) * musicDuration;
+    onMusicStartChange(Math.min(maxMusicStart, Math.max(0, drag.startValue + deltaSeconds)));
+  }
+  // 놓으면 고른 구간을 바로 들려준다 — 영상도 다듬은 시작점부터 같이 재생(인스타그램처럼).
+  function handleMusicPointerUp() {
+    if (!musicDragRef.current) return;
+    musicDragRef.current = null;
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = range.start;
+    void video.play();
   }
 
   function handleTrimPointerDown(which: "start" | "end") {
@@ -451,18 +526,19 @@ export function VideoEditor({
           className="hidden"
         />
         {musicFile && musicUrl ? (
-          <div className="flex items-center gap-3 rounded-xl bg-main-gray px-3 py-2.5">
+          <div className="flex flex-col gap-2 rounded-xl bg-main-gray px-3 py-2.5">
+          <div className="flex items-center gap-3">
             <span className="text-lg" aria-hidden>
               ♪
             </span>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-medium text-black">{musicFile.name}</span>
               <span className="text-[11px] text-active-gray">
-                {musicDuration > 0 && musicDuration < range.end - range.start - 0.05
-                  ? `음원(${formatTime(musicDuration)})이 영상보다 짧아서 ${formatTime(musicDuration)} 이후엔 ${
+                {musicDuration > 0 && musicDuration - musicStart < clipLength - 0.05
+                  ? `남은 음원(${formatTime(musicDuration - musicStart)})이 영상보다 짧아서 그 뒤엔 ${
                       muteOriginal ? "소리가 없어요" : "원본 소리만 나와요"
                     }`
-                  : `영상 길이(${formatTime(range.end - range.start)})에 맞춰 잘려요`}
+                  : `${formatTime(musicStart)}부터 ${formatTime(clipLength)} 사용 · 영상 길이에 맞춰 잘려요`}
               </span>
             </div>
             <button
@@ -492,6 +568,55 @@ export function VideoEditor({
               }}
               className="hidden"
             />
+          </div>
+          {/* 음원 구간 선택 — 음원 전체 파형 위에 영상 길이만큼의 흰 테두리 창을 띄우고, 창을
+              좌우로 끌어서 쓸 부분을 고른다. 음원이 영상보다 짧으면 창이 꽉 차서 움직이지 않는다. */}
+          {musicDuration > 0 && (
+            <>
+              <div
+                ref={musicStripRef}
+                onPointerDown={handleMusicPointerDown}
+                onPointerMove={handleMusicPointerMove}
+                onPointerUp={handleMusicPointerUp}
+                onPointerCancel={handleMusicPointerUp}
+                role="slider"
+                aria-label="음원 시작 지점"
+                aria-valuemin={0}
+                aria-valuemax={Math.round(maxMusicStart)}
+                aria-valuenow={Math.round(musicStart)}
+                style={{ height: MUSIC_STRIP_HEIGHT }}
+                className={`relative flex touch-none select-none items-center gap-px overflow-hidden rounded-lg bg-box-gray px-1 ${
+                  maxMusicStart > 0 ? "cursor-grab active:cursor-grabbing" : ""
+                }`}
+              >
+                {Array.from({ length: MUSIC_BAR_COUNT }, (_, i) => {
+                  const barTime = ((i + 0.5) / MUSIC_BAR_COUNT) * musicDuration;
+                  const selected = barTime >= musicStart && barTime <= musicStart + clipLength;
+                  return (
+                    <span
+                      key={i}
+                      className={`min-w-0 flex-1 rounded-full ${selected ? "bg-active-gray" : "bg-active-gray/30"}`}
+                      style={{ height: `${Math.max(8, (musicPeaks[i] ?? 0.15) * 100)}%` }}
+                    />
+                  );
+                })}
+                <div
+                  className="pointer-events-none absolute inset-y-0 rounded-lg border-[3px] border-white shadow"
+                  style={{
+                    left: `${(musicStart / musicDuration) * 100}%`,
+                    width: `${Math.min(100, (clipLength / musicDuration) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-[11px] text-active-gray">
+                <span>0:00</span>
+                <span className="font-medium text-black">
+                  {maxMusicStart > 0 ? "창을 좌우로 끌어서 쓸 부분을 고르세요" : "음원 전체가 사용돼요"}
+                </span>
+                <span>{formatTime(musicDuration)}</span>
+              </div>
+            </>
+          )}
           </div>
         ) : (
           <button

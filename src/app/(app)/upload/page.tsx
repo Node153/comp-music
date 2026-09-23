@@ -477,6 +477,7 @@ export default function UploadPage() {
   // 영상 소리 편집(2026-09-24) — 원본 소리 끄기, 음원 넣기(영상 길이에 맞춰 잘림).
   const [muteOriginal, setMuteOriginal] = useState(false);
   const [musicFile, setMusicFile] = useState<File | null>(null);
+  const [musicStart, setMusicStart] = useState(0);
 
   // Complex 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
   const [complexFile, setComplexFile] = useState<File | null>(null);
@@ -614,6 +615,7 @@ export default function UploadPage() {
     setTrimRange(null);
     setMuteOriginal(false);
     setMusicFile(null);
+    setMusicStart(0);
     setVideoDuration(0);
     setCoverFrameTime(null);
     setCoverFromFrame(false);
@@ -676,7 +678,7 @@ export default function UploadPage() {
     try {
       return await editVideoFile(
         file,
-        { start: range.start, end: range.end, muteOriginal, music: musicFile },
+        { start: range.start, end: range.end, muteOriginal, music: musicFile, musicStart },
         (ratio) => setLoadingLabel(`영상 편집 중... ${Math.round(ratio * 100)}%`),
       );
     } finally {
@@ -1014,7 +1016,12 @@ export default function UploadPage() {
           muteOriginal={muteOriginal}
           onMuteOriginalChange={setMuteOriginal}
           musicFile={musicFile}
-          onMusicFileChange={setMusicFile}
+          onMusicFileChange={(file) => {
+            setMusicFile(file);
+            setMusicStart(0);
+          }}
+          musicStart={musicStart}
+          onMusicStartChange={setMusicStart}
           customCover={
             coverFile && !coverFromFrame && coverObjectUrl ? (
               <div className="flex items-start gap-3">

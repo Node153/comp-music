@@ -104,9 +104,11 @@ export type VideoEdit = {
   end: number;
   // 원본 영상 소리를 뺀다(음원을 넣었으면 음원만 남는다).
   muteOriginal: boolean;
-  // 넣을 음원 — 처음부터 재생되고 영상(다듬은 구간) 길이에 맞춰 잘린다. 음원이 더 짧으면
-  // 그 뒤는 (원본 소리를 켰으면 원본만, 아니면) 무음.
+  // 넣을 음원 — musicStart 지점부터 재생되고 영상(다듬은 구간) 길이에 맞춰 잘린다. 남은
+  // 음원이 더 짧으면 그 뒤는 (원본 소리를 켰으면 원본만, 아니면) 무음.
   music: File | null;
+  // 음원에서 쓸 구간의 시작(초) — 영상 첫 프레임에 이 지점이 맞춰진다.
+  musicStart: number;
 };
 
 function extOf(name: string, fallback: string) {
@@ -119,16 +121,17 @@ export async function editVideoFile(
   // 재인코딩으로 넘어갔을 때만 호출된다(0~1) — 스트림 복사는 금방 끝나서 진행률이 필요 없다.
   onReencodeProgress?: (ratio: number) => void,
 ): Promise<File> {
-  const { start, end, muteOriginal, music } = edit;
+  const { start, end, muteOriginal, music, musicStart } = edit;
   const ext = extOf(file.name, "mp4");
   const length = end - start;
   const inputs: InputFile[] = [{ name: `input.${ext}`, data: new Uint8Array(await file.arrayBuffer()) }];
   const musicName = music ? `music.${extOf(music.name, "mp3")}` : null;
   if (music && musicName) inputs.push({ name: musicName, data: new Uint8Array(await music.arrayBuffer()) });
 
-  // 입력 쪽 -ss/-t로 영상만 자르고, 음원은 0초부터 쓰되 출력 -t로 영상 길이에 맞춰 자른다.
+  // 입력 쪽 -ss/-t로 영상을 자르고, 음원도 입력 -ss로 고른 시작 지점부터 읽은 뒤 출력 -t로
+  // 영상 길이에 맞춰 자른다.
   const inputArgs = ["-ss", start.toFixed(3), "-t", length.toFixed(3), "-i", inputs[0].name];
-  if (musicName) inputArgs.push("-i", musicName);
+  if (musicName) inputArgs.push("-ss", Math.max(0, musicStart).toFixed(3), "-i", musicName);
 
   // 소리 구성별 매핑 — mixOriginal=false면 원본 오디오를 아예 안 쓴다(원본에 오디오 트랙이
   // 없어서 amix가 실패했을 때의 재시도에도 쓴다).
