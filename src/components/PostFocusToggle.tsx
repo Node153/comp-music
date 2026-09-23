@@ -7,6 +7,7 @@
 // children으로 그대로 넘겨받는다. 함수를 children으로 넘기면 서버→클라이언트 경계를 못
 // 건너기 때문에(RSC 직렬화 제약) 렌더 prop 패턴 대신 이 구조를 쓴다.
 import { useState } from "react";
+import Link from "next/link";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { Avatar } from "@/components/Avatar";
 import { ComperBadge } from "@/components/ComperBadge";
@@ -50,12 +51,17 @@ export function PostFocusToggle({
       }
     >
       <div className="flex shrink-0 items-center gap-2 p-3">
-        <Avatar userId={authorId} name={authorName} className="h-8 w-8 text-xs" />
+        <Link href={`/profile/${authorId}`} className="shrink-0">
+          <Avatar userId={authorId} name={authorName} className="h-8 w-8 text-xs" />
+        </Link>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800 dark:text-gray-200">
+          <Link
+            href={`/profile/${authorId}`}
+            className="flex items-center gap-1.5 text-sm font-medium text-gray-800 hover:underline dark:text-gray-200"
+          >
             <span className="truncate">{authorName}</span>
             {isComper && <ComperBadge />}
-          </span>
+          </Link>
           <span className="truncate text-xs text-gray-400 dark:text-gray-500">{metaLine}</span>
         </div>
         {expiresAt && <TimeLimitBadge expiresAt={expiresAt} />}
