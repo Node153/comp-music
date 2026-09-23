@@ -55,7 +55,29 @@ export function FeedHero({ messages, snap = false }: { messages?: HeroMessage[];
           {m.a}
         </p>
       </div>
-      <span className="mt-4 text-xs text-gray-300 dark:text-gray-600">아래로 내리면 오늘의 작업들이 있어요 ↓</span>
+      {/* 예전엔 text-xs·gray-300이라 아래에 게시물이 있는지 모르겠다는 피드백(2026-09-24) —
+          크기·대비를 올리고 튀는 화살표를 달아, 누르면 바로 첫 게시물로 스크롤한다. */}
+      <button
+        type="button"
+        onClick={(e) =>
+          e.currentTarget.closest("section")?.nextElementSibling?.scrollIntoView({ behavior: "smooth" })
+        }
+        className="mt-8 flex flex-col items-center gap-2 rounded-full px-5 py-3 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-300 dark:hover:text-white md:text-base"
+      >
+        아래로 내리면 오늘의 작업들이 있어요
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className="h-7 w-7 animate-bounce text-amber-600 dark:text-amber-400"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
     </section>
   );
 }
