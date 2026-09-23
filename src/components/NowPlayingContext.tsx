@@ -40,11 +40,6 @@ type NowPlayingContextValue = {
   // 직후의 이벤트. 카드(PostVideo/SoundbarPlayer)가 자기 postId와 비교해서 화면 숫자를
   // 낙관적으로 올리는 용도 — at은 매번 새 값이라 같은 트랙이 다시 카운트돼도 감지된다.
   lastCountedView: { id: string; at: number } | null;
-  // 모바일 사운드바 접힘 상태 — BottomNav의 토글 버튼(예전 "홈" 탭 자리, 2026-09-23 사용자
-  // 요청으로 교체)이 켜고 끈다. 데스크톱은 이 값과 무관하게 항상 펼쳐진 채로 둔다
-  // (GlobalPlayerBar에서 md: 브레이크포인트로 강제 override).
-  barCollapsed: boolean;
-  toggleBarCollapsed: () => void;
 };
 
 const NowPlayingContext = createContext<NowPlayingContextValue | null>(null);
@@ -54,8 +49,6 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [lastCountedView, setLastCountedView] = useState<{ id: string; at: number } | null>(null);
-  const [barCollapsed, setBarCollapsed] = useState(false);
-  const toggleBarCollapsed = useCallback(() => setBarCollapsed((v) => !v), []);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // 조회수(0053/0054) 30초 시청 세션 — 실제 소리가 나는 이 <video> 하나를 기준으로 재는다.
@@ -172,8 +165,6 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
         duration,
         setDuration,
         lastCountedView,
-        barCollapsed,
-        toggleBarCollapsed,
       }}
     >
       {children}

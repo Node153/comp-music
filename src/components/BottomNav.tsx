@@ -2,23 +2,23 @@
 
 // 승인된 사용자 화면 전반(S6/S8/S9/S12)에서 공통으로 쓰는 하단 탭바.
 // 미승인/가입/관리자 화면에서는 노출하지 않는다 ((app) 라우트 그룹의 layout에서만 렌더링).
-// 순서: 검색 · 업로드(가운데) · 메시지 · 프로필 · 재생목록(사운드바 접기/펼치기).
+// 순서: 홈 · 검색 · 업로드(가운데) · 메시지 · 프로필(2026-09, 사용자 요청 — 인스타/스레드처럼
+// 하단 탭 맨 왼쪽은 항상 "홈"이어야 하는데 우리는 그 자리가 검색이었다). 인스타/스레드
+// 순서(홈·검색·만들기·활동·프로필)에 맞춰 업로드를 가운데로 오게 재배치.
 // Help는 레퍼런스 3곳(인스타/스레드/페이스북) 다 하단 탭에 상시 노출 안 하는 유틸리티
 // 성격이라 하단 탭에서 빼고 상단바(MobileTopBar)로 옮겼다 — 5탭 유지.
 // "검색"만 페이지 이동이 아니라 오버레이를 여는 버튼 — /goal 검색 UX 논의 참고
 // (SearchOverlay.tsx 주석).
-// 맨 왼쪽 "홈" 탭은 2026-09-23 제거(사용자 요청 — MobileTopBar의 "Compmusic" 로고가
-// 이미 /feed로 가는 홈 링크라 중복이었다). 그 자리에 GlobalPlayerBar(사운드바)를
-// 접고/펼치는 "재생목록" 토글을 추가했는데, 같은 날 맨 오른쪽으로 재배치하고 아이콘도
-// GlobalPlayerBar의 대기열 버튼과 같은 ListIcon으로, 라벨도 접기/펼치기로 바뀌던 걸
-// 고정된 "재생목록"으로 바꿨다(사용자 요청).
+// 2026-09-23: "홈" 탭을 뺐다가(MobileTopBar 로고 중복 이유) 그 자리에 사운드바 접기/펼치기
+// "재생목록" 토글을 넣은 적이 있는데, 같은 날 둘 다 사용자 요청으로 되돌렸다 — 홈은 다시
+// 맨 앞으로, 재생목록 토글은 제거(그 유일한 진입점이 없어지면 GlobalPlayerBar의 접힘 상태
+// 자체가 켜질 방법이 없어져서, 관련 코드까지 함께 정리했다 — NowPlayingContext.tsx 참고).
 import { usePathname } from "next/navigation";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { useNotificationCount } from "@/components/NotificationCountContext";
 import { useMessageCount } from "@/components/MessageCountContext";
-import { useNowPlaying } from "@/components/NowPlayingContext";
 import Link from "next/link";
-import { SearchIcon, MailIcon, PlusIcon, UserIcon, ListIcon } from "@/components/icons";
+import { HomeIcon, SearchIcon, MailIcon, PlusIcon, UserIcon } from "@/components/icons";
 
 const itemClass = (active: boolean) =>
   `relative flex flex-col items-center gap-0.5 text-xs ${active ? "opacity-100" : "opacity-60"}`;
@@ -28,10 +28,13 @@ export function BottomNav({ currentUserId }: { currentUserId: string }) {
   const search = useSearchOverlay();
   const unseenNotifications = useNotificationCount();
   const unreadConversations = useMessageCount();
-  const { barCollapsed, toggleBarCollapsed } = useNowPlaying();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-white/10 bg-[#1c1c1e]/80 text-white backdrop-blur md:hidden">
+      <Link href="/feed" className={itemClass(pathname === "/feed")}>
+        <HomeIcon className="h-5 w-5" />
+        홈
+      </Link>
       <button type="button" onClick={search.open} className={itemClass(search.isOpen)}>
         <SearchIcon className="h-5 w-5" />
         검색
@@ -61,16 +64,6 @@ export function BottomNav({ currentUserId }: { currentUserId: string }) {
           </span>
         )}
       </Link>
-      <button
-        type="button"
-        onClick={toggleBarCollapsed}
-        aria-label={barCollapsed ? "사운드바 펼치기" : "사운드바 접기"}
-        aria-pressed={!barCollapsed}
-        className={itemClass(!barCollapsed)}
-      >
-        <ListIcon className="h-5 w-5" />
-        재생목록
-      </button>
     </nav>
   );
 }

@@ -14,6 +14,7 @@ import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylist } from "@/components/PlaylistContext";
 import { useMediaProgress } from "@/lib/useMediaProgress";
 import { computeWaveformBars } from "@/lib/waveform";
+import { ExpandedPlayer } from "@/components/ExpandedPlayer";
 import {
   PlayIcon,
   PauseIcon,
@@ -22,7 +23,6 @@ import {
   ListIcon,
   HeadphonesIcon,
   VolumeIcon,
-  ChevronDownIcon,
 } from "@/components/icons";
 
 const BAR_COUNT = 160;
@@ -74,8 +74,6 @@ export function GlobalPlayerBar() {
     videoRef,
     duration,
     setDuration,
-    barCollapsed,
-    toggleBarCollapsed,
   } = useNowPlaying();
   const {
     items: queueItems,
@@ -101,6 +99,14 @@ export function GlobalPlayerBar() {
     volumeRef.current = volume;
     if (videoRef.current) videoRef.current.volume = volume;
   }, [volume, videoRef]);
+
+  // 풀스크린 플레이어(사운드클라우드 참고, 2026-09-23 추가) — 바의 커버·제목 영역을 탭하면
+  // 열린다. 트랙이 바뀌어도 열린 채 유지(다음 곡 자동재생 등), 트랙이 아예 없어지면(정지)
+  // 닫을 화면이 없으므로 같이 닫는다.
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!track) setExpanded(false);
+  }, [track]);
 
   // #1 — 프리셋이 아니라 현재 트랙의 실제 오디오를 분석한 파형.
   const preset = useMemo(() => presetBars(track?.id ?? ""), [track?.id]);
@@ -241,40 +247,6 @@ export function GlobalPlayerBar() {
           똑같은 minmax(0,1fr)로 줘서 파형이 "화면 자체의" 정중앙에 오게 만든다(사용자 요청 —
           파형이 정렬 기준, 나머지 아이콘은 그 파형 양옆에 붙임). 좌우 폭이 같은 1fr이라 안의
           내용물 크기와 무관하게 가운데 열은 항상 정확히 화면 중앙에 위치한다. */}
-      {/* 모바일 접힘 전용 축소 바 — BottomNav 토글로 켜지면 풀 바(아래) 대신 이 얇은 줄만
-          보인다. 데스크톱(md)은 barCollapsed와 무관하게 절대 안 보임(토글 버튼 자체가
-          모바일 전용 BottomNav에만 있으므로). */}
-      <div
-        className={`fixed inset-x-0 bottom-14 z-50 h-11 items-center gap-2 border-t px-3 transition-colors md:hidden ${
-          barCollapsed ? "flex" : "hidden"
-        } ${barBg} ${barText} ${barBorder}`}
-      >
-        <button
-          onClick={track ? toggle : () => playAt(0)}
-          disabled={!track && !hasQueue}
-          aria-label={isPlaying ? "일시정지" : "재생"}
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition disabled:opacity-30 ${playButtonBg}`}
-        >
-          {isPlaying ? <PauseIcon className="h-3.5 w-3.5" /> : <PlayIcon className="h-3.5 w-3.5" />}
-        </button>
-        <button
-          onClick={toggleBarCollapsed}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-          aria-label="사운드바 펼치기"
-        >
-          <span className="truncate text-xs font-semibold">
-            {track ? track.title : hasQueue ? `대기열 ${queueItems.length}곡` : "재생 중인 트랙 없음"}
-          </span>
-        </button>
-        <button
-          onClick={toggleBarCollapsed}
-          aria-label="사운드바 펼치기"
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ${barHover}`}
-        >
-          <ChevronDownIcon className="h-4 w-4 rotate-180" />
-        </button>
-      </div>
-
       <div
         // 전엔 md 이상에서 NavSidebar를 피해 md:left-[72px]로 시작점을 밀어냈는데, 그래도
         // 사이드바 폭 트랜지션 중 사운드바 왼쪽이 가려 보이는 문제가 계속 있었다(2026-09-16
@@ -282,11 +254,7 @@ export function GlobalPlayerBar() {
         // bottom-16까지만 뻗게 줄여서(NavSidebar.tsx 참고) 이 바와 세로로 아예 안 겹치게
         // 했으므로, 여기 있던 left 오프셋도 걷어내고 항상 화면 맨 왼쪽부터 꽉 채운다 — 두
         // 요소가 물리적으로 안 겹치니 어떤 z-index/트랜지션 상황에서도 가려질 수가 없다.
-        // 모바일에서 barCollapsed면 위 축소 바로 대체되니 이 풀 바는 숨긴다(md:grid로
-        // md 이상에서는 항상 강제 노출 — 데스크톱엔 접기 버튼이 없어서 늘 펼쳐진 채여야 함).
-        className={`fixed inset-x-0 bottom-14 z-50 h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t px-3 transition-colors md:bottom-0 md:grid md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${
-          barCollapsed ? "hidden" : "grid"
-        } ${barBg} ${barText} ${barBorder}`}
+        className={`fixed inset-x-0 bottom-14 z-50 grid h-16 grid-cols-[36px_minmax(0,1fr)_140px] items-center gap-2 border-t px-3 transition-colors md:bottom-0 md:grid-cols-[minmax(0,1fr)_900px_minmax(0,1fr)] md:gap-4 md:px-4 ${barBg} ${barText} ${barBorder}`}
       >
         {/* 왼쪽: 트랜스포트 (이전/다음은 데스크톱만 — 모바일은 대기열 패널에서 곡 선택).
             justify-self-end로 이 넓은 왼쪽 열의 오른쪽 끝(=파형 바로 옆)에 붙인다. */}
@@ -354,22 +322,30 @@ export function GlobalPlayerBar() {
             justify-self를 안 줘서 기본값 stretch로 열 전체를 채우고, flex 기본 정렬(시작 쪽
             packing)로 왼쪽부터 붙는다. 이래야 title의 flex-1/truncate도 실제로 동작한다.) */}
         <div className="flex min-w-0 items-center gap-1.5 md:gap-2">
-          <span className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded ${coverBg}`}>
-            {track?.posterSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={track.posterSrc} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <HeadphonesIcon className={`h-4 w-4 ${coverIcon}`} />
-            )}
-          </span>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-xs font-semibold md:text-sm">
-              {track ? track.title : "재생 중인 트랙 없음"}
+          <button
+            type="button"
+            onClick={() => track && setExpanded(true)}
+            disabled={!track}
+            aria-label="플레이어 펼치기"
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left disabled:cursor-default md:gap-2"
+          >
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded ${coverBg}`}>
+              {track?.posterSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={track.posterSrc} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <HeadphonesIcon className={`h-4 w-4 ${coverIcon}`} />
+              )}
             </span>
-            <span className={`truncate text-[11px] md:text-xs ${barMuted}`}>
-              {track ? track.author : hasQueue ? `대기열 ${queueItems.length}곡` : "—"}
-            </span>
-          </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-xs font-semibold md:text-sm">
+                {track ? track.title : "재생 중인 트랙 없음"}
+              </span>
+              <span className={`truncate text-[11px] md:text-xs ${barMuted}`}>
+                {track ? track.author : hasQueue ? `대기열 ${queueItems.length}곡` : "—"}
+              </span>
+            </div>
+          </button>
           <div className="relative hidden md:block">
             {volumeOpen && (
               <>
@@ -426,6 +402,31 @@ export function GlobalPlayerBar() {
           </button>
         </div>
       </div>
+
+      {expanded && track && (
+        <ExpandedPlayer
+          track={track}
+          isPlaying={isPlaying}
+          toggle={toggle}
+          playPrev={playPrev}
+          playNext={playNext}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          bars={bars}
+          playedBarCount={playedBarCount}
+          playedColor={playedColor}
+          unplayedBarColor={unplayedBarColor}
+          playheadColor={playheadColor}
+          pct={pct}
+          seek={seek}
+          progress={progress}
+          duration={duration}
+          onClose={() => setExpanded(false)}
+          hasPanel={hasPanel}
+          queueOpen={queueOpen}
+          toggleQueue={toggleQueue}
+        />
+      )}
     </>
   );
 }
