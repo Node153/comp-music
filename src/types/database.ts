@@ -502,6 +502,23 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      // 관리자 내부 메모(0066) — 회원 상세 패널. 관리자만 조회/작성, 삭제는 본인 메모만.
+      admin_notes: {
+        Row: {
+          id: number;
+          target_user_id: string;
+          author_id: string | null;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          target_user_id: string;
+          author_id: string;
+          body: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       announcements: {
         Row: {
           id: string;

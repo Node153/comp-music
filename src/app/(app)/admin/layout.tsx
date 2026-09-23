@@ -7,7 +7,7 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 // 긴 표의 마지막 행·가로 스크롤바가 가려지지 않도록 feed/help와 같은 기준으로 확보한다.
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6 pb-[7.5rem] md:flex-row md:gap-6 md:px-6 md:pb-24">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 pb-[7.5rem] md:flex-row md:gap-6 md:px-6 md:pb-24">
       <AdminSidebar />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
