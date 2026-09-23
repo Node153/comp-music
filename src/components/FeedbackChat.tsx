@@ -149,7 +149,8 @@ export function FeedbackChat({
   const [isPrivate, setIsPrivate] = useState(true);
   const [image, setImage] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const didInitialScroll = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -268,7 +269,13 @@ export function FeedbackChat({
   }, [supabase]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // scrollIntoView는 채팅 목록뿐 아니라 페이지 전체까지 끌어내려서(모바일에서 제목이 잘린 채
+    // 열림) 목록 컨테이너 자체의 scrollTop만 움직인다. 첫 진입은 즉시, 이후 새 메시지는 부드럽게.
+    const el = listRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: didInitialScroll.current ? "smooth" : "auto" });
+      didInitialScroll.current = true;
+    }
     // 새 메시지가 붙을 때만 — 관리자 답변(UPDATE)/👍로 목록이 바뀔 땐 스크롤을 건드리지 않는다.
   }, [messages.length]);
 
@@ -348,7 +355,7 @@ export function FeedbackChat({
 
   return (
     <div className="flex h-full min-h-[320px] flex-col rounded-xl bg-box-gray">
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div ref={listRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
         {/* 고정 안내 — 빈 채팅방은 먼저 말 꺼내기 어려워서, 운영자가 구체적인 질문을 먼저 던져둔다. */}
         <div className="flex flex-col items-start gap-0.5">
           <span className="flex items-center gap-1.5 px-1 text-[11px] text-active-gray">
@@ -496,7 +503,6 @@ export function FeedbackChat({
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
       <div className="flex flex-wrap items-center gap-1.5 border-t border-main-gray px-2.5 pt-2.5">
         {FEEDBACK_CATEGORIES.map((c) => {

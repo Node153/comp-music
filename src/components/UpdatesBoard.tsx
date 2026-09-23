@@ -2,9 +2,9 @@
 
 // Help(피드백) 페이지 왼쪽 칸 "업데이트 소식"(0067) — 예전 공지사항 목록을 대체한다.
 // 공지 종류별 카드: 공지(운영 안내) / 업데이트(새 기능·수정) / 피드백 반영(강조 카드 — 요청 요약,
-// 바뀐 점, 요청 회원 수·공감 수, "직접 써보기"). 고정 공지는 맨 위. 탭: 전체 / 업데이트(업데이트+
-// 피드백 반영) / 공지.
-import { useState } from "react";
+// 바뀐 점, 요청 회원 수·공감 수, "직접 써보기"). 고정 공지는 맨 위.
+// 2026-09-24 — 피드백 페이지 오른쪽 탭 카드(FeedbackSidePanel) 안으로 들어가면서 자체 박스와
+// 전체/업데이트/공지 필터 탭을 없앴다(탭 안의 탭이라 복잡). 종류는 카드 머리의 라벨로 구분된다.
 import Link from "next/link";
 import { timeAgo } from "@/lib/timeAgo";
 import { ANNOUNCEMENT_KIND_LABEL, isInternalPath, type AnnouncementKind } from "@/lib/announcements";
@@ -31,19 +31,6 @@ export type UpdateItem = {
   createdAt: string;
 };
 
-type Tab = "all" | "updates" | "notices";
-const TABS: { value: Tab; label: string }[] = [
-  { value: "all", label: "전체" },
-  { value: "updates", label: "업데이트" },
-  { value: "notices", label: "공지" },
-];
-
-function matches(item: UpdateItem, tab: Tab) {
-  if (tab === "all") return true;
-  if (tab === "notices") return item.kind === "notice";
-  return item.kind === "update" || item.kind === "feedback";
-}
-
 function KindIcon({ kind, className }: { kind: AnnouncementKind; className?: string }) {
   if (kind === "feedback") return <FeedbackIcon className={className} />;
   if (kind === "update") return <SparkleIcon className={className} />;
@@ -51,28 +38,9 @@ function KindIcon({ kind, className }: { kind: AnnouncementKind; className?: str
 }
 
 export function UpdatesBoard({ items }: { items: UpdateItem[] }) {
-  const [tab, setTab] = useState<Tab>("all");
-  const visible = items.filter((i) => matches(i, tab));
-
   return (
-    <div className="flex flex-col gap-3 overflow-y-auto rounded-xl bg-box-gray p-4 md:max-h-[520px]">
-      <div className="flex gap-1.5">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            type="button"
-            onClick={() => setTab(t.value)}
-            aria-pressed={tab === t.value}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-              tab === t.value ? "bg-black text-white" : "bg-main-gray text-black hover:bg-demo-bg"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {visible.map((a) => {
+    <div className="flex flex-col gap-2">
+      {items.map((a) => {
         const isFeedback = a.kind === "feedback";
         return (
           <article
@@ -136,11 +104,7 @@ export function UpdatesBoard({ items }: { items: UpdateItem[] }) {
         );
       })}
 
-      {visible.length === 0 && (
-        <p className="py-6 text-center text-sm text-active-gray">
-          {tab === "notices" ? "아직 공지가 없어요" : "아직 업데이트 소식이 없어요"}
-        </p>
-      )}
+      {items.length === 0 && <p className="py-8 text-center text-xs text-active-gray">아직 업데이트 소식이 없어요</p>}
     </div>
   );
 }

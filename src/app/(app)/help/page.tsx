@@ -1,12 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { FeedbackChat, type FeedbackChatMessage } from "@/components/FeedbackChat";
-import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
-import { ArrowRightIcon, FeedbackIcon, HammerIcon, SparkleIcon, ThumbsUpIcon } from "@/components/icons";
-import { UpdatesBoard, type UpdateItem } from "@/components/UpdatesBoard";
+import { pageTitle } from "@/components/ui/styles";
+import { type UpdateItem } from "@/components/UpdatesBoard";
 import { MarkUpdatesSeen } from "@/components/UpdatesStatusContext";
-import { FeedbackStatusIcon } from "@/components/FeedbackIcons";
-import { FEEDBACK_STATUS_LABEL } from "@/lib/feedback";
-import { ContributionPanel, type BoardRow, type MyContribution } from "@/components/ContributionPanel";
+import { type BoardRow, type MyContribution } from "@/components/ContributionPanel";
+import { FeedbackSidePanel, type BuildingItem } from "@/components/FeedbackSidePanel";
 
 // Help(구 Away) — 공지사항+피드백 창구(0021_announcements_and_feedback).
 // 0067 — 왼쪽 칸은 "업데이트 소식"(UpdatesBoard): 공지/업데이트/피드백 반영 카드, 고정 공지 먼저.
@@ -14,7 +12,10 @@ import { ContributionPanel, type BoardRow, type MyContribution } from "@/compone
 // 검토 중 → 반영, 이번 달 반영, 평균 첫 응답)와 "지금 만드는 중"(공감 많은 공개 의견)을 둔다.
 // 숫자가 0인 항목은 역효과라 숨긴다. 모바일 순서: 현황 → 만드는 중 → 채팅 → 업데이트 소식
 // (참여를 먼저), 데스크톱: 왼쪽(만드는 중+업데이트 소식) · 오른쪽(채팅).
-// 0069 — 현황 띠 아래 "내 기여도 + 기여 랭킹"(ContributionPanel, 점수·순위만).
+// 0069 — "내 기여도 + 기여 랭킹"(ContributionPanel, 점수·순위만).
+// 2026-09-24 정리 — 박스가 5개로 늘어 복잡해져서: 현황 띠는 제목 아래 한 줄(StatusLine)로,
+// 업데이트 소식·만드는 중·기여 랭킹은 오른쪽 탭 카드 하나(FeedbackSidePanel)로 모았다.
+// 데스크톱: 왼쪽 채팅(주인공) · 오른쪽 탭 카드, 모바일: 채팅 → 탭 카드.
 // 관리자 페이지 진입은 TopNav 프로필 드롭다운(ProfileMenu)의 "관리자 메뉴"로 옮겼다.
 // 여기서 isAdmin은 피드백 채팅 메시지 삭제 권한 판정에만 쓴다.
 
@@ -32,7 +33,8 @@ function responseTimeText(hours: number) {
   return `${Math.ceil(hours / 24)}일 안에`;
 }
 
-function StatusStrip({ stats }: { stats: Stats | null }) {
+// 제목 아래 한 줄 — 운영자가 직접 읽는다는 약속 + 처리 현황 숫자(0인 항목은 숨김).
+function StatusLine({ stats }: { stats: Stats | null }) {
   const steps = stats
     ? [
         { label: "받은 의견", value: stats.received },
@@ -41,73 +43,32 @@ function StatusStrip({ stats }: { stats: Stats | null }) {
       ].filter((st) => st.value > 0)
     : [];
   return (
-    <section className="flex flex-col gap-3 rounded-xl bg-box-gray p-4 md:flex-row md:items-center md:justify-between">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-2 text-sm md:flex-row md:items-center md:justify-between">
+      <span className="flex items-center gap-2 text-active-gray">
         {/* eslint-disable-next-line @next/next/no-img-element -- 정적 브랜드 이미지(NavSidebar와 동일) */}
-        <img src="/brand-cat.png" alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-black">운영자가 모든 의견을 직접 읽어요</span>
-          <span className="text-xs text-active-gray">
-            {stats?.avg_response_hours != null
-              ? `최근 의견엔 평균 ${responseTimeText(Number(stats.avg_response_hours))} 답했어요`
-              : "남겨주신 의견은 검토 후 상태와 답변으로 알려드려요"}
-          </span>
-        </div>
-      </div>
+        <img src="/brand-cat.png" alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+        <span>
+          <span className="font-semibold text-black">운영자가 모든 의견을 직접 읽어요</span>
+          {stats?.avg_response_hours != null && (
+            <> · 최근 평균 {responseTimeText(Number(stats.avg_response_hours))} 답했어요</>
+          )}
+        </span>
+      </span>
       {steps.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-black">
-          {steps.map((st, i) => (
-            <span key={st.label} className="inline-flex items-center gap-2">
-              {i > 0 && <ArrowRightIcon className="h-3.5 w-3.5 text-active-gray" />}
-              <span className="text-xs text-active-gray">{st.label}</span>
-              <span className="font-semibold tabular-nums">{st.value}</span>
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-active-gray">
+          {steps.map((st) => (
+            <span key={st.label}>
+              {st.label} <span className="font-semibold tabular-nums text-black">{st.value}</span>
             </span>
           ))}
           {stats && stats.done_this_month > 0 && (
-            <span className="ml-1 rounded-full bg-black px-2.5 py-0.5 text-xs font-medium text-white">
+            <span className="rounded-full bg-black px-2 py-0.5 font-medium text-white">
               이번 달 반영 {stats.done_this_month}건
             </span>
           )}
-        </div>
+        </span>
       )}
-    </section>
-  );
-}
-
-// "지금 만드는 중" — 검토 중인 공개 의견을 공감순으로, 3개가 안 되면 공감 받은 접수 의견으로 채움(최대 5).
-function BuildingNow({ items }: { items: FeedbackChatMessage[] }) {
-  return (
-    <section className="flex min-w-0 flex-col gap-3">
-      <h2 className={`${sectionTitle} flex items-center gap-1.5 !text-black`}>
-        <HammerIcon className="h-5 w-5" /> 지금 만드는 중
-      </h2>
-      <div className="flex flex-col gap-1.5 rounded-xl bg-box-gray p-3">
-        {items.map((m, i) => (
-          <a
-            key={m.id}
-            href={`#fb-${m.id}`}
-            className="flex items-center gap-3 rounded-lg bg-main-gray px-3 py-2 text-sm text-black transition hover:bg-demo-bg"
-          >
-            <span className="w-4 shrink-0 text-center text-xs font-semibold tabular-nums text-active-gray">{i + 1}</span>
-            <span className="min-w-0 flex-1 truncate">{m.content}</span>
-            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-active-gray">
-              <FeedbackStatusIcon status={m.status} className="h-3 w-3" />
-              {FEEDBACK_STATUS_LABEL[m.status]}
-            </span>
-            {m.likers.length > 0 && (
-              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-active-gray">
-                <ThumbsUpIcon className="h-3 w-3" /> {m.likers.length}
-              </span>
-            )}
-          </a>
-        ))}
-        {items.length === 0 && (
-          <p className="px-2 py-3 text-center text-xs text-active-gray">
-            공감을 많이 받은 의견이 여기 올라와요. 채팅에서 “나도”로 공감해 보세요.
-          </p>
-        )}
-      </div>
-    </section>
+    </div>
   );
 }
 
@@ -202,66 +163,57 @@ export default async function HelpPage() {
   const candidates = feedbackMessages.filter((m) => !m.isPrivate && !m.announcementId && m.category);
   const reviewing = candidates.filter((m) => m.status === "reviewing").sort(byLikes);
   const popularReceived = candidates.filter((m) => m.status === "received" && m.likers.length > 0).sort(byLikes);
-  const buildingNow = [...reviewing, ...(reviewing.length < 3 ? popularReceived : [])].slice(0, 5);
+  const buildingNow: BuildingItem[] = [...reviewing, ...(reviewing.length < 3 ? popularReceived : [])]
+    .slice(0, 5)
+    .map((m) => ({ id: m.id, content: m.content, status: m.status, likes: m.likers.length }));
 
   return (
     // 모바일은 pb-24(96px)로는 부족 — 로그인 사용자에겐 하단바 두 개(GlobalPlayerBar 64px +
     // BottomNav 56px = 7.5rem/120px)가 항상 떠 있어서, 페이지 맨 아래 피드백 채팅 입력창이
     // 그 밑에 24px 정도 가려지는 문제가 있었다(2026-09-22 확인 — messages/[conversationId]와
     // 같은 원인). 데스크톱은 BottomNav가 없어(md:hidden) 기존 md:pb-6 그대로 둔다.
-    <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 bg-main-gray p-6 pb-[7.5rem] md:my-6 md:rounded-lg md:pb-6">
-      <div>
-        <h1 className={`${pageTitle} !text-black`}>피드백</h1>
-        <p className={`${mutedText} !text-active-gray mt-1`}>여러분의 의견으로 바뀐 것들을 확인하고, 하고 싶은 말을 남겨주세요.</p>
-      </div>
-
+    <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-5 bg-main-gray p-6 pb-[7.5rem] md:my-6 md:rounded-lg md:pb-6">
       {user && <MarkUpdatesSeen />}
-      <StatusStrip stats={stats} />
-      {user && myContribution && (
-        <ContributionPanel
-          userId={user.id}
-          mine={myContribution}
-          monthBoard={(monthBoard ?? []) as BoardRow[]}
-          allBoard={(allBoard ?? []) as BoardRow[]}
-        />
-      )}
-
-      {/* 데스크톱: 왼쪽(만드는 중 + 업데이트 소식) · 오른쪽(채팅, 두 줄 차지).
-          모바일: order로 만드는 중 → 채팅 → 업데이트 소식 순. */}
-      <div className="grid gap-6 md:grid-cols-2 md:grid-rows-[auto_1fr]">
-        <div className="order-1 min-w-0 md:col-start-1 md:row-start-1">
-          <BuildingNow items={buildingNow} />
+      <header className="flex flex-col gap-3">
+        <div>
+          <h1 className={`${pageTitle} !text-black`}>피드백</h1>
+          <p className="mt-1 text-sm text-active-gray">불편한 점, 바라는 점을 편하게 남겨주세요. 반영되면 알려드려요.</p>
         </div>
+        <StatusLine stats={stats} />
+      </header>
 
-        <section className="order-2 flex min-w-0 flex-col gap-3 md:col-start-2 md:row-span-2 md:row-start-1">
-          <h2 className={`${sectionTitle} flex items-center gap-1.5 !text-black`}>
-            <FeedbackIcon className="h-5 w-5" /> 피드백 채팅
-          </h2>
-          <p className={`${mutedText} !text-active-gray`}>
-            유형을 고르면 더 빨리 확인할 수 있어요. “운영자에게만”으로 보내면 다른 회원에게는 보이지 않아요.
-          </p>
-          <div className="h-[70vh] md:h-auto md:min-h-[600px] md:flex-1">
-            {user ? (
-              <FeedbackChat
-                currentUserId={user.id}
-                isAdmin={isAdmin}
-                initialMessages={feedbackMessages}
-                announcementLinks={announcementLinks}
-              />
-            ) : (
-              <p className="flex h-full items-center justify-center rounded-xl bg-box-gray text-center text-sm text-active-gray">
-                로그인 후 이용할 수 있어요.
-              </p>
-            )}
-          </div>
+      <div className="grid gap-5 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <section aria-label="피드백 채팅" className="h-[70vh] min-w-0 md:h-[640px]">
+          {user ? (
+            <FeedbackChat
+              currentUserId={user.id}
+              isAdmin={isAdmin}
+              initialMessages={feedbackMessages}
+              announcementLinks={announcementLinks}
+            />
+          ) : (
+            <p className="flex h-full items-center justify-center rounded-xl bg-box-gray text-center text-sm text-active-gray">
+              로그인 후 이용할 수 있어요.
+            </p>
+          )}
         </section>
 
-        <section id="updates" className="order-3 flex min-w-0 scroll-mt-4 flex-col gap-3 md:col-start-1 md:row-start-2">
-          <h2 className={`${sectionTitle} flex items-center gap-1.5 !text-black`}>
-            <SparkleIcon className="h-5 w-5" /> 업데이트 소식
-          </h2>
-          <UpdatesBoard items={updates} />
-        </section>
+        <aside className="h-[70vh] min-w-0 scroll-mt-4 md:h-[640px]">
+          <FeedbackSidePanel
+            updates={updates}
+            building={buildingNow}
+            contribution={
+              user && myContribution
+                ? {
+                    userId: user.id,
+                    mine: myContribution,
+                    monthBoard: (monthBoard ?? []) as BoardRow[],
+                    allBoard: (allBoard ?? []) as BoardRow[],
+                  }
+                : null
+            }
+          />
+        </aside>
       </div>
     </main>
   );
