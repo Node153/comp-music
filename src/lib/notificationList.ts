@@ -37,6 +37,8 @@ export type NotificationItem = (
     }
   // 0067 — 내가 👍 공감한 피드백이 "피드백 반영" 공지로 올라왔을 때. id/createdAt = 공지.
   | { type: "liked_feedback_announced"; id: string; title: string; createdAt: string }
+  // 0069 — 이번 달 기여 3위 안 진입 / 1위 달성(좋은 소식만).
+  | { type: "contribution_milestone"; id: string; milestone: "top3" | "first"; createdAt: string }
 ) & { href: string; unread: boolean };
 
 // 내가 공감(feedback_reactions)한 피드백과 연결된 "피드백 반영" 공지 — 알림 목록과 뱃지 숫자
@@ -96,6 +98,12 @@ export async function getNotificationItems(
       .limit(50),
     getLikedFeedbackAnnouncements(supabase, userId),
   ]);
+  const { data: milestones } = await supabase
+    .from("contribution_milestones")
+    .select("month, milestone, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
   const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
@@ -225,6 +233,16 @@ export async function getNotificationItems(
         createdAt: f.admin_updated_at as string,
         href: "/help",
         unread: isUnread(f.admin_updated_at as string),
+      }),
+    ),
+    ...(milestones ?? []).map(
+      (m): NotificationItem => ({
+        type: "contribution_milestone",
+        id: `${m.month}-${m.milestone}`,
+        milestone: m.milestone,
+        createdAt: m.created_at,
+        href: "/help",
+        unread: isUnread(m.created_at),
       }),
     ),
     ...likedAnnouncements.map(

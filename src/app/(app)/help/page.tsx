@@ -6,6 +6,7 @@ import { UpdatesBoard, type UpdateItem } from "@/components/UpdatesBoard";
 import { MarkUpdatesSeen } from "@/components/UpdatesStatusContext";
 import { FeedbackStatusIcon } from "@/components/FeedbackIcons";
 import { FEEDBACK_STATUS_LABEL } from "@/lib/feedback";
+import { ContributionPanel, type BoardRow, type MyContribution } from "@/components/ContributionPanel";
 
 // Help(구 Away) — 공지사항+피드백 창구(0021_announcements_and_feedback).
 // 0067 — 왼쪽 칸은 "업데이트 소식"(UpdatesBoard): 공지/업데이트/피드백 반영 카드, 고정 공지 먼저.
@@ -13,6 +14,7 @@ import { FEEDBACK_STATUS_LABEL } from "@/lib/feedback";
 // 검토 중 → 반영, 이번 달 반영, 평균 첫 응답)와 "지금 만드는 중"(공감 많은 공개 의견)을 둔다.
 // 숫자가 0인 항목은 역효과라 숨긴다. 모바일 순서: 현황 → 만드는 중 → 채팅 → 업데이트 소식
 // (참여를 먼저), 데스크톱: 왼쪽(만드는 중+업데이트 소식) · 오른쪽(채팅).
+// 0069 — 현황 띠 아래 "내 기여도 + 기여 랭킹"(ContributionPanel, 점수·순위만).
 // 관리자 페이지 진입은 TopNav 프로필 드롭다운(ProfileMenu)의 "관리자 메뉴"로 옮겼다.
 // 여기서 isAdmin은 피드백 채팅 메시지 삭제 권한 판정에만 쓴다.
 
@@ -128,6 +130,15 @@ export default async function HelpPage() {
     .order("created_at", { ascending: false }),
     user ? supabase.rpc("feedback_stats") : Promise.resolve({ data: null }),
   ]);
+
+  const [{ data: myContribRows }, { data: monthBoard }, { data: allBoard }] = user
+    ? await Promise.all([
+        supabase.rpc("my_contribution"),
+        supabase.rpc("contribution_leaderboard", { p_period: "month", p_limit: 10 }),
+        supabase.rpc("contribution_leaderboard", { p_period: "all", p_limit: 10 }),
+      ])
+    : [{ data: null }, { data: null }, { data: null }];
+  const myContribution = (myContribRows?.[0] as MyContribution | undefined) ?? null;
   const stats = (statsRows?.[0] as Stats | undefined) ?? null;
   const announcementLinks = Object.fromEntries((announcements ?? []).map((a) => [a.id, a.link_url]));
   const updates: UpdateItem[] = (announcements ?? []).map((a) => ({
@@ -206,6 +217,14 @@ export default async function HelpPage() {
 
       {user && <MarkUpdatesSeen />}
       <StatusStrip stats={stats} />
+      {user && myContribution && (
+        <ContributionPanel
+          userId={user.id}
+          mine={myContribution}
+          monthBoard={(monthBoard ?? []) as BoardRow[]}
+          allBoard={(allBoard ?? []) as BoardRow[]}
+        />
+      )}
 
       {/* 데스크톱: 왼쪽(만드는 중 + 업데이트 소식) · 오른쪽(채팅, 두 줄 차지).
           모바일: order로 만드는 중 → 채팅 → 업데이트 소식 순. */}

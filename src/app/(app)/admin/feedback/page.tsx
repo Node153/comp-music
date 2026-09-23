@@ -24,6 +24,7 @@ import { AnnounceComposer, AnnounceSelectionProvider, SelectForAnnounce } from "
 //
 // 0065 — "나도 👍" 수(?sort=likes로 공감순 정렬), 첨부 스크린샷, 상황별 짧은 설문 결과 요약.
 // 0067 — 여러 건을 골라 "피드백 반영" 공지 하나로 묶기(AnnounceSelection). 이미 공지된 건 표시.
+// 0069 — 기여도 상위 회원(누적/이번 달/최근 90일 점수, 반영된 의견 수). 관리자만 보는 화면.
 type SearchParams = { status?: string; category?: string; sort?: string };
 
 function filterHref(current: SearchParams, patch: SearchParams) {
@@ -38,6 +39,34 @@ function chipClass(active: boolean) {
   return `rounded-full px-2.5 py-1 text-xs font-medium transition ${
     active ? "bg-black text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
   }`;
+}
+
+// 기여도 상위 회원 — contribution_events는 관리자에게 전부 보인다(RLS). 파일럿 규모라 전량을 받아
+// 합산한다. "이번 달" 경계는 DB의 contribution_month_start()(Asia/Seoul)를 그대로 쓴다.
+async function loadContributionTop(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const [{ data: events }, { data: monthStartIso }] = await Promise.all([
+    supabase.from("contribution_events").select("user_id, kind, points, created_at"),
+    supabase.rpc("contribution_month_start"),
+  ]);
+  const monthStart = monthStartIso ? new Date(monthStartIso as string).getTime() : 0;
+  const since90 = Date.now() - 90 * 86_400_000;
+  const byUser = new Map<string, { total: number; month: number; recent: number; done: number }>();
+  for (const e of events ?? []) {
+    const row = byUser.get(e.user_id) ?? { total: 0, month: 0, recent: 0, done: 0 };
+    const at = new Date(e.created_at).getTime();
+    row.total += e.points;
+    if (at >= monthStart) row.month += e.points;
+    if (at >= since90) row.recent += e.points;
+    if (e.kind === "feedback_done") row.done += 1;
+    byUser.set(e.user_id, row);
+  }
+  const ids = [...byUser.keys()];
+  const { data: users } =
+    ids.length > 0 ? await supabase.from("users").select("id, name, nickname").in("id", ids) : { data: [] };
+  return (users ?? [])
+    .map((u) => ({ ...u, ...byUser.get(u.id)! }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 20);
 }
 
 export default async function AdminFeedbackPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -102,9 +131,43 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
       : { data: [] };
   const userMap = new Map((users ?? []).map((u) => [u.id, u]));
 
+  const contribTop = await loadContributionTop(supabase);
+
   return (
     <main className="flex flex-col gap-5">
       <h1 className={pageTitle}>피드백</h1>
+
+      <section className="flex flex-col gap-2 rounded-xl border border-gray-200 p-4">
+        <p className="text-sm font-semibold text-gray-900">기여도 상위 회원</p>
+        {contribTop.length > 0 ? (
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs text-gray-500">
+              <tr>
+                <th className="py-1 font-medium">회원</th>
+                <th className="py-1 text-right font-medium">누적</th>
+                <th className="py-1 text-right font-medium">이번 달</th>
+                <th className="py-1 text-right font-medium">최근 90일</th>
+                <th className="py-1 text-right font-medium">반영 의견</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-800">
+              {contribTop.map((u) => (
+                <tr key={u.id} className="border-t border-gray-100">
+                  <td className="py-1.5">
+                    {u.name} <span className="text-xs text-gray-400">{u.nickname}</span>
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums">{u.total}</td>
+                  <td className="py-1.5 text-right tabular-nums">{u.month}</td>
+                  <td className="py-1.5 text-right tabular-nums">{u.recent}</td>
+                  <td className="py-1.5 text-right tabular-nums">{u.done}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className={mutedText}>아직 점수를 얻은 회원이 없습니다</p>
+        )}
+      </section>
 
       <section className="grid gap-2 md:grid-cols-2">
         {pulseSummary.map((p) => (

@@ -559,3 +559,21 @@ export function HammerIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// 기여 랭킹 1위(0069).
+export function CrownIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-2 11H5z" />
+    </svg>
+  );
+}
+
+export function TrophyIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z" />
+      <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
+    </svg>
+  );
+}

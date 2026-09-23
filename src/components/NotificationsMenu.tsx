@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { BellIcon, FeedbackIcon, FlameIcon, XIcon } from "@/components/icons";
+import { BellIcon, CrownIcon, FeedbackIcon, FlameIcon, XIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
 import { navRowClass, navLabelClass, topBarIconClass } from "@/components/ui/styles";
@@ -227,6 +227,10 @@ export function NotificationsMenu({
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-600">
                               <FlameIcon className="h-4 w-4 text-white" />
                             </span>
+                          ) : item.type === "contribution_milestone" ? (
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-white dark:bg-white dark:text-black">
+                              <CrownIcon className="h-4 w-4" />
+                            </span>
                           ) : item.type === "feedback_update" || item.type === "liked_feedback_announced" ? (
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                               <FeedbackIcon className="h-4 w-4" />
@@ -238,6 +242,8 @@ export function NotificationsMenu({
                             <span className="text-gray-800 dark:text-gray-200">
                               {item.type === "peak" ? (
                                 "회원님의 게시물이 PEAK에 도달했어요"
+                              ) : item.type === "contribution_milestone" ? (
+                                item.milestone === "first" ? "이번 달 기여 1위가 됐어요" : "이번 달 기여 3위 안에 들었어요"
                               ) : item.type === "liked_feedback_announced" ? (
                                 "공감한 의견이 반영됐어요"
                               ) : item.type === "feedback_update" ? (

@@ -67,6 +67,8 @@ export interface Database {
           notifications_seen_at: string;
           // 0068 — 피드백 메뉴 "새 소식" 점/홈 배너 판정(마지막으로 업데이트 소식을 본 시각).
           updates_seen_at: string;
+          // 0069 — 기여 랭킹 목록에서 내 이름 숨기기(점수는 계속 쌓임).
+          hide_from_ranking: boolean;
           // 우측 사이드바 온라인/자리비움/오프라인 판정용(0025) — 클라이언트가 주기적으로 갱신,
           // 한 번도 접속 안 했으면 null(오프라인 취급).
           last_seen_at: string | null;
@@ -109,6 +111,7 @@ export interface Database {
           role?: UserRole;
           notifications_seen_at?: string;
           updates_seen_at?: string;
+          hide_from_ranking?: boolean;
           last_seen_at?: string | null;
           needs_onboarding?: boolean;
           birth_date?: string | null;
@@ -555,6 +558,33 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["announcements"]["Insert"]>;
         Relationships: [];
       };
+      // 0069 — 기여 점수 적립 기록(트리거만 씀, 본인·관리자만 조회).
+      contribution_events: {
+        Row: {
+          id: number;
+          user_id: string;
+          kind: "feedback_reviewing" | "feedback_done" | "like_received" | "liked_done" | "pulse_comment";
+          points: number;
+          feedback_id: string | null;
+          source_key: string;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      // 0069 — 이번 달 3위 안/1위 달성 기록(순위 알림용, 본인만 조회).
+      contribution_milestones: {
+        Row: {
+          user_id: string;
+          month: string;
+          milestone: "top3" | "first";
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       // 0067 — 피드백 반영 공지 ↔ 반영된 피드백(여러 건 → 공지 하나).
       announcement_feedback: {
         Row: {
@@ -744,6 +774,30 @@ export interface Database {
       };
     };
     Functions: {
+      // 0069 — 이번 달 시작 시각(Asia/Seoul) — 기여 점수 "이번 달" 경계.
+      contribution_month_start: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      // 0069 — 기여 랭킹(이번 달 'month' / 누적 'all'). 관리자·랭킹 숨김 회원 제외.
+      contribution_leaderboard: {
+        Args: { p_period?: string; p_limit?: number };
+        Returns: { user_id: string; nickname: string; points: number; rank: number }[];
+      };
+      // 0069 — 내 기여도(이번 달/누적 점수·순위, 위 순위까지 남은 점수).
+      my_contribution: {
+        Args: Record<string, never>;
+        Returns: {
+          month_points: number;
+          month_rank: number | null;
+          month_gap: number | null;
+          month_leader_gap: number | null;
+          month_participants: number;
+          total_points: number;
+          total_rank: number | null;
+          hide_from_ranking: boolean;
+        }[];
+      };
       // 0068 — 피드백 처리 현황 집계(숫자만, security definer). 승인 회원만.
       feedback_stats: {
         Args: Record<string, never>;

@@ -27,6 +27,12 @@ export async function computeUnseenNotificationCount(
     // 0067 — 내가 공감한 피드백의 반영 공지(notificationList.ts와 동일 정의).
     getLikedFeedbackAnnouncements(supabase, userId, seenAt),
   ]);
+  // 0069 — 기여 순위 달성(notificationList.ts의 contribution_milestone과 동일 기준).
+  const { data: newMilestones } = await supabase
+    .from("contribution_milestones")
+    .select("month")
+    .eq("user_id", userId)
+    .gt("created_at", seenAt);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
   const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
@@ -62,6 +68,7 @@ export async function computeUnseenNotificationCount(
     newKnockCount +
     (newCompanionRequests?.length ?? 0) +
     (newFeedbackUpdates?.length ?? 0) +
-    newLikedAnnouncements.length
+    newLikedAnnouncements.length +
+    (newMilestones?.length ?? 0)
   );
 }
