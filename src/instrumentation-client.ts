@@ -24,8 +24,11 @@ if (typeof window !== "undefined") {
     reportClientError("window", e.message || "window error", e.error?.stack);
   });
   window.addEventListener("unhandledrejection", (e) => {
-    const r = e.reason as { message?: string; stack?: string } | undefined;
-    reportClientError("promise", r?.message ?? String(e.reason), r?.stack);
+    const r = e.reason as { name?: string; message?: string; stack?: string } | undefined;
+    const message = r?.message ?? String(e.reason);
+    // AbortError(네비게이션/언마운트로 fetch가 취소됨)는 정상 동작 — 노이즈라 리포트하지 않음.
+    if (r?.name === "AbortError" || /\baborted\b/i.test(message)) return;
+    reportClientError("promise", message, r?.stack);
   });
 }
 
