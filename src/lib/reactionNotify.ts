@@ -25,8 +25,11 @@ type Kind = "like" | "comment" | "reply";
 
 export type PostInfo = { id: string; user_id: string; title: string | null; caption: string | null; visibility: string };
 
-export function postHref(post: Pick<PostInfo, "id" | "visibility">) {
-  return `/feed?feed=${post.visibility === "public" ? "completion" : "complex"}#${post.id}`;
+// 내 게시물에 대한 알림(반응·청취자·PEAK)에서 오는 링크엔 from=notify를 붙인다 — 피드가 그걸 보고
+// "다음 Drop 올리기" 배너(NotifyLandingBanner)를 띄운다. 남의 글로 보내는 링크(Companion 새 글 등)는
+// ownPost=false로 부른다.
+export function postHref(post: Pick<PostInfo, "id" | "visibility">, ownPost = true) {
+  return `/feed?feed=${post.visibility === "public" ? "completion" : "complex"}${ownPost ? "&from=notify" : ""}#${post.id}`;
 }
 
 export function postLabel(post: PostInfo) {

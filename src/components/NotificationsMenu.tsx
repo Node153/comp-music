@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { BellIcon, CrownIcon, FeedbackIcon, FlameIcon, HeadphonesIcon, KickIcon, XIcon } from "@/components/icons";
+import { BellIcon, CrownIcon, FeedbackIcon, FlameIcon, HeadphonesIcon, KickIcon, UploadIcon, XIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
 import { navRowClass, navLabelClass, topBarIconClass } from "@/components/ui/styles";
@@ -36,6 +36,16 @@ function matchesCategory(item: NotificationItem, filter: CategoryFilter) {
   if (filter === "request") return item.type === "companion_request" || item.type === "knock";
   return item.type === "peak" || item.type === "peak_progress";
 }
+
+// 내 게시물에 대한 소식 — 하나라도 있으면 패널 아래에 "새 Drop 올리기"를 띄운다(0077).
+const OWN_POST_NEWS_TYPES = new Set<NotificationItem["type"]>([
+  "like",
+  "kick",
+  "comment",
+  "peak",
+  "peak_progress",
+  "play_milestone",
+]);
 
 // 인스타그램 알림탭과 같은 시간 구간 묶음. 알림이 createdAt 내림차순으로 이미 정렬돼 오므로
 // 순서대로 훑으면서 구간이 바뀔 때만 새 섹션을 만들면 된다(별도 정렬/버킷 배열 불필요).
@@ -117,6 +127,8 @@ export function NotificationsMenu({
       cancelled = true;
     };
   }, [open, userId, markSeen]);
+
+  const hasOwnPostNews = (items ?? []).some((item) => OWN_POST_NEWS_TYPES.has(item.type));
 
   const filteredItems = useMemo(
     () => (items ?? []).filter((item) => matchesCategory(item, category)),
@@ -333,6 +345,23 @@ export function NotificationsMenu({
                 ))
               )}
             </div>
+
+            {/* 반응 → 다음 업로드(0077) — 내 게시물에 반응·청취·PEAK 소식이 하나라도 있으면 목록 바로
+                아래에 업로드 버튼을 둔다(반응을 확인하는 순간이 다음 작업을 올리기 가장 좋은 때). */}
+            {hasOwnPostNews && (
+              <div className="flex shrink-0 items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 dark:border-gray-800">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  반응이 올 때가 다음 작업을 올리기 좋은 타이밍이에요
+                </span>
+                <Link
+                  href="/upload"
+                  onClick={close}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-black px-3.5 py-2 text-xs font-semibold text-white transition hover:opacity-80 dark:bg-white dark:text-black"
+                >
+                  <UploadIcon className="h-3.5 w-3.5" />새 Drop 올리기
+                </Link>
+              </div>
+            )}
           </div>
         </>
       )}

@@ -98,6 +98,11 @@ export interface Database {
           push_notify_progress: boolean;
           email_notify_companion_post: boolean;
           email_notify_progress: boolean;
+          // 0077 — 월요일 주간 리포트(지난주 반응·청취자 + Kick 충전 + 새 Drop 유도).
+          email_notify_weekly: boolean;
+          push_notify_weekly: boolean;
+          // 마지막으로 주간 리포트를 보낸 주의 월요일(KST, 'YYYY-MM-DD') — 같은 주 중복 발송 방지.
+          weekly_report_week: string | null;
           // 이메일 다이제스트 발송 커서(0035) — 크론이 "이 시각 이후로 새로 생긴 것"만 골라
           // 보내고 나면 여기를 now()로 갱신한다.
           last_notification_emailed_at: string;
@@ -141,6 +146,9 @@ export interface Database {
           push_notify_progress?: boolean;
           email_notify_companion_post?: boolean;
           email_notify_progress?: boolean;
+          email_notify_weekly?: boolean;
+          push_notify_weekly?: boolean;
+          weekly_report_week?: string | null;
           last_notification_emailed_at?: string;
           withdrawn_at?: string | null;
           admin_notified_at?: string | null;

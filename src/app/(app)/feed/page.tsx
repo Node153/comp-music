@@ -8,6 +8,7 @@ import { loadFeedChunk } from "./feedChunk";
 import { isOneScreenFeed } from "./feedRender";
 import { FeedInfiniteList } from "./FeedInfiniteList";
 import { NewDropsRail } from "./NewDropsRail";
+import { NotifyLandingBanner } from "./NotifyLandingBanner";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성.
@@ -18,9 +19,9 @@ import { NewDropsRail } from "./NewDropsRail";
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ feed?: string; tag?: string }>;
+  searchParams: Promise<{ feed?: string; tag?: string; from?: string }>;
 }) {
-  const { feed: feedParam, tag: tagParam } = await searchParams;
+  const { feed: feedParam, tag: tagParam, from: fromParam } = await searchParams;
   // Demo(전체공개, 노출영구) 기본값 · Complex(비공개, 노출시간필수 — 팔로워공개 또는 특정인 초대)는
   // 0012_complex_access_and_chat부터 실제 posts에 저장됨. visibility='public'이 demo, 그 외
   // ('followers'/'invite_only')가 Complex — 같은 posts 테이블을 이 컬럼으로 나눠서 쓴다.
@@ -101,6 +102,8 @@ export default async function FeedPage({
           </Link>
         </div>
       )}
+      {/* 내 게시물 알림(푸시·메일·알림 패널)을 타고 들어왔을 때 — 다음 Drop 올리기 유도(0077). */}
+      {currentUser && fromParam === "notify" && <NotifyLandingBanner userId={currentUser.id} />}
       {tagParam && (
         <div className="mx-3 mb-4 flex items-center justify-between gap-3 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 md:mx-0">
           <span className="text-sm text-gray-600">

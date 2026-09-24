@@ -139,7 +139,8 @@ export async function notifyPublished(authorId: string, postId: string) {
   const { data: author } = await admin.from("users").select("name, nickname").eq("id", authorId).single();
   const authorName = author?.name || author?.nickname || "Companion";
   const label = postLabel(post);
-  const href = postHref(post);
+  // 받는 사람(Companion)에겐 남의 글이라 업로드 유도 배너 없이.
+  const href = postHref(post, false);
   const isDemo = post.visibility === "public";
 
   let recipientIds: string[];
@@ -194,7 +195,7 @@ async function alertAdminsNewDrop(nickname: string, label: string, postId: strin
         embeds: [
           {
             title: "🎵 새 Drop — 2시간 안에 첫 반응 부탁해요",
-            description: `**${nickname}** · 「${label}」\n[게시물 보기](${APP_URL}${postHref({ id: postId, visibility: "public" })}) · [반응 대기 목록](${APP_URL}/admin/awaiting-reactions)`,
+            description: `**${nickname}** · 「${label}」\n[게시물 보기](${APP_URL}${postHref({ id: postId, visibility: "public" }, false)}) · [반응 대기 목록](${APP_URL}/admin/awaiting-reactions)`,
             color: 0xf59e0b,
             timestamp: new Date().toISOString(),
           },

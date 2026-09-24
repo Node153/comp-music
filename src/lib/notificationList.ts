@@ -242,7 +242,8 @@ export async function getNotificationItems(
   const peakedPosts = (myPosts ?? []).filter((p) => p.peaked_at);
 
   function hrefFor(postId: string) {
-    return `/feed?feed=${visibilityByPostId.get(postId) === "public" ? "completion" : "complex"}#${postId}`;
+    // 내 게시물 알림 → 피드에 "다음 Drop 올리기" 배너(from=notify, NotifyLandingBanner).
+    return `/feed?feed=${visibilityByPostId.get(postId) === "public" ? "completion" : "complex"}&from=notify#${postId}`;
   }
   const titleByPostId = new Map((myPosts ?? []).map((p) => [p.id, p.title || p.caption || "회원님의 게시물"]));
   function isUnread(createdAt: string) {
