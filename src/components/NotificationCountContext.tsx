@@ -21,21 +21,45 @@ const NotificationCountContext = createContext<NotificationCountContextValue>({
   markSeen: async () => {},
 });
 
+// 홈 화면 앱 아이콘 숫자(Badging API, 2026-09-24) — iOS 16.4+ 홈 화면 앱·데스크톱 설치 앱에서 보이고,
+// 미지원 환경(일반 브라우저 탭 등)에선 조용히 무시된다. 푸시가 올 때는 sw.js가 같은 숫자로 올린다.
+function syncAppBadge(count: number) {
+  try {
+    if (typeof navigator === "undefined" || !("setAppBadge" in navigator)) return;
+    if (count > 0) navigator.setAppBadge(count).catch(() => {});
+    else navigator.clearAppBadge().catch(() => {});
+  } catch {
+    // 권한·정책으로 막혀도 뱃지 숫자(화면 안)는 그대로 동작.
+  }
+}
+
 export function NotificationCountProvider({ children }: { children: React.ReactNode }) {
   const [count, setCount] = useState(0);
 
+  // 처음 한 번 + 앱을 다시 앞으로 가져올 때마다(백그라운드에 있는 동안 푸시로 새 알림이 왔을 수 있음).
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/notifications/count")
-      .then((res) => (res.ok ? res.json() : { count: 0 }))
-      .then((data: { count?: number }) => {
-        if (!cancelled) setCount(data.count ?? 0);
-      })
-      .catch(() => {});
+    const load = () =>
+      fetch("/api/notifications/count")
+        .then((res) => (res.ok ? res.json() : { count: 0 }))
+        .then((data: { count?: number }) => {
+          if (!cancelled) setCount(data.count ?? 0);
+        })
+        .catch(() => {});
+    void load();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+
+  useEffect(() => {
+    syncAppBadge(count);
+  }, [count]);
 
   const markSeen = useCallback(async (userId: string) => {
     const supabase = createClient();

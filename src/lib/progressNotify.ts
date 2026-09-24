@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { sendPushToUser } from "@/lib/push";
+import { ownPostActions, pushImageFor, sendPushToUser } from "@/lib/push";
 import { PEAK_VIEW_THRESHOLD, peakScore } from "@/lib/feedConstants";
 import { escapeHtml, postHref, postLabel, reactionEmailHtml } from "@/lib/reactionNotify";
 
@@ -28,7 +28,7 @@ async function claimMilestone(admin: Admin, postId: string, kind: "plays" | "pea
 async function loadPost(admin: Admin, postId: string) {
   const { data } = await admin
     .from("posts")
-    .select("id, user_id, title, caption, visibility, status, view_count, peaked_at")
+    .select("id, user_id, title, caption, visibility, status, view_count, peaked_at, thumbnail_url")
     .eq("id", postId)
     .maybeSingle();
   return data;
@@ -73,6 +73,8 @@ export async function notifyPlay(listenerId: string, postId: string) {
             : `「${label}」을 지금까지 ${reached}명이 들었어요`,
         url: postHref(post),
         tag: `plays:${postId}`,
+        image: await pushImageFor(post.thumbnail_url),
+        actions: ownPostActions(postHref(post)),
       });
     }
   }
@@ -109,6 +111,8 @@ export async function checkPeakProgress(postId: string) {
       body: `${headline} — 친구에게 들려주면 더 빨리 닿아요`,
       url: href,
       tag: `peak:${postId}`,
+      image: await pushImageFor(post.thumbnail_url),
+      actions: ownPostActions(href),
     });
   }
   if (author.email_notify_progress && !author.email.endsWith(PLACEHOLDER_EMAIL_SUFFIX)) {
@@ -158,6 +162,7 @@ export async function notifyPublished(authorId: string, postId: string) {
   recipientIds = [...new Set(recipientIds)].filter((id) => id !== authorId);
 
   if (recipientIds.length > 0) {
+    const image = await pushImageFor(post.thumbnail_url);
     const { data: recipients } = await admin
       .from("users")
       .select("id, status, push_notify_companion_post")
@@ -171,6 +176,8 @@ export async function notifyPublished(authorId: string, postId: string) {
             body: `「${label}」 — 첫 반응을 남겨주세요`,
             url: href,
             tag: `post:${postId}`,
+            image,
+            actions: [{ action: "open", title: isDemo ? "들으러 가기" : "보러 가기", url: href }],
           }),
         ),
     );

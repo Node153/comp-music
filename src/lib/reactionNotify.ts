@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { sendPushToUser } from "@/lib/push";
+import { ownPostActions, pushImageFor, sendPushToUser } from "@/lib/push";
 
 // 반응(좋아요·댓글·답글) 즉시 알림(0074) — 이메일 + 웹 푸시.
 //
@@ -118,7 +118,7 @@ export async function notifyLike(actorId: string, postId: string) {
     admin.from("likes").select("id").eq("post_id", postId).eq("user_id", actorId).maybeSingle(),
     // Kick하면 좋아요도 자동으로 들어간다(give_kick) — Kick 알림은 /api/kicks가 따로 보낸다.
     admin.from("kicks").select("id").eq("post_id", postId).eq("user_id", actorId).maybeSingle(),
-    admin.from("posts").select("id, user_id, title, caption, visibility").eq("id", postId).maybeSingle(),
+    admin.from("posts").select("id, user_id, title, caption, visibility, thumbnail_url").eq("id", postId).maybeSingle(),
   ]);
   if (!like || kick || !post || post.user_id === actorId) return;
 
@@ -146,6 +146,8 @@ export async function notifyLike(actorId: string, postId: string) {
       body: `${actorName}님이 「${label}」을 좋아해요`,
       url: href,
       tag: `like:${postId}`,
+      image: await pushImageFor(post.thumbnail_url),
+      actions: ownPostActions(href),
     });
     if (pushed) await admin.from("reaction_notifications").update({ pushed_at: now }).eq("id", rowId);
   }
@@ -195,7 +197,7 @@ export async function notifyComment(actorId: string, commentId: string) {
   if (!comment || comment.user_id !== actorId) return;
   const { data: post } = await admin
     .from("posts")
-    .select("id, user_id, title, caption, visibility")
+    .select("id, user_id, title, caption, visibility, thumbnail_url")
     .eq("id", comment.post_id)
     .maybeSingle();
   if (!post) return;
@@ -242,6 +244,8 @@ export async function notifyComment(actorId: string, commentId: string) {
           body: preview,
           url: href,
           tag: `comment:${post.id}`,
+          image: await pushImageFor(post.thumbnail_url),
+          actions: ownPostActions(href),
         });
         if (pushed) await admin.from("reaction_notifications").update({ pushed_at: now }).eq("id", rowId);
       }

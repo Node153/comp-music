@@ -20,6 +20,9 @@ import type { ExpireHours } from "@/types/database";
 import { editVideoFile } from "@/lib/trimVideo";
 import { VideoEditor, type TrimRange } from "./VideoEditor";
 import { notifyReaction } from "@/lib/notifyReaction";
+import { HAPTIC, haptic } from "@/lib/haptics";
+import { acquireWakeLock } from "@/lib/wakeLock";
+import { takeSharedUploadFile } from "@/lib/shareTarget";
 
 const MIN_TAGS = 3;
 
@@ -639,6 +642,29 @@ export default function UploadPage() {
     setMediaKind(file ? detectMediaKind(file) : null);
   }
 
+  // Android 공유 시트에서 Compmusic으로 보낸 음원·영상(Share Target, shareTarget.ts) — sw.js가
+  // 캐시에 넣어두고 ?shared=1로 보낸 파일을 한 번 꺼내 DEMO 업로드 파일로 채운다. 서비스 워커가
+  // 아직 없어 서버로 바로 온 경우(?shared=missing)엔 다시 골라달라고 안내한다.
+  useEffect(() => {
+    const shared = new URLSearchParams(window.location.search).get("shared");
+    if (!shared) return;
+    let cancelled = false;
+    void takeSharedUploadFile().then((file) => {
+      if (cancelled) return;
+      if (file) {
+        setUploadType("demo");
+        handleFileChange(file);
+      } else {
+        setMediaFileError("공유한 파일을 받지 못했어요. 아래에서 파일을 다시 선택해주세요.");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // 마운트 때 한 번만 — handleFileChange는 매 렌더 새로 만들어지지만 여기선 첫 렌더 것이면 충분.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     e.target.value = "";
@@ -800,6 +826,17 @@ export default function UploadPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // 영상 다듬기(ffmpeg)·업로드 도중 폰 화면이 꺼지면 브라우저가 작업을 멈출 수 있어서, 끝날
+    // 때까지 화면을 켜둔다(wakeLock.ts — 미지원 브라우저면 아무것도 안 함).
+    const releaseWakeLock = await acquireWakeLock();
+    try {
+      await submitPost();
+    } finally {
+      releaseWakeLock();
+    }
+  }
+
+  async function submitPost() {
     setError(null);
 
     if (!title.trim()) {
@@ -913,6 +950,7 @@ export default function UploadPage() {
 
       // Companion(특정인 초대면 초대받은 사람)에게 새 글 알림(0076) — 초대 등록 뒤에 불러야 대상이 잡힌다.
       notifyReaction({ kind: "published", postId: complexPost.id });
+      haptic(HAPTIC.success);
       setLoading(false);
       router.push("/feed?feed=complex");
       return;
@@ -1002,6 +1040,7 @@ export default function UploadPage() {
 
     // Companion 새 글 푸시 + 운영자 Discord(첫 반응 보장) — 0076.
     notifyReaction({ kind: "published", postId: post.id });
+    haptic(HAPTIC.success);
     router.push("/feed");
   }
 

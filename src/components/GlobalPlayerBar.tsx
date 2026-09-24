@@ -16,6 +16,7 @@ import { useMediaProgress } from "@/lib/useMediaProgress";
 import { computeWaveformBars } from "@/lib/waveform";
 import { ExpandedPlayer } from "@/components/ExpandedPlayer";
 import { useScrub } from "@/lib/useScrub";
+import { useMediaSession } from "@/lib/useMediaSession";
 import {
   PlayIcon,
   PauseIcon,
@@ -87,6 +88,8 @@ export function GlobalPlayerBar() {
     toggleQueue,
     recentlyPlayed,
   } = usePlaylist();
+  // 잠금화면·알림창·이어폰 버튼 재생 컨트롤 + 백그라운드 재생 안정화(useMediaSession.ts).
+  useMediaSession({ track, isPlaying, setIsPlaying, pause, mediaRef: videoRef, playNext, playPrev, hasNext, hasPrev });
   const hasQueue = queueItems.length > 0;
   const hasPanel = hasQueue || recentlyPlayed.length > 0;
   const [progress] = useMediaProgress(videoRef, isPlaying);
@@ -227,17 +230,11 @@ export function GlobalPlayerBar() {
 
   return (
     <>
-      {/* display:none 대신 1x1px+opacity-0로 숨긴다 — 일부 브라우저(WebKit 계열)는
-          display:none인 <video>의 디코딩을 아예 정지시켜서, 화면에 보이는 영상 미리보기는
-          멀쩡한데 이 안 보이는 재생 엘리먼트만 소리가 안 나는 경우가 있다고 알려져 있다. */}
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <video
-        ref={videoRef}
-        playsInline
-        aria-hidden="true"
-        tabIndex={-1}
-        className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
-      />
+      {/* 소리 전용 전역 엘리먼트 — <audio>라서 iOS·Android 모두 앱을 내리거나 화면을 꺼도 계속
+          재생되고(예전 <video>는 iOS가 백그라운드에서 멈춤), 잠금화면·알림창 컨트롤은
+          useMediaSession이 붙인다. controls가 없는 <audio>는 원래 화면에 안 그려져서 따로 숨길
+          필요가 없다(재생에는 영향 없음). */}
+      <audio ref={videoRef} preload="auto" aria-hidden="true" />
       {/* 바 배경 = 지금 보고 있는 사이트 테마(isMemoTheme, ThemeSync와 동일 기준)를 따라감
           (2026-09-18) — DEMO는 데모탭 배경(demo-bg, #fafafa)으로 밝게, memo 탭은 memo/complex
           배경(#1c1c1e)으로 어둡게. 배경이 바뀌므로 아이콘·글씨·파형 미재생 구간·재생 버튼

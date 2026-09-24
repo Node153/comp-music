@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { sendPushToUser } from "@/lib/push";
+import { ownPostActions, pushImageFor, sendPushToUser } from "@/lib/push";
 import { postHref } from "@/lib/reactionNotify";
 import { checkPeakProgress } from "@/lib/progressNotify";
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const { data: post } = await admin
       .from("posts")
-      .select("id, user_id, title, caption, visibility")
+      .select("id, user_id, title, caption, visibility, thumbnail_url")
       .eq("id", postId)
       .single();
     if (post) {
@@ -65,6 +65,8 @@ export async function POST(request: Request) {
           body: `${kicker?.nickname ?? "누군가"}님이 「${post.title || post.caption || "회원님의 게시물"}」에 Kick을 줬어요`,
           url: postHref(post),
           tag: `kick:${postId}`,
+          image: await pushImageFor(post.thumbnail_url),
+          actions: ownPostActions(postHref(post)),
         });
       }
       if (

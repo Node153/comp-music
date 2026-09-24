@@ -9,6 +9,7 @@
 // 누르면 그 문구로 바로 댓글 등록 → 작성자 알림도 댓글과 똑같이 감)과, 지금 이 게시물을 듣는
 // 중이면 재생 위치를 붙여 남기는 "0:42 여기 좋다" 댓글(comments.timestamp_sec). 댓글의 시간
 // 칩을 누르면 그 위치로 이동한다(이 게시물이 재생 중일 때).
+import { HAPTIC, haptic } from "@/lib/haptics";
 import { useEffect, useState, type ComponentType } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
@@ -150,6 +151,7 @@ export function CommentPanel({
 
     setSubmitting(false);
     if (insertError || !inserted) return;
+    haptic(HAPTIC.tap);
     notifyReaction({ kind: "comment", commentId: inserted.id });
 
     setComments((prev) => [...prev, { ...inserted, authorName: "나" }]);

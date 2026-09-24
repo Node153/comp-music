@@ -5,6 +5,7 @@
 // 성공하면 좋아요도 같이 켜지고(DB give_kick이 likes에도 넣음) 카드 중앙에 "Kick!" 연출.
 // 버튼 상태: 사용 가능(윤곽선) / 이 게시물에 Kick함(골드 채움, 잠김) / 이번 주 다른 곳에 사용함
 // (흐리게, 누르면 다음 충전까지 남은 기간 안내) / 내 게시물(숫자만, 누를 수 없음).
+import { HAPTIC, haptic } from "@/lib/haptics";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -108,6 +109,7 @@ export function KickButton({
     }
     markMyWeeklyKick(userId, postId);
     triggerKick();
+    haptic(HAPTIC.kick);
   }
 
   const stateClass = kicked

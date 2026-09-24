@@ -122,6 +122,10 @@ export async function GET(request: NextRequest) {
             : "이번 주 Kick이 충전됐어요 · 이번 주엔 습작 하나 올려볼까요?",
         url: "/upload",
         tag: "weekly-report",
+        actions: [
+          { action: "upload", title: "새 Drop 올리기", url: "/upload" },
+          { action: "feed", title: "피드 보기", url: "/feed?from=notify" },
+        ],
       });
       if (ok) pushed += 1;
     }

@@ -4,6 +4,7 @@
 // 잠긴다(Kick 번복 불가 규칙의 연장, DB likes_delete_self 정책도 같은 조건으로 막음).
 // liked 상태는 PostEngagementContext에서 공유 — 더블탭 좋아요(usePostLike)와 같은 값을
 // 봐야 버튼으로 누르든 더블탭하든 화면이 항상 일치한다(초기값은 Provider의 initialLiked).
+import { HAPTIC, haptic } from "@/lib/haptics";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
@@ -33,7 +34,10 @@ export function LikeButton({
 
     const nextLiked = !liked;
     setLiked(nextLiked);
-    if (nextLiked) setBumpKey((k) => k + 1);
+    if (nextLiked) {
+      setBumpKey((k) => k + 1);
+      haptic(HAPTIC.like);
+    }
     setLikeCount((c) => c + (nextLiked ? 1 : -1));
     // 지금 누르는 좋아요/취소는 항상 "이번 주" 안에서 일어나는 일이라 weeklyLikeCount도 같이
     // 맞춰준다 — 다만 몇 주 전에 눌러둔 좋아요를 지금 취소하는 경우엔 그 좋아요가 애초에

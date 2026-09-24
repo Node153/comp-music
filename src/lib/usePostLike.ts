@@ -4,6 +4,7 @@
 // 상태면 DB 호출 없이 하트 애니메이션만 보여준다). LikeButton과 같은 PostEngagementContext
 // 상태(liked/likeCount/weeklyLikeCount)를 공유해서, 버튼으로 누르든 더블탭하든 화면이
 // 항상 같은 값을 보여준다.
+import { HAPTIC, haptic } from "@/lib/haptics";
 import { useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
@@ -14,6 +15,7 @@ export function usePostLike(postId: string, userId: string) {
 
   const likeOnly = useCallback(async () => {
     if (liked) return;
+    haptic(HAPTIC.like);
     setLiked(true);
     setLikeCount((c) => c + 1);
     setWeeklyLikeCount((c) => c + 1);

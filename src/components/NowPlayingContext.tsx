@@ -32,7 +32,11 @@ type NowPlayingContextValue = {
   pause: () => void;
   toggle: () => void;
   close: () => void;
-  videoRef: React.RefObject<HTMLVideoElement | null>;
+  // 실제 소리를 내는 전역 미디어 엘리먼트. 이름은 예전 그대로 videoRef지만 2026-09-24부터
+  // <audio>다 — 화면에 보이는 영상은 카드의 음소거 미리보기(PostVideo)가 따로 그리고 이 엘리먼트는
+  // 소리만 내므로, iOS가 앱을 내리거나 화면을 끄면 멈춰버리는 <video> 대신 백그라운드 재생이
+  // 되는 <audio>를 쓴다(<audio>도 mp4·mov 영상 파일의 소리를 그대로 재생한다).
+  videoRef: React.RefObject<HTMLAudioElement | null>;
   // 현재 트랙 길이(초). GlobalPlayerBar가 <video> 메타데이터에서 읽어 올려준다 —
   // 카드(SoundbarPlayer)가 렌더 중 ref를 만지지 않고도 진행률을 계산할 수 있게.
   duration: number;
@@ -50,7 +54,7 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [lastCountedView, setLastCountedView] = useState<{ id: string; at: number } | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLAudioElement>(null);
 
   // 조회수(0053/0054) 30초 시청 세션 — 실제 소리가 나는 이 <video> 하나를 기준으로 재는다.
   // 피드 인라인 재생/최근 들은/담기 큐 재생이 전부 결국 play()를 거치므로 여기 한 곳에서만
