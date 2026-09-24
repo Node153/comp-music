@@ -1099,6 +1099,17 @@ export interface Database {
         Args: { p_limit?: number };
         Returns: { post: Database["public"]["Tables"]["posts"]["Row"]; reaction_count: number }[];
       };
+      // peak_candidates(0081) — 피드 상단 "PEAK 유력 후보"(아직 PEAK 아닌 남의 DEMO, 점수 높은 순).
+      peak_candidates: {
+        Args: { p_limit?: number };
+        Returns: {
+          post: Database["public"]["Tables"]["posts"]["Row"];
+          like_count: number;
+          kick_count: number;
+          score: number;
+          my_liked: boolean;
+        }[];
+      };
       // feed_candidates(0072) — 피드 한 페이지분 후보(키셋 커서, 재생 여부·scope 필터).
       feed_candidates: {
         Args: {

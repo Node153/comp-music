@@ -137,8 +137,8 @@ export default async function FeedPage({
           태그 필터 중일 때는(결과를 보러 온 상태) 생략. */}
       <div className={feedListClass}>
         {showHero && <FeedHero messages={heroMessages} snap={oneScreenFeed} />}
-        {/* 새 글 부스트(0076) — 반응이 적은 최근 DEMO를 피드 맨 위에 모아 첫 반응을 유도. */}
-        {currentUser && !isComplex && !tagParam && <NewDropsRail />}
+        {/* PEAK 유력 후보(0081) — PEAK 직전 DEMO를 피드 맨 위에 모아 반응을 보태도록 유도. */}
+        {currentUser && !isComplex && !tagParam && <NewDropsRail userId={currentUser.id} />}
         <FeedInfiniteList
           // 탭/태그가 바뀌면 이어 붙인 페이지를 버리고 새로 시작.
           key={`${scope}:${tagParam ?? ""}`}
