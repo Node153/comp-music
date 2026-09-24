@@ -5,6 +5,7 @@
 // 클라이언트로 가져온다(둘 다 관리자만 select 가능한 RLS). Esc 또는 바깥 클릭으로 닫힘.
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { USER_TYPE_LABEL, MEMBER_STATUS_LABEL } from "@/lib/adminMembers";
 import { MemberStatusActions } from "@/components/admin/MemberStatusActions";
@@ -25,6 +26,7 @@ function describeAction(a: Action): string {
   const b = a.before ?? {};
   const af = a.after ?? {};
   if (a.action === "role_change") return `권한 → ${af.role === "admin" ? "관리자" : "일반"}`;
+  if (a.action === "name_change") return `이름 ${b.name} → ${af.name}`;
   if (a.action === "suspension_expired") return "정지 기간 만료 해제";
   const to = MEMBER_STATUS_LABEL[String(af.status)] ?? af.status;
   const from = MEMBER_STATUS_LABEL[String(b.status)] ?? b.status;
@@ -45,6 +47,11 @@ export function MemberDrawer({
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(m.name);
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -74,15 +81,46 @@ export function MemberDrawer({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 외부(DB) 데이터 동기화
     load();
-  }, [load, m.status, m.role]);
+  }, [load, m.status, m.role, m.name]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !document.querySelector('[role="dialog"][aria-modal="true"]')) onClose();
+      if (e.key !== "Escape" || document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      // 이름 편집 중이면 Esc는 편집만 취소(입력창 onKeyDown이 처리)하고 패널은 닫지 않는다.
+      if (e.target instanceof HTMLElement && e.target.dataset.nameEdit) return;
+      onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  async function saveName() {
+    const next = nameDraft.trim().replace(/\s+/g, " ");
+    if (!next) {
+      setNameError("이름을 입력해주세요");
+      return;
+    }
+    if (next === m.name) {
+      setEditingName(false);
+      return;
+    }
+    setNameSaving(true);
+    setNameError(null);
+    const { error: rpcError } = await createClient().rpc("admin_set_member_name", { p_target: m.id, p_name: next });
+    setNameSaving(false);
+    if (rpcError) {
+      setNameError(rpcError.message);
+      return;
+    }
+    setEditingName(false);
+    router.refresh();
+  }
+
+  function cancelNameEdit() {
+    setEditingName(false);
+    setNameDraft(m.name);
+    setNameError(null);
+  }
 
   async function addNote() {
     const body = draft.trim();
@@ -128,13 +166,67 @@ export function MemberDrawer({
       >
         <header className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h2 className="truncate text-base font-semibold text-gray-900">{m.name}</h2>
-              <StatusPill status={m.status} />
-              {m.role === "admin" && (
-                <span className="rounded bg-gray-900 px-1 text-[10px] font-medium leading-4 text-white">관리자</span>
-              )}
-            </div>
+            {editingName ? (
+              <form
+                className="flex items-center gap-1.5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  saveName();
+                }}
+              >
+                <input
+                  autoFocus
+                  data-name-edit="1"
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") cancelNameEdit();
+                  }}
+                  maxLength={100}
+                  aria-label="이름"
+                  className="w-36 rounded-md border border-gray-300 px-2 py-0.5 text-sm font-semibold text-gray-900 focus:border-gray-900 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={nameSaving}
+                  className="rounded-md bg-gray-900 px-2 py-0.5 text-xs font-medium text-white transition hover:bg-gray-700 disabled:opacity-40"
+                >
+                  {nameSaving ? "저장 중..." : "저장"}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelNameEdit}
+                  className="rounded-md px-1.5 py-0.5 text-xs text-gray-500 transition hover:bg-gray-100"
+                >
+                  취소
+                </button>
+              </form>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <h2 className="truncate text-base font-semibold text-gray-900">{m.name}</h2>
+                {!withdrawn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNameDraft(m.name);
+                      setEditingName(true);
+                    }}
+                    aria-label="이름 수정"
+                    title="이름 수정"
+                    className="rounded p-0.5 text-gray-300 transition hover:bg-gray-100 hover:text-gray-700"
+                  >
+                    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M13.5 3.5l3 3L7 16H4v-3l9.5-9.5z" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                )}
+                <StatusPill status={m.status} />
+                {m.role === "admin" && (
+                  <span className="rounded bg-gray-900 px-1 text-[10px] font-medium leading-4 text-white">관리자</span>
+                )}
+              </div>
+            )}
+            {nameError && <p className="text-xs text-red-600">{nameError}</p>}
             <p className="truncate text-xs text-gray-500">
               {m.nickname} #{m.nickname_tag}
               {!withdrawn && (

@@ -536,7 +536,7 @@ export interface Database {
           id: number;
           admin_id: string | null;
           target_user_id: string | null;
-          action: "status_change" | "role_change" | "suspension_expired";
+          action: "status_change" | "role_change" | "name_change" | "suspension_expired";
           before: Record<string, unknown> | null;
           after: Record<string, unknown> | null;
           reason: string | null;
@@ -869,6 +869,11 @@ export interface Database {
       };
       admin_set_member_role: {
         Args: { p_target: string; p_role: string; p_reason: string };
+        Returns: void;
+      };
+      // admin_set_member_name(0073) — 관리자 회원 실명 수정(admin_actions에 name_change 기록).
+      admin_set_member_name: {
+        Args: { p_target: string; p_name: string; p_reason?: string | null };
         Returns: void;
       };
       // lift_my_expired_suspension(0064) — 기간 만료된 본인 정지 해제. proxy.ts가 호출.

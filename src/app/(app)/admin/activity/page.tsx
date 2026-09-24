@@ -38,6 +38,9 @@ function describe(action: string, before: Record<string, unknown> | null, after:
   if (action === "role_change") {
     return `권한 ${ROLE_LABEL[String(b.role)] ?? b.role} → ${ROLE_LABEL[String(a.role)] ?? a.role}`;
   }
+  if (action === "name_change") {
+    return `이름 ${b.name} → ${a.name}`;
+  }
   if (action === "suspension_expired") {
     return "정지 기간 만료로 자동 해제";
   }
