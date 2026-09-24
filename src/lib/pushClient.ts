@@ -15,6 +15,9 @@ const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
 export function isIOS() {
   if (typeof navigator === "undefined") return false;
+  // Android UA는 먼저 걸러낸다 — 기기 에뮬레이션 등에서 platform이 MacIntel+터치로 잡혀 아래
+  // iPad 판정에 잘못 걸리는 경우가 있다(iOS·Android 설치 안내 팝업이 동시에 뜬 사례).
+  if (/Android/i.test(navigator.userAgent)) return false;
   // iPadOS 13+는 데스크톱 사파리 UA를 쓰므로 터치 포인트로 구분한다.
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
