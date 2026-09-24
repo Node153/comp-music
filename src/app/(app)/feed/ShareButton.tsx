@@ -4,38 +4,53 @@
 // 경로. 비로그인도 /feed는 열리고 DEMO는 공개라 링크를 받은 사람이 바로 들을 수 있다(미리보기
 // 30초, GUEST_PREVIEW_SECONDS).
 // 누르면 공유 시트: 인스타그램 스토리 / 링크 복사 / 다른 앱으로 공유(OS 공유 시트).
-// 인스타 스토리는 /api/story-image/[postId]가 만든 1080×1920 이미지를 파일로 OS 공유 시트에 넘긴다
-// — 웹은 인스타 스토리 편집기를 직접 열 수 없어서 이게 가장 짧은 경로(Android는 "스토리" 대상이
-// 바로 보이고, iOS는 Instagram → 스토리). 링크는 그 순간 클립보드에 넣어둬서 스토리의 링크
-// 스티커에 바로 붙여넣을 수 있게 한다.
-// iOS Safari는 navigator.share를 탭 직후(사용자 제스처 안)에만 허용해서, 이미지 fetch를 탭한
+// 인스타 스토리는 소리가 있는 게시물(음원·영상)이면 /api/story-video가 만든 "곡 처음 15초가 깔린"
+// 세로 MP4를, 이미지 게시물이거나 영상 생성이 실패하면 /api/story-image의 1080×1920 이미지를 파일로
+// OS 공유 시트에 넘긴다 — 웹은 인스타 스토리 편집기를 직접 열 수 없고(스포티파이식 직행은 네이티브
+// 앱 + 메타 앱 등록 전용), 곡을 붙여주는 건 메타 제휴 전용이라 영상 자체에 소리를 넣었다.
+// 링크는 그 순간 클립보드에 넣어둬서 스토리의 링크 스티커에 바로 붙여넣을 수 있게 한다.
+// iOS Safari는 navigator.share를 탭 직후(사용자 제스처 안)에만 허용해서, 파일 fetch를 탭한
 // 뒤에 기다리면 NotAllowedError가 난다 — 그래서 시트가 열리는 순간 미리 받아둔다.
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { InstagramIcon, LinkIcon, XIcon, ArrowUpIcon } from "@/components/icons";
 
-type StoryState = { status: "loading" } | { status: "ready"; file: File } | { status: "error" };
+type StoryKind = "video" | "image";
+type StoryState =
+  | { status: "loading"; kind: StoryKind }
+  | { status: "ready"; kind: StoryKind; file: File }
+  | { status: "error"; kind: StoryKind };
 
-export function ShareButton({ postId, title }: { postId: string; title: string }) {
+export function ShareButton({ postId, title, hasSound }: { postId: string; title: string; hasSound: boolean }) {
   const [open, setOpen] = useState(false);
-  const [story, setStory] = useState<StoryState>({ status: "loading" });
+  const [story, setStory] = useState<StoryState>({ status: "loading", kind: hasSound ? "video" : "image" });
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
+  const storyRequested = useRef(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
 
   const url = () => `${window.location.origin}/feed?feed=completion#${postId}`;
 
+  function loadStory(kind: StoryKind) {
+    setStory({ status: "loading", kind });
+    const [endpoint, ext, type] =
+      kind === "video" ? ["story-video", "mp4", "video/mp4"] : ["story-image", "png", "image/png"];
+    fetch(`/api/${endpoint}/${postId}`)
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+      .then((blob) =>
+        setStory({ status: "ready", kind, file: new File([blob], `compmusic-${postId.slice(0, 8)}.${ext}`, { type }) }),
+      )
+      // 영상이 안 되면(원본 없음·인코딩 실패) 소리 없는 이미지 카드로라도 공유할 수 있게.
+      .catch(() => (kind === "video" ? loadStory("image") : setStory({ status: "error", kind })));
+  }
+
   function openSheet() {
     setOpen(true);
     setCanNativeShare(typeof navigator.share === "function");
-    if (story.status === "ready") return;
-    setStory({ status: "loading" });
-    fetch(`/api/story-image/${postId}`)
-      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
-      .then((blob) =>
-        setStory({ status: "ready", file: new File([blob], `compmusic-${postId.slice(0, 8)}.png`, { type: "image/png" }) }),
-      )
-      .catch(() => setStory({ status: "error" }));
+    // 처음 열 때 한 번만 — 받는 중에 다시 열어도 중복 요청하지 않는다(실패 시 재시도는 새로고침).
+    if (storyRequested.current) return;
+    storyRequested.current = true;
+    loadStory(hasSound ? "video" : "image");
   }
 
   function showToast(message: string) {
@@ -74,7 +89,9 @@ export function ShareButton({ postId, title }: { postId: string; title: string }
     a.click();
     window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     await copied;
-    showToast("스토리 이미지를 저장했어요 — 휴대폰에서 누르면 인스타로 바로 올릴 수 있어요");
+    showToast(
+      `스토리 ${story.kind === "video" ? "영상" : "이미지"}을 저장했어요 — 휴대폰에서 누르면 인스타로 바로 올릴 수 있어요`,
+    );
   }
 
   async function onCopyLink() {
@@ -146,10 +163,12 @@ export function ShareButton({ postId, title }: { postId: string; title: string }
                     <span>인스타그램 스토리</span>
                     <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
                       {story.status === "loading"
-                        ? "스토리 이미지 만드는 중…"
+                        ? story.kind === "video"
+                          ? "곡 15초를 넣은 영상 만드는 중…"
+                          : "스토리 이미지 만드는 중…"
                         : story.status === "error"
-                          ? "이미지를 만들지 못했어요"
-                          : "Instagram → 스토리 선택 · 링크는 자동 복사돼요"}
+                          ? "스토리 카드를 만들지 못했어요"
+                          : `${story.kind === "video" ? "곡이 흘러나오는 영상 · " : ""}Instagram → 스토리 선택 · 링크 자동 복사`}
                     </span>
                   </span>
                 </button>

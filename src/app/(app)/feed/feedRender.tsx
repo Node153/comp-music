@@ -705,7 +705,11 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                     {!isComplex && <KickButton postId={post.id} userId={currentUser.id} isOwnPost={isOwnPost} />}
                     <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isComplex} isOwnPost={isOwnPost} />
                     {/* 공유(0076) — PEAK 진행 알림의 행동 버튼, 외부 유입 경로. DEMO 전용. */}
-                    {!isComplex && <ShareButton postId={post.id} title={post.title || post.caption || "Drop"} />}
+                    {!isComplex && <ShareButton
+                        postId={post.id}
+                        title={post.title || post.caption || "Drop"}
+                        hasSound={post.media_type === "audio" || post.media_type === "video"}
+                      />}
                     {isOwnPost && isComplex && (
                       // memo 공동창작 미체크 본인 글은 이 자리에 조회자 목록(인스타
                       // 스토리 참고, 사용자 요청) — DEMO 본인 글은 이 슬롯 자체가 없다.

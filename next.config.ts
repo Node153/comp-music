@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
+  // 인스타 스토리 영상(/api/story-video)이 쓰는 ffmpeg 바이너리 — 번들링하면 경로(__dirname)가
+  // 깨지니 외부 패키지로 두고, 바이너리 파일은 파일 트레이싱이 못 찾으니 직접 포함시킨다.
+  serverExternalPackages: ["ffmpeg-static"],
+  outputFileTracingIncludes: {
+    "/api/story-video/[postId]": ["./node_modules/ffmpeg-static/ffmpeg"],
+  },
   // Sentry/Supabase realtime/Giphy/카카오 OAuth 등 외부 연동이 많아 CSP는 라이브 검증 없이
   // 섣불리 추가하지 않고, 깨질 위험이 거의 없는 기본 보안 헤더만 우선 적용한다.
   async headers() {
