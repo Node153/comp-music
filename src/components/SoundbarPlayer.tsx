@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
 import { useMediaProgress } from "@/lib/useMediaProgress";
 import { useNowPlaying } from "@/components/NowPlayingContext";
-import { usePlaylistOptional } from "@/components/PlaylistContext";
+import { usePlaylistOptional, usePageTrack, PAGE_TRACK_ATTR } from "@/components/PlaylistContext";
 import { usePostEngagement } from "@/components/PostEngagementContext";
 import { useDoubleTap } from "@/lib/useDoubleTap";
 import { usePostLike } from "@/lib/usePostLike";
@@ -169,18 +169,24 @@ export function SoundbarPlayer({
   const currentTime = isGlobal ? (isThisTrack ? globalTime : 0) : inlineTime;
   const duration = isGlobal ? (isThisTrack ? globalDuration : 0) : inlineDuration;
 
+  const trackData = trackId
+    ? {
+        id: trackId,
+        title,
+        author: author ?? "",
+        authorId,
+        videoSrc: src,
+        posterSrc: posterSrc ?? null,
+        expiresAt,
+        mediaType: "audio" as const,
+      }
+    : null;
+  // 하단 바에서 앞 곡이 끝나면 화면상 다음 카드로 이어 재생되도록 후보 등록(global 모드만).
+  usePageTrack(isGlobal ? trackData : null);
+  const pageTrackAttr = isGlobal && trackId ? { [PAGE_TRACK_ATTR]: trackId } : {};
+
   function startGlobal() {
-    if (!trackId) return;
-    const trackData = {
-      id: trackId,
-      title,
-      author: author ?? "",
-      authorId,
-      videoSrc: src,
-      posterSrc: posterSrc ?? null,
-      expiresAt,
-      mediaType: "audio" as const,
-    };
+    if (!trackData) return;
     // memo는 "담기"(+ 버튼)만 금지고 "최근 들은" 기록은 그대로 남는다(사용자 요청) —
     // 담기 제외는 feed/page.tsx의 playlistTrack(!isComplex 게이트)에서만 처리한다.
     // src는 이 렌더에서 서버가 방금 내려준 signed URL이라 이미 최신이라 skipRefresh.
@@ -245,7 +251,7 @@ export function SoundbarPlayer({
 
   if (posterSrc) {
     return (
-      <div className="group relative aspect-square w-full overflow-hidden rounded-xl">
+      <div {...pageTrackAttr} className="group relative aspect-square w-full overflow-hidden rounded-xl">
         <button type="button" onClick={posterOnClick} className="block h-full w-full">
           {audioEl}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -275,7 +281,7 @@ export function SoundbarPlayer({
   }
 
   return (
-    <div className="flex w-full flex-col gap-2 rounded-xl bg-neutral-900 p-2.5">
+    <div {...pageTrackAttr} className="flex w-full flex-col gap-2 rounded-xl bg-neutral-900 p-2.5">
       {audioEl}
       {/* 게시물 캡션이 이미 카드 위쪽에 한 번 보이므로(feed/page.tsx) 여기서 title을
           또 텍스트로 보여주진 않는다 — poster 모드의 alt 속성 등 접근성 용도로만 쓰인다. */}

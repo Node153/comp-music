@@ -9,7 +9,7 @@
 // 컨트롤이 앱 톤과 안 맞는다는 지적). tone="memo"(기본값)는 예전 방식 그대로.
 import { useEffect, useRef, useState } from "react";
 import { useNowPlaying } from "@/components/NowPlayingContext";
-import { usePlaylistOptional } from "@/components/PlaylistContext";
+import { usePlaylistOptional, usePageTrack, PAGE_TRACK_ATTR } from "@/components/PlaylistContext";
 import { usePostEngagement } from "@/components/PostEngagementContext";
 import { useDoubleTap } from "@/lib/useDoubleTap";
 import { usePostLike } from "@/lib/usePostLike";
@@ -77,21 +77,24 @@ export function PostVideo({
     return () => globalVideo.removeEventListener("seeked", syncTime);
   }, [track?.id, postId, globalVideoRef]);
 
+  const trackData = {
+    id: postId,
+    title,
+    author,
+    authorId,
+    videoSrc,
+    posterSrc: posterSrc ?? null,
+    expiresAt,
+    mediaType: "video" as const,
+  };
+  // 하단 바에서 앞 곡이 끝나면 화면상 다음 카드로 이어 재생되도록 후보 등록.
+  usePageTrack(trackData);
+
   function handlePlay() {
     setIsPlaying(true);
     // 오디오 게시물(SoundbarPlayer)처럼 영상 게시물도 재생하면 "최근 들은"에 기록되게 —
     // 여기서 넘기는 값은 이 렌더에서 서버가 방금 내려준 것이라 이미 최신(signed URL 등)이라
     // skipRefresh. 로그인 상태(PlaylistProvider 있음)가 아니면(게스트) 그냥 재생만 한다.
-    const trackData = {
-      id: postId,
-      title,
-      author,
-      authorId,
-      videoSrc,
-      posterSrc: posterSrc ?? null,
-      expiresAt,
-      mediaType: "video" as const,
-    };
     if (playlist) playlist.playNow(trackData, { skipRefresh: true });
     else play(trackData);
   }
@@ -125,7 +128,7 @@ export function PostVideo({
 
   if (tone === "demo") {
     return (
-      <div className="relative">
+      <div {...{ [PAGE_TRACK_ATTR]: postId }} className="relative">
         <video
           ref={videoRef}
           src={previewSrc}
@@ -154,6 +157,7 @@ export function PostVideo({
 
   return (
     <video
+      {...{ [PAGE_TRACK_ATTR]: postId }}
       src={previewSrc}
       poster={posterSrc ?? undefined}
       className="max-h-[780px] w-auto max-w-full object-contain"

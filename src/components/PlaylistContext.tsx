@@ -45,7 +45,13 @@ type PlaylistContextValue = {
    * videoSrc는 만료되는 R2 signed URL이라 localStorage에 오래 남아있던 항목은 재생이 안 될 수
    * 있음 — 그 게시물이 피드에 다시 렌더될 때마다(AddToPlaylistButton) 슬쩍 갱신해둔다. */
   refresh: (track: PlaylistTrack) => void;
+  /** 지금 화면(피드·프로필)에 보이는 재생 가능한 카드 등록 — 담기 큐에 없는 곡이 끝나면
+   * 화면상 다음 카드로 자동 재생하기 위함(usePageTrack). 해제 함수를 돌려준다. */
+  registerPageTrack: (track: PlaylistTrack) => () => void;
 };
+
+// 카드 루트에 붙이는 속성 — 자동 재생 순서는 등록 순서가 아니라 실제 DOM 순서(화면 위→아래)로 정한다.
+export const PAGE_TRACK_ATTR = "data-page-track";
 
 const PlaylistContext = createContext<PlaylistContextValue | null>(null);
 
@@ -122,6 +128,33 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 
   const currentIndex = track ? items.findIndex((t) => t.id === track.id) : -1;
 
+  // 화면에 떠 있는 카드들의 트랙 데이터(id → 트랙). 같은 게시물이 두 번 렌더될 수 있어 개수도 센다.
+  const pageTracksRef = useRef(new Map<string, { track: PlaylistTrack; count: number }>());
+  const registerPageTrack = useCallback((t: PlaylistTrack) => {
+    const map = pageTracksRef.current;
+    const entry = map.get(t.id);
+    map.set(t.id, { track: t, count: (entry?.count ?? 0) + 1 });
+    return () => {
+      const cur = map.get(t.id);
+      if (!cur) return;
+      if (cur.count <= 1) map.delete(t.id);
+      else map.set(t.id, { ...cur, count: cur.count - 1 });
+    };
+  }, []);
+
+  // 담기 큐 밖에서(피드 카드에서 바로) 튼 곡이 끝났을 때 — 화면에서 그 카드 바로 아래에 있는
+  // 재생 가능한 카드를 이어서 튼다. 현재 곡 카드가 화면에 없거나(다른 페이지로 이동) 마지막이면 false.
+  const pickNextOnPage = useCallback((): PlaylistTrack | null => {
+    if (!track || typeof document === "undefined") return null;
+    const ids = Array.from(document.querySelectorAll<HTMLElement>(`[${PAGE_TRACK_ATTR}]`))
+      .map((el) => el.getAttribute(PAGE_TRACK_ATTR) ?? "")
+      .filter((id) => pageTracksRef.current.has(id));
+    const at = ids.indexOf(track.id);
+    if (at < 0) return null;
+    const nextId = ids.slice(at + 1).find((id) => id !== track.id);
+    return nextId ? (pageTracksRef.current.get(nextId)?.track ?? null) : null;
+  }, [track]);
+
   // 재생목록/최근들은에서 실제로 재생을 누르는 순간 서버에서 최신 signed URL을 한 번 더
   // 받아온다 — AddToPlaylistButton의 마운트 시 갱신은 그 게시물이 "지금 피드에 보일 때만"
   // 동작해서, 최근 목록 밖으로 밀려난 옛날 게시물은 놓칠 수 있다(사용자 제보: "특정 트랙만
@@ -150,26 +183,6 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     [items, play, fetchFreshTrack],
   );
 
-  const playNext = useCallback(() => {
-    if (currentIndex < 0 || currentIndex >= items.length - 1) return false;
-    const target = items[currentIndex + 1];
-    void fetchFreshTrack(target).then((fresh) => {
-      play(fresh);
-      setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
-    });
-    return true;
-  }, [currentIndex, items, play, fetchFreshTrack]);
-
-  const playPrev = useCallback(() => {
-    if (currentIndex <= 0) return false;
-    const target = items[currentIndex - 1];
-    void fetchFreshTrack(target).then((fresh) => {
-      play(fresh);
-      setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
-    });
-    return true;
-  }, [currentIndex, items, play, fetchFreshTrack]);
-
   const playNow = useCallback(
     (next: PlaylistTrack, opts?: { skipRefresh?: boolean }) => {
       const run = async () => {
@@ -181,6 +194,32 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     },
     [play, fetchFreshTrack],
   );
+
+  const playNext = useCallback(() => {
+    if (currentIndex < 0) {
+      const onPage = pickNextOnPage();
+      if (!onPage) return false;
+      playNow(onPage);
+      return true;
+    }
+    if (currentIndex >= items.length - 1) return false;
+    const target = items[currentIndex + 1];
+    void fetchFreshTrack(target).then((fresh) => {
+      play(fresh);
+      setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
+    });
+    return true;
+  }, [currentIndex, items, play, fetchFreshTrack, pickNextOnPage, playNow]);
+
+  const playPrev = useCallback(() => {
+    if (currentIndex <= 0) return false;
+    const target = items[currentIndex - 1];
+    void fetchFreshTrack(target).then((fresh) => {
+      play(fresh);
+      setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
+    });
+    return true;
+  }, [currentIndex, items, play, fetchFreshTrack]);
 
   const removeRecent = useCallback((id: string) => {
     setRecentlyPlayed((prev) => prev.filter((t) => t.id !== id));
@@ -218,6 +257,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         removeRecent,
         clearRecent,
         refresh,
+        registerPageTrack,
       }}
     >
       {children}
@@ -234,4 +274,15 @@ export function usePlaylist() {
 // 비로그인(게스트) 피드처럼 PlaylistProvider 밖에서도 렌더될 수 있는 컴포넌트용 — 없으면 null.
 export function usePlaylistOptional() {
   return useContext(PlaylistContext);
+}
+
+// 피드·프로필 카드가 자기 트랙을 "화면상 다음 곡 자동 재생" 후보로 등록한다(게스트면 아무 일도 안 함).
+// 카드 루트에는 {[PAGE_TRACK_ATTR]: id}도 같이 붙여야 순서가 잡힌다.
+export function usePageTrack(track: PlaylistTrack | null) {
+  const register = useContext(PlaylistContext)?.registerPageTrack;
+  const key = track ? JSON.stringify(track) : null;
+  useEffect(() => {
+    if (!register || !key) return;
+    return register(JSON.parse(key) as PlaylistTrack);
+  }, [register, key]);
 }
