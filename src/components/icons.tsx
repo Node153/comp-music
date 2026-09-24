@@ -648,6 +648,26 @@ export function HandshakeIcon({ className }: IconProps) {
   );
 }
 
+// PWA 설치 안내(IosInstallGuide)의 이모지(📱🔑)도 선 아이콘으로 교체. 🔔은 기존 BellIcon 재사용.
+export function SmartphoneIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="6" y="2" width="12" height="20" rx="2" />
+      <line x1="11" y1="18" x2="13" y2="18" />
+    </svg>
+  );
+}
+
+export function KeyIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="7.5" cy="15.5" r="5.5" />
+      <path d="m21 2-9.6 9.6" />
+      <path d="m15.5 7.5 3 3L22 7l-3-3" />
+    </svg>
+  );
+}
+
 export function LinkIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden="true">

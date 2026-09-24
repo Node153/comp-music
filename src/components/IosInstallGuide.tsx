@@ -10,10 +10,12 @@
 //   신규 가입자 기능 안내(FeatureGuideModal)를 아직 안 봤으면 겹치지 않게 이번엔 건너뛴다.
 //   카카오톡·인스타그램 같은 앱 안 브라우저에선 홈 화면 추가가 안 돼서 "Safari로 열기" 안내만.
 // - openIosInstallGuide(): 다른 곳(알림 설정·알림 패널 배너)에서 같은 팝업을 여는 이벤트.
-// - 주소에 ?installGuide=1을 붙이면 기기와 무관하게 강제로 연다(확인·공유용).
+// - 주소에 ?installGuide=ios를 붙이면 기기와 무관하게 강제로 연다(확인·공유용). ?installGuide=1은
+//   기기에 맞는 쪽을 연다(Android면 AndroidInstallGuide, 그 외엔 이 팝업).
 import { useEffect, useState } from "react";
-import { XIcon } from "@/components/icons";
+import { XIcon, SmartphoneIcon, BellIcon, KeyIcon } from "@/components/icons";
 import { isIOS, isStandalone } from "@/lib/pushClient";
+import { isAndroid } from "@/components/AndroidInstallGuide";
 
 const OPEN_EVENT = "comp:open-install-guide";
 const STORAGE_KEY = "comp:ios-install-prompt:v1";
@@ -90,7 +92,8 @@ export function IosInstallPrompt({ userId }: { userId: string }) {
     window.addEventListener(OPEN_EVENT, onOpen);
 
     let timer: number | undefined;
-    const forced = new URLSearchParams(window.location.search).get("installGuide") === "1";
+    const param = new URLSearchParams(window.location.search).get("installGuide");
+    const forced = param === "ios" || (param === "1" && !isAndroid());
     if (forced) {
       timer = window.setTimeout(() => setOpen(true), 300);
     } else if (isIOS() && !isStandalone()) {
@@ -126,6 +129,7 @@ export function IosInstallPrompt({ userId }: { userId: string }) {
 function IosInstallGuideModal({ onClose }: { onClose: (reason: "close" | "finish" | "never") => void }) {
   const [step, setStep] = useState(0);
   const [inApp] = useState(() => isInAppBrowser());
+  const [kakao] = useState(() => /KAKAOTALK/i.test(navigator.userAgent));
   const [copied, setCopied] = useState(false);
   const current = STEPS[step];
   const last = step === STEPS.length - 1;
@@ -175,6 +179,18 @@ function IosInstallGuideModal({ onClose }: { onClose: (reason: "close" | "finish
               지금은 카카오톡·인스타그램 같은 <b>앱 안의 브라우저</b>라서 홈 화면에 추가할 수 없어요. 화면의 ··· 메뉴에서{" "}
               <b>&lsquo;Safari로 열기&rsquo;</b>(또는 &lsquo;다른 브라우저로 열기&rsquo;)를 누른 뒤 다시 시도해주세요.
             </p>
+            {kakao && (
+              // 카카오톡 자체 스킴 — 인앱 브라우저에서 기본 브라우저(Safari)로 바로 연다.
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(`${window.location.origin}/feed`)}`;
+                }}
+                className="rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-80 dark:bg-white dark:text-black"
+              >
+                Safari로 열기
+              </button>
+            )}
             <button
               type="button"
               onClick={copyLink}
@@ -218,9 +234,18 @@ function IosInstallGuideModal({ onClose }: { onClose: (reason: "close" | "finish
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Compmusic</span>
                 </span>
                 <ul className="flex flex-col gap-2 self-stretch rounded-2xl bg-gray-100 px-4 py-4 text-sm leading-relaxed text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                  <li>📱 주소창 없이 앱처럼 전체 화면으로 열려요</li>
-                  <li>🔔 처음 한 번 로그인한 뒤 <b>알림 설정 → 이 기기에서 푸시 알림 받기 → 켜기</b>를 누르면, 좋아요·댓글이 올 때 바로 알려드려요</li>
-                  <li>🔑 홈 화면 앱은 Safari와 로그인이 따로라, 처음 한 번은 다시 로그인해야 해요</li>
+                  <li className="flex gap-2">
+                    <SmartphoneIcon className="h-4 w-4 shrink-0 translate-y-0.5" />
+                    <span>주소창 없이 앱처럼 전체 화면으로 열려요</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <BellIcon className="h-4 w-4 shrink-0 translate-y-0.5" />
+                    <span>처음 한 번 로그인한 뒤 <b>알림 설정 → 이 기기에서 푸시 알림 받기 → 켜기</b>를 누르면, 좋아요·댓글이 올 때 바로 알려드려요</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <KeyIcon className="h-4 w-4 shrink-0 translate-y-0.5" />
+                    <span>홈 화면 앱은 Safari와 로그인이 따로라, 처음 한 번은 다시 로그인해야 해요</span>
+                  </li>
                 </ul>
                 </>
               )}
