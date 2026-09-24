@@ -108,17 +108,19 @@ export function ProfileFeed({
         >
           현재 게시물 <span className={tab === "current" ? "text-white/70" : "text-active-gray"}>{currentPosts.length}</span>
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("expired")}
-          className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-            tab === "expired"
-              ? "bg-black text-white"
-              : "border border-box-gray text-active-gray hover:opacity-70"
-          }`}
-        >
-          보관된 게시물 <span className={tab === "expired" ? "text-white/70" : "text-active-gray"}>{expiredPosts.length}</span>
-        </button>
+        {isOwnProfile && (
+          <button
+            type="button"
+            onClick={() => setTab("expired")}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+              tab === "expired"
+                ? "bg-black text-white"
+                : "border border-box-gray text-active-gray hover:opacity-70"
+            }`}
+          >
+            보관된 게시물 <span className={tab === "expired" ? "text-white/70" : "text-active-gray"}>{expiredPosts.length}</span>
+          </button>
+        )}
         {isOwnProfile && (
           <button
             type="button"

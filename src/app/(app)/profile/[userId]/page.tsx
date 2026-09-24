@@ -82,27 +82,31 @@ export default async function ProfilePage({
     .in("status", ["published", "expired"])
     .order("created_at", { ascending: false });
 
+  // 만료 판정은 expires_at(시각)으로 직접 한다. status="expired"는 expire-posts 크론이
+  // 뒤늦게(하루 1회) 채우는 값이라, 크론 지연과 무관하게 정확한 배지를 보이려면 시각 비교가 필요.
+  const nowMs = Date.now();
+  const isPostExpired = (post: { status: string; expires_at: string | null }) =>
+    post.status === "expired" || (post.expires_at != null && new Date(post.expires_at).getTime() <= nowMs);
+  // 보관된 게시물(노출시간이 끝난 memo)은 작성자 본인만 본다(2026-09-24 사용자 요청) — 남의
+  // 프로필에선 서버에서부터 빼서 미디어 URL도 내려가지 않게 한다.
+  const profilePosts = (posts ?? []).filter((post) => isOwnProfile || !isPostExpired(post));
+
   // 데스크톱 오른쪽 피드 카드(2단계, 페이스북 참고)에 실제 좋아요/댓글 버튼을 쓰려면 메인
   // 피드(feed/page.tsx)와 같은 방식으로 likes/comments를 한 번에 배치 조회해야 한다 —
   // LikeButton/CommentPanel은 개수를 직접 안 불러오고 PostEngagementProvider가 미리 준
   // 초기값만 쓴다.
-  const postIds = (posts ?? []).map((p) => p.id);
+  const postIds = profilePosts.map((p) => p.id);
   const { data: likeRows } =
     postIds.length > 0 ? await supabase.from("likes").select("post_id, user_id").in("post_id", postIds) : { data: [] };
   const { data: commentRows } =
     postIds.length > 0 ? await supabase.from("comments").select("post_id").in("post_id", postIds) : { data: [] };
 
-  // 만료 판정은 expires_at(시각)으로 직접 한다. status="expired"는 expire-posts 크론이
-  // 뒤늦게(하루 1회) 채우는 값이라, 크론 지연과 무관하게 정확한 배지를 보이려면 시각 비교가 필요.
-  const nowMs = Date.now();
   const postsWithVideo = await Promise.all(
-    (posts ?? []).map(async (post) => {
+    profilePosts.map(async (post) => {
       const mediaPath = post.video_url ?? post.image_url ?? post.audio_url ?? "";
       const videoSrc = mediaPath ? await getR2SignedUrl(mediaPath, SIGNED_URL_EXPIRY_SECONDS) : null;
       const posterSrc = post.thumbnail_url ? await resolveMediaUrl(post.thumbnail_url, SIGNED_URL_EXPIRY_SECONDS) : null;
-      const isExpired =
-        post.status === "expired" ||
-        (post.expires_at != null && new Date(post.expires_at).getTime() <= nowMs);
+      const isExpired = isPostExpired(post);
       const likeCount = (likeRows ?? []).filter((l) => l.post_id === post.id).length;
       const likedByMe = !!currentUser && (likeRows ?? []).some((l) => l.post_id === post.id && l.user_id === currentUser.id);
       const commentCount = (commentRows ?? []).filter((c) => c.post_id === post.id).length;
@@ -126,7 +130,13 @@ export default async function ProfilePage({
   // localStorage에만 있어서(PlaylistContext) 서버 렌더 프로필엔 못 실음 — 사용자 확인 후
   // 이번엔 좋아요만 구현, 담기는 별도 작업으로 미룸.
   // 나만 보기(2026-09-24 사용자 요청) — 남이 무엇을 좋아요했는지는 본인 프로필에서만 보여야
-  // 하므로, 본인이 아니면 아예 쿼리도 안 돌리고 빈 배열을 내려준다(ProfileFeed도 탭 자체를 숨김).
+  // 한다. 다만 Kick 필터는 남에게도 공개라, 남의 프로필에선 좋아요 전체 대신 Kick한 게시물만
+  // 불러온다(Kick한 게시물 카드 데이터를 이 목록에서 꺼내 쓰기 때문 — 아래 kickedPosts).
+  const { data: kickedByUserRows } = await supabase
+    .from("kicks")
+    .select("post_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
   const { data: likedByUserRows } = isOwnProfile
     ? await supabase
         .from("likes")
@@ -134,7 +144,9 @@ export default async function ProfilePage({
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
     : { data: [] };
-  const likedPostIds = (likedByUserRows ?? []).map((r) => r.post_id);
+  const likedPostIds = isOwnProfile
+    ? (likedByUserRows ?? []).map((r) => r.post_id)
+    : (kickedByUserRows ?? []).map((r) => r.post_id);
 
   const { data: likedPostsRaw } =
     likedPostIds.length > 0
@@ -199,12 +211,10 @@ export default async function ProfilePage({
   // 좋아요도 같이 켜지고 취소가 안 되니 Kick한 게시물은 항상 좋아요 목록 안에 있다 — 게시물
   // 데이터는 likedPostsWithVideo에서 그대로 꺼내 쓴다.
   const kickTargetIds = [...new Set([...postIds, ...likedRawIds])];
-  const [{ data: kickedByUserRows }, { data: kickerRows }] = await Promise.all([
-    supabase.from("kicks").select("post_id").eq("user_id", userId).order("created_at", { ascending: false }),
+  const { data: kickerRows } =
     currentUser && kickTargetIds.length > 0
-      ? supabase.rpc("post_kickers", { pids: kickTargetIds })
-      : { data: [] as { post_id: string; user_id: string; nickname: string }[] },
-  ]);
+      ? await supabase.rpc("post_kickers", { pids: kickTargetIds })
+      : { data: [] as { post_id: string; user_id: string; nickname: string }[] };
   const kickersByPost = new Map<string, Kicker[]>();
   for (const row of kickerRows ?? []) {
     kickersByPost.set(row.post_id, [...(kickersByPost.get(row.post_id) ?? []), { id: row.user_id, name: row.nickname }]);
@@ -429,7 +439,7 @@ export default async function ProfilePage({
       <div className="md:hidden">
         <ProfileTabs
           posts={ownPostsWithKicks}
-          likedPosts={likedPostsWithKicks}
+          likedPosts={isOwnProfile ? likedPostsWithKicks : []}
           kickedPosts={kickedPosts}
           folders={folders}
           profile={profile}
@@ -516,7 +526,7 @@ export default async function ProfilePage({
           )}
           <ProfileFeed
             posts={ownPostsWithKicks}
-            likedPosts={likedPostsWithKicks}
+            likedPosts={isOwnProfile ? likedPostsWithKicks : []}
             kickedPosts={kickedPosts}
             folders={folders}
             isOwnProfile={isOwnProfile}
