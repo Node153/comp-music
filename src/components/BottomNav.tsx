@@ -45,7 +45,7 @@ export function BottomNav({ currentUserId }: { currentUserId: string }) {
     <nav
       // 5등분 그리드 — justify-around는 탭마다 라벨 폭(홈/업로드 등)이 달라 가운데 "업로드"가
       // 화면 정중앙에서 어긋났다(2026-09-23 제보). 열 폭을 똑같이 나눠 각 탭을 열 가운데에 둔다.
-      className={`fixed inset-x-0 bottom-0 z-40 grid min-h-14 grid-cols-5 place-items-center border-t pb-[env(safe-area-inset-bottom)] transition-colors md:hidden ${
+      className={`fixed inset-x-0 bottom-0 z-40 grid min-h-14 box-content grid-cols-5 place-items-center border-t pb-[env(safe-area-inset-bottom)] transition-colors md:hidden ${
         isMemoTheme ? "border-white/10 bg-[#1c1c1e] text-white" : "border-black/10 bg-demo-bg text-black"
       }`}
     >

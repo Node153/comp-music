@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -31,6 +31,14 @@ export const metadata: Metadata = {
     title: "Compmusic",
     statusBarStyle: "default",
   },
+};
+
+// viewportFit "cover"가 없으면 iOS(특히 홈 화면에 추가한 웹앱)에서 env(safe-area-inset-*)가 항상
+// 0이라, BottomNav 등의 홈 인디케이터 여백이 적용되지 않는다.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
