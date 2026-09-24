@@ -134,6 +134,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
   // 카드가 등록/해제될 때마다 올라가는 번호 — 하단 바 "다음" 버튼 활성 여부(pageHasNext)를 다시 계산하는 신호.
   const [pageVersion, setPageVersion] = useState(0);
   const [pageHasNext, setPageHasNext] = useState(false);
+  const [pageHasPrev, setPageHasPrev] = useState(false);
   const registerPageTrack = useCallback((t: PlaylistTrack) => {
     const map = pageTracksRef.current;
     const entry = map.get(t.id);
@@ -161,11 +162,26 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     return nextId ? (pageTracksRef.current.get(nextId)?.track ?? null) : null;
   }, [track]);
 
-  // 화면상 다음 카드가 있는지 — DOM 순서를 봐야 해서 렌더가 끝난 다음 프레임에 계산한다.
+  // 위와 대칭 — 화면에서 현재 곡 카드 바로 위에 있는 재생 가능한 카드(이전 버튼용).
+  const pickPrevOnPage = useCallback((): PlaylistTrack | null => {
+    if (!track || typeof document === "undefined") return null;
+    const ids = Array.from(document.querySelectorAll<HTMLElement>(`[${PAGE_TRACK_ATTR}]`))
+      .map((el) => el.getAttribute(PAGE_TRACK_ATTR) ?? "")
+      .filter((id) => pageTracksRef.current.has(id));
+    const at = ids.indexOf(track.id);
+    if (at < 0) return null;
+    const prevId = [...ids.slice(0, at)].reverse().find((id) => id !== track.id);
+    return prevId ? (pageTracksRef.current.get(prevId)?.track ?? null) : null;
+  }, [track]);
+
+  // 화면상 다음/이전 카드가 있는지 — DOM 순서를 봐야 해서 렌더가 끝난 다음 프레임에 계산한다.
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setPageHasNext(!!pickNextOnPage()));
+    const raf = requestAnimationFrame(() => {
+      setPageHasNext(!!pickNextOnPage());
+      setPageHasPrev(!!pickPrevOnPage());
+    });
     return () => cancelAnimationFrame(raf);
-  }, [pickNextOnPage, pageVersion]);
+  }, [pickNextOnPage, pickPrevOnPage, pageVersion]);
 
   // 재생목록/최근들은에서 실제로 재생을 누르는 순간 서버에서 최신 signed URL을 한 번 더
   // 받아온다 — AddToPlaylistButton의 마운트 시 갱신은 그 게시물이 "지금 피드에 보일 때만"
@@ -224,6 +240,12 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
   }, [currentIndex, items, play, fetchFreshTrack, pickNextOnPage, playNow]);
 
   const playPrev = useCallback(() => {
+    if (currentIndex < 0) {
+      const onPage = pickPrevOnPage();
+      if (!onPage) return false;
+      playNow(onPage);
+      return true;
+    }
     if (currentIndex <= 0) return false;
     const target = items[currentIndex - 1];
     void fetchFreshTrack(target).then((fresh) => {
@@ -231,7 +253,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
     });
     return true;
-  }, [currentIndex, items, play, fetchFreshTrack]);
+  }, [currentIndex, items, play, fetchFreshTrack, pickPrevOnPage, playNow]);
 
   const removeRecent = useCallback((id: string) => {
     setRecentlyPlayed((prev) => prev.filter((t) => t.id !== id));
@@ -261,7 +283,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         currentIndex,
         // 담기 큐 곡이면 큐 기준, 피드·프로필에서 바로 튼 곡이면 화면상 다음 카드 기준.
         hasNext: currentIndex >= 0 ? currentIndex < items.length - 1 : pageHasNext,
-        hasPrev: currentIndex > 0,
+        // 담기 큐 곡이면 큐 기준, 피드·프로필에서 바로 튼 곡이면 화면상 이전 카드 기준.
+        hasPrev: currentIndex >= 0 ? currentIndex > 0 : pageHasPrev,
         queueOpen,
         setQueueOpen,
         toggleQueue,
