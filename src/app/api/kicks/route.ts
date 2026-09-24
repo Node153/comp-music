@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
 import { postHref } from "@/lib/reactionNotify";
+import { checkPeakProgress } from "@/lib/progressNotify";
 
 const APP_URL = "https://compmusic.kr";
 const PLACEHOLDER_EMAIL_SUFFIX = "@no-email.comp.local";
@@ -83,6 +84,8 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[kicks] 알림 메일 발송 실패", err);
   }
+  // Kick 1개 = PEAK 점수 100 — PEAK 50%/80% 진행 알림 확인(0076).
+  await checkPeakProgress(postId).catch((err) => console.error("[kicks] PEAK 진행 확인 실패", err));
 
   return NextResponse.json({ ok: true });
 }

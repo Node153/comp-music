@@ -23,18 +23,18 @@ const DAILY_EMAIL_CAP = 10;
 type Admin = ReturnType<typeof createAdminClient>;
 type Kind = "like" | "comment" | "reply";
 
-type PostInfo = { id: string; user_id: string; title: string | null; caption: string | null; visibility: string };
+export type PostInfo = { id: string; user_id: string; title: string | null; caption: string | null; visibility: string };
 
 export function postHref(post: Pick<PostInfo, "id" | "visibility">) {
   return `/feed?feed=${post.visibility === "public" ? "completion" : "complex"}#${post.id}`;
 }
 
-function postLabel(post: PostInfo) {
+export function postLabel(post: PostInfo) {
   const raw = (post.title || post.caption || "회원님의 게시물").trim();
   return raw.length > 40 ? `${raw.slice(0, 40)}…` : raw;
 }
 
-function escapeHtml(text: string) {
+export function escapeHtml(text: string) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 

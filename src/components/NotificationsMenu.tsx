@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { BellIcon, CrownIcon, FeedbackIcon, FlameIcon, KickIcon, XIcon } from "@/components/icons";
+import { BellIcon, CrownIcon, FeedbackIcon, FlameIcon, HeadphonesIcon, KickIcon, XIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/timeAgo";
 import { useNotificationCount, useMarkNotificationsSeen } from "@/components/NotificationCountContext";
 import { navRowClass, navLabelClass, topBarIconClass } from "@/components/ui/styles";
@@ -31,9 +31,10 @@ const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
 ];
 function matchesCategory(item: NotificationItem, filter: CategoryFilter) {
   if (filter === "all") return true;
-  if (filter === "engagement") return item.type === "like" || item.type === "kick" || item.type === "comment";
+  if (filter === "engagement")
+    return item.type === "like" || item.type === "kick" || item.type === "comment" || item.type === "play_milestone";
   if (filter === "request") return item.type === "companion_request" || item.type === "knock";
-  return item.type === "peak";
+  return item.type === "peak" || item.type === "peak_progress";
 }
 
 // 인스타그램 알림탭과 같은 시간 구간 묶음. 알림이 createdAt 내림차순으로 이미 정렬돼 오므로
@@ -227,9 +228,13 @@ export function NotificationsMenu({
                             item.unread ? "bg-gray-50 dark:bg-gray-900/60" : ""
                           }`}
                         >
-                          {item.type === "peak" ? (
+                          {item.type === "peak" || item.type === "peak_progress" ? (
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-500 dark:bg-gray-600">
                               <FlameIcon className="h-4 w-4 text-white" />
+                            </span>
+                          ) : item.type === "play_milestone" ? (
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                              <HeadphonesIcon className="h-4 w-4" />
                             </span>
                           ) : item.type === "contribution_milestone" ? (
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-white dark:bg-white dark:text-black">
@@ -254,6 +259,21 @@ export function NotificationsMenu({
                             <span className="text-gray-800 dark:text-gray-200">
                               {item.type === "peak" ? (
                                 "회원님의 게시물이 PEAK에 도달했어요"
+                              ) : item.type === "peak_progress" ? (
+                                <>
+                                  「{item.title}」이 <span className="font-semibold">PEAK까지 {item.value}%</span> 왔어요
+                                  — 친구에게 들려주면 더 빨리 닿아요
+                                </>
+                              ) : item.type === "play_milestone" ? (
+                                item.value === 1 ? (
+                                  <>
+                                    누군가 「{item.title}」을 <span className="font-semibold">처음으로</span> 들었어요
+                                  </>
+                                ) : (
+                                  <>
+                                    「{item.title}」을 <span className="font-semibold">{item.value}명</span>이 들었어요
+                                  </>
+                                )
                               ) : item.type === "contribution_milestone" ? (
                                 item.milestone === "first" ? "이번 달 기여 1위가 됐어요" : "이번 달 기여 3위 안에 들었어요"
                               ) : item.type === "liked_feedback_announced" ? (
@@ -278,6 +298,8 @@ export function NotificationsMenu({
                                   {item.type === "comment" && "님이 댓글을 남겼습니다"}
                                   {item.type === "companion_request" && "님이 Companion을 신청했어요"}
                                   {item.type === "knock" && "님이 비공개 게시물에 노크했어요"}
+                                  {item.type === "companion_post" &&
+                                    (item.isDemo ? "님이 새 Drop을 올렸어요" : "님이 memo에 새 글을 올렸어요")}
                                 </>
                               )}
                             </span>
@@ -289,6 +311,11 @@ export function NotificationsMenu({
                             {item.type === "feedback_update" && (
                               <span className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
                                 “{item.content}”
+                              </span>
+                            )}
+                            {item.type === "companion_post" && (
+                              <span className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
+                                「{item.title}」 · 첫 반응을 남겨보세요
                               </span>
                             )}
                             {item.type === "comment" && (

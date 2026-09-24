@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const { data: users, error: usersError } = await supabase
     .from("users")
     .select(
-      "id, email, email_notify_like, email_notify_comment, email_notify_knock, email_notify_companion_request, email_notify_message, email_notify_peak, last_notification_emailed_at",
+      "id, email, email_notify_like, email_notify_comment, email_notify_knock, email_notify_companion_request, email_notify_message, email_notify_peak, email_notify_progress, email_notify_companion_post, last_notification_emailed_at",
     )
     .eq("status", "approved");
 
@@ -112,6 +112,40 @@ export async function GET(request: NextRequest) {
         // 영구 고정, EngagementMeter/RightSidebar·notificationList.ts와 동일 기준)을 그대로 쓴다.
         const newlyPeakedCount = (myPosts ?? []).filter((p) => p.peaked_at && p.peaked_at > cursor).length;
         if (newlyPeakedCount > 0) sections.push(`PEAK 도달 게시물 ${newlyPeakedCount}개`);
+      }
+
+      // 0076 — 새로 들은 사람(post_plays, 5초 이상 재생) 수. 본인 재생은 뺀다.
+      const myPostIds = (myPosts ?? []).map((p) => p.id);
+      if (user.email_notify_progress && myPostIds.length > 0) {
+        const { count } = await supabase
+          .from("post_plays")
+          .select("post_id", { count: "exact", head: true })
+          .in("post_id", myPostIds)
+          .neq("user_id", user.id)
+          .gt("played_at", cursor);
+        if (count) sections.push(`새로 들은 사람 ${count}명`);
+      }
+
+      // 0076 — Companion 새 글(invite_only 제외 — 알림 목록 getCompanionPosts와 같은 기준).
+      if (user.email_notify_companion_post) {
+        const { data: companionRows } = await supabase
+          .from("companions")
+          .select("requester_id, addressee_id")
+          .eq("status", "accepted")
+          .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+        const companionIds = (companionRows ?? []).map((r) =>
+          r.requester_id === user.id ? r.addressee_id : r.requester_id,
+        );
+        if (companionIds.length > 0) {
+          const { count } = await supabase
+            .from("posts")
+            .select("id", { count: "exact", head: true })
+            .in("user_id", companionIds)
+            .eq("status", "published")
+            .in("visibility", ["public", "followers"])
+            .gt("published_at", cursor);
+          if (count) sections.push(`Companion 새 글 ${count}개`);
+        }
       }
 
       if (sections.length > 0) {

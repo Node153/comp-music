@@ -233,7 +233,7 @@ export function ExpandedPlayer({
               {engagement.isDemo && (
                 <KickButton postId={track.id} userId={currentUserId} isOwnPost={engagement.isOwnPost} />
               )}
-              <CommentPanel postId={track.id} userId={currentUserId} />
+              <CommentPanel postId={track.id} userId={currentUserId} isOwnPost={engagement.isOwnPost} />
             </PostEngagementProvider>
           ) : (
             <>

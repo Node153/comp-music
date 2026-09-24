@@ -171,7 +171,7 @@ export function ProfileFeedPostCard({
               {isDemo && (
                 <KickButton postId={post.id} userId={currentUserId} isOwnPost={post.authorId === currentUserId} />
               )}
-              <CommentPanel postId={post.id} userId={currentUserId} isDemo />
+              <CommentPanel postId={post.id} userId={currentUserId} isDemo isOwnPost={post.authorId === currentUserId} />
             </div>
             {isDemo && <KickersLine currentUserId={currentUserId} className="-mt-1.5 px-4 pb-3" />}
           </div>

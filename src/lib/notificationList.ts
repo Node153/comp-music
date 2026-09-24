@@ -27,6 +27,19 @@ export type NotificationItem = (
       createdAt: string;
     }
   | { type: "peak"; id: string; postId: string; createdAt: string }
+  // 0076 — 반응 유도 알림: 청취자 수 마일스톤, PEAK 진행률(50/80%), Companion 새 글.
+  | { type: "play_milestone"; id: string; postId: string; value: number; title: string; createdAt: string }
+  | { type: "peak_progress"; id: string; postId: string; value: number; title: string; createdAt: string }
+  | {
+      type: "companion_post";
+      id: string;
+      postId: string;
+      actorId: string;
+      actorName: string;
+      title: string;
+      isDemo: boolean;
+      createdAt: string;
+    }
   | { type: "knock"; id: string; postId: string; actorId: string; actorName: string; createdAt: string }
   // 0063 — 관리자가 내 피드백의 상태를 바꾸거나 답변을 달았을 때. createdAt = admin_updated_at.
   | {
@@ -75,6 +88,64 @@ export async function getLikedFeedbackAnnouncements(
   return data ?? [];
 }
 
+// 0076 — 내 게시물의 청취자 수·PEAK 진행 마일스톤(post_milestones, 작성자만 읽기 가능).
+// since가 있으면 그 이후 것만(뱃지 숫자용).
+export async function getMyPostMilestones(
+  supabase: SupabaseClient,
+  myPostIds: string[],
+  since?: string,
+): Promise<{ id: string; post_id: string; kind: "plays" | "peak_progress"; value: number; created_at: string }[]> {
+  if (myPostIds.length === 0) return [];
+  let query = supabase
+    .from("post_milestones")
+    .select("id, post_id, kind, value, created_at")
+    .in("post_id", myPostIds)
+    .in("kind", ["plays", "peak_progress"])
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (since) query = query.gt("created_at", since);
+  const { data } = await query;
+  return data ?? [];
+}
+
+// 0076 — Companion이 최근 14일 안에 올린 새 글(내가 볼 수 있는 것만 — posts RLS가 거른다).
+// 첫 반응을 남기러 오게 하려는 알림이라 invite_only는 빼고(초대는 별도 흐름), since가 있으면
+// 그 이후 것만(뱃지 숫자용).
+export async function getCompanionPosts(
+  supabase: SupabaseClient,
+  userId: string,
+  since?: string,
+): Promise<
+  {
+    id: string;
+    user_id: string;
+    title: string | null;
+    caption: string | null;
+    visibility: string;
+    published_at: string | null;
+    created_at: string;
+  }[]
+> {
+  const { data: rows } = await supabase
+    .from("companions")
+    .select("requester_id, addressee_id")
+    .eq("status", "accepted")
+    .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+  const companionIds = (rows ?? []).map((r) => (r.requester_id === userId ? r.addressee_id : r.requester_id));
+  if (companionIds.length === 0) return [];
+  const floor = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("posts")
+    .select("id, user_id, title, caption, visibility, published_at, created_at")
+    .in("user_id", companionIds)
+    .eq("status", "published")
+    .in("visibility", ["public", "followers"])
+    .gt("published_at", since && since > floor ? since : floor)
+    .order("published_at", { ascending: false })
+    .limit(30);
+  return data ?? [];
+}
+
 // 정렬만 된, 필터링/자르기 전 전체 목록을 돌려준다 — 카테고리 필터는 자르기 전에 적용돼야
 // 하므로(예: "신청" 탭이 50개보다 적으면 안 잘리게) 호출하는 쪽이 각자 filter+slice 한다.
 export async function getNotificationItems(
@@ -83,7 +154,7 @@ export async function getNotificationItems(
 ): Promise<{ items: NotificationItem[]; seenAt: string }> {
   const [{ data: myPosts }, { data: me }, { data: incomingRequests }, { data: feedbackUpdates }, likedAnnouncements] =
     await Promise.all([
-    supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", userId),
+    supabase.from("posts").select("id, visibility, peaked_at, title, caption").eq("user_id", userId),
     supabase.from("users").select("notifications_seen_at").eq("id", userId).single(),
     supabase
       .from("companions")
@@ -106,6 +177,10 @@ export async function getNotificationItems(
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(20);
+  const [postMilestones, companionPosts] = await Promise.all([
+    getMyPostMilestones(supabase, (myPosts ?? []).map((p) => p.id)),
+    getCompanionPosts(supabase, userId),
+  ]);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
   const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
@@ -154,6 +229,7 @@ export async function getNotificationItems(
     ...(comments ?? []).map((c) => c.user_id),
     ...(knocks ?? []).map((k) => k.user_id),
     ...(kicks ?? []).map((k) => k.user_id),
+    ...companionPosts.map((p) => p.user_id),
   ]);
   const { data: actors } =
     actorIds.size > 0
@@ -168,6 +244,7 @@ export async function getNotificationItems(
   function hrefFor(postId: string) {
     return `/feed?feed=${visibilityByPostId.get(postId) === "public" ? "completion" : "complex"}#${postId}`;
   }
+  const titleByPostId = new Map((myPosts ?? []).map((p) => [p.id, p.title || p.caption || "회원님의 게시물"]));
   function isUnread(createdAt: string) {
     return new Date(createdAt) > new Date(seenAt);
   }
@@ -223,6 +300,32 @@ export async function getNotificationItems(
         createdAt: p.peaked_at as string,
         href: hrefFor(p.id),
         unread: isUnread(p.peaked_at as string),
+      }),
+    ),
+    ...postMilestones.map(
+      (m): NotificationItem => ({
+        type: m.kind === "plays" ? "play_milestone" : "peak_progress",
+        id: m.id,
+        postId: m.post_id,
+        value: m.value,
+        title: titleByPostId.get(m.post_id) ?? "회원님의 게시물",
+        createdAt: m.created_at,
+        href: hrefFor(m.post_id),
+        unread: isUnread(m.created_at),
+      }),
+    ),
+    ...companionPosts.map(
+      (p): NotificationItem => ({
+        type: "companion_post",
+        id: p.id,
+        postId: p.id,
+        actorId: p.user_id,
+        actorName: actorNameById.get(p.user_id) ?? "알 수 없음",
+        title: p.title || p.caption || "새 게시물",
+        isDemo: p.visibility === "public",
+        createdAt: p.published_at ?? p.created_at,
+        href: `/feed?feed=${p.visibility === "public" ? "completion" : "complex"}#${p.id}`,
+        unread: isUnread(p.published_at ?? p.created_at),
       }),
     ),
     ...(incomingRequests ?? []).map(

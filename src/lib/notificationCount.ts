@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getLikedFeedbackAnnouncements } from "@/lib/notificationList";
+import { getCompanionPosts, getLikedFeedbackAnnouncements, getMyPostMilestones } from "@/lib/notificationList";
 
 // 상단/하단 네비의 안읽음 뱃지 숫자. 예전엔 (app)/layout.tsx가 매 페이지 렌더마다
 // 이 계산(쿼리 최대 7개, 주간 likes 전체 스캔 + users count)을 동기로 돌려서
@@ -35,6 +35,11 @@ export async function computeUnseenNotificationCount(
     .gt("created_at", seenAt);
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
+  // 0076 — 청취자 수·PEAK 진행 마일스톤, Companion 새 글(notificationList.ts와 동일 정의).
+  const [newPostMilestones, newCompanionPosts] = await Promise.all([
+    getMyPostMilestones(supabase, myPostIds, seenAt),
+    getCompanionPosts(supabase, userId, seenAt),
+  ]);
   const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
   const newPeakCount = (myPosts ?? []).filter((p) => p.peaked_at && p.peaked_at > seenAt).length;
 
@@ -79,6 +84,8 @@ export async function computeUnseenNotificationCount(
     (newCompanionRequests?.length ?? 0) +
     (newFeedbackUpdates?.length ?? 0) +
     newLikedAnnouncements.length +
-    (newMilestones?.length ?? 0)
+    (newMilestones?.length ?? 0) +
+    newPostMilestones.length +
+    newCompanionPosts.length
   );
 }

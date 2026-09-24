@@ -19,6 +19,7 @@ import { tagColorClass } from "@/lib/feedConstants";
 import type { ExpireHours } from "@/types/database";
 import { editVideoFile } from "@/lib/trimVideo";
 import { VideoEditor, type TrimRange } from "./VideoEditor";
+import { notifyReaction } from "@/lib/notifyReaction";
 
 const MIN_TAGS = 3;
 
@@ -910,6 +911,8 @@ export default function UploadPage() {
         }
       }
 
+      // Companion(특정인 초대면 초대받은 사람)에게 새 글 알림(0076) — 초대 등록 뒤에 불러야 대상이 잡힌다.
+      notifyReaction({ kind: "published", postId: complexPost.id });
       setLoading(false);
       router.push("/feed?feed=complex");
       return;
@@ -997,6 +1000,8 @@ export default function UploadPage() {
       return;
     }
 
+    // Companion 새 글 푸시 + 운영자 Discord(첫 반응 보장) — 0076.
+    notifyReaction({ kind: "published", postId: post.id });
     router.push("/feed");
   }
 

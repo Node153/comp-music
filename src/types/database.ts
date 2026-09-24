@@ -93,6 +93,11 @@ export interface Database {
           push_notify_like: boolean;
           push_notify_comment: boolean;
           push_notify_kick: boolean;
+          // 0076 — Companion 새 글, 재생 수·PEAK 진행 소식. 푸시는 즉시, 이메일은 다이제스트 한 줄.
+          push_notify_companion_post: boolean;
+          push_notify_progress: boolean;
+          email_notify_companion_post: boolean;
+          email_notify_progress: boolean;
           // 이메일 다이제스트 발송 커서(0035) — 크론이 "이 시각 이후로 새로 생긴 것"만 골라
           // 보내고 나면 여기를 now()로 갱신한다.
           last_notification_emailed_at: string;
@@ -132,6 +137,10 @@ export interface Database {
           push_notify_like?: boolean;
           push_notify_comment?: boolean;
           push_notify_kick?: boolean;
+          push_notify_companion_post?: boolean;
+          push_notify_progress?: boolean;
+          email_notify_companion_post?: boolean;
+          email_notify_progress?: boolean;
           last_notification_emailed_at?: string;
           withdrawn_at?: string | null;
           admin_notified_at?: string | null;
@@ -426,6 +435,8 @@ export interface Database {
           user_id: string;
           parent_id: string | null;
           content: string;
+          // 0076 — 재생 위치를 붙인 댓글("0:42 여기 좋다"), 초 단위. 일반 댓글은 null.
+          timestamp_sec: number | null;
           created_at: string;
         };
         Insert: {
@@ -434,6 +445,7 @@ export interface Database {
           user_id: string;
           parent_id?: string | null;
           content: string;
+          timestamp_sec?: number | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["comments"]["Insert"]>;
@@ -462,6 +474,25 @@ export interface Database {
           last_success_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["push_subscriptions"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0076 — 게시물 마일스톤(청취자 수·PEAK 진행률·Companion 새 글 알림 발송) 1회 기록.
+      post_milestones: {
+        Row: {
+          id: string;
+          post_id: string;
+          kind: "plays" | "peak_progress" | "published";
+          value: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          kind: "plays" | "peak_progress" | "published";
+          value: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_milestones"]["Insert"]>;
         Relationships: [];
       };
       // 0074 — 반응(좋아요/댓글/답글) 알림 발송 기록. 중복 방지 + 이메일 묶음/하루 상한 판정용.
@@ -985,10 +1016,16 @@ export interface Database {
         Args: { pid: string; uid: string };
         Returns: boolean;
       };
-      // mark_post_played(0072) — 5초 재생 시 내 post_plays 행 추가(중복 무시).
+      // mark_post_played(0072) — 5초 재생 시 내 post_plays 행 추가(중복 무시). 0076부터 이번
+      // 호출로 처음 기록됐으면 true(재생 수 알림 트리거 판단용).
       mark_post_played: {
         Args: { pid: string };
-        Returns: void;
+        Returns: boolean;
+      };
+      // awaiting_first_reactions(0076) — 피드 상단 "첫 반응을 기다리는 Drop" 후보.
+      awaiting_first_reactions: {
+        Args: { p_limit?: number };
+        Returns: { post: Database["public"]["Tables"]["posts"]["Row"]; reaction_count: number }[];
       };
       // feed_candidates(0072) — 피드 한 페이지분 후보(키셋 커서, 재생 여부·scope 필터).
       feed_candidates: {

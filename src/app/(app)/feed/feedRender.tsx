@@ -21,6 +21,7 @@ import { KickButton } from "./KickButton";
 import { KickersLine } from "./KickersLine";
 import { PinButton } from "./PinButton";
 import { CommentPanel } from "./CommentPanel";
+import { ShareButton } from "./ShareButton";
 import { GuestEngagementRow } from "./GuestEngagementRow";
 import type { ContentType, Database } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
@@ -702,7 +703,9 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                     <LikeButton postId={post.id} userId={currentUser.id} />
                     {/* Kick(0071) — 하트 바로 옆, DEMO 전용 */}
                     {!isComplex && <KickButton postId={post.id} userId={currentUser.id} isOwnPost={isOwnPost} />}
-                    <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isComplex} />
+                    <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isComplex} isOwnPost={isOwnPost} />
+                    {/* 공유(0076) — PEAK 진행 알림의 행동 버튼, 외부 유입 경로. DEMO 전용. */}
+                    {!isComplex && <ShareButton postId={post.id} title={post.title || post.caption || "Drop"} />}
                     {isOwnPost && isComplex && (
                       // memo 공동창작 미체크 본인 글은 이 자리에 조회자 목록(인스타
                       // 스토리 참고, 사용자 요청) — DEMO 본인 글은 이 슬롯 자체가 없다.

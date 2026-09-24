@@ -7,6 +7,7 @@ import { initialFeedState } from "./feedQuery";
 import { loadFeedChunk } from "./feedChunk";
 import { isOneScreenFeed } from "./feedRender";
 import { FeedInfiniteList } from "./FeedInfiniteList";
+import { NewDropsRail } from "./NewDropsRail";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성.
@@ -131,6 +132,8 @@ export default async function FeedPage({
           태그 필터 중일 때는(결과를 보러 온 상태) 생략. */}
       <div className={feedListClass}>
         {showHero && <FeedHero messages={heroMessages} snap={oneScreenFeed} />}
+        {/* 새 글 부스트(0076) — 반응이 적은 최근 DEMO를 피드 맨 위에 모아 첫 반응을 유도. */}
+        {currentUser && !isComplex && !tagParam && <NewDropsRail />}
         <FeedInfiniteList
           // 탭/태그가 바뀌면 이어 붙인 페이지를 버리고 새로 시작.
           key={`${scope}:${tagParam ?? ""}`}

@@ -5,6 +5,7 @@
 // 실제 <video> 재생은 GlobalPlayerBar 안의 엘리먼트 하나로만 이뤄지고, 페이지 이동에도 안 끊긴다.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { notifyReaction } from "@/lib/notifyReaction";
 
 export type NowPlayingTrack = {
   id: string;
@@ -122,9 +123,13 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
       if (!session.played && session.watchedMs >= 5000) {
         session.played = true;
         // 비로그인은 함수 권한이 없어 실패한다 — 피드 정렬용 기록일 뿐이라 조용히 무시.
+        // 0076 — 이번에 처음 기록된 재생이면(true) 작성자에게 청취자 수 알림을 보낼지 서버가 판단.
+        const playedId = session.trackId;
         createClient()
-          .rpc("mark_post_played", { pid: session.trackId })
-          .then(() => {});
+          .rpc("mark_post_played", { pid: playedId })
+          .then(({ data }) => {
+            if (data === true) notifyReaction({ kind: "play", postId: playedId });
+          });
       }
       if (session.countView && !session.counted && session.watchedMs >= 30000) {
         session.counted = true;

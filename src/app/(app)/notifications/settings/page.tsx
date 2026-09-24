@@ -15,6 +15,10 @@ type PreferenceKey =
   | "push_notify_like"
   | "push_notify_comment"
   | "push_notify_kick"
+  | "push_notify_companion_post"
+  | "push_notify_progress"
+  | "email_notify_companion_post"
+  | "email_notify_progress"
   | "email_notify_knock"
   | "email_notify_companion_request"
   | "email_notify_message"
@@ -29,6 +33,12 @@ const PUSH_ROWS: PreferenceRow[] = [
   { key: "push_notify_like", label: "좋아요", description: "내 게시물에 좋아요가 눌리면" },
   { key: "push_notify_comment", label: "댓글·답글", description: "내 게시물에 댓글, 내 댓글에 답글이 달리면" },
   { key: "push_notify_kick", label: "Kick", description: "내 게시물이 Kick을 받으면" },
+  { key: "push_notify_companion_post", label: "Companion 새 글", description: "Companion이 새 글을 올리면" },
+  {
+    key: "push_notify_progress",
+    label: "청취자·PEAK 소식",
+    description: "첫 청취자·들은 사람 수 돌파, PEAK까지 50%·80% 도달하면",
+  },
 ];
 
 const PREFERENCE_ROWS: PreferenceRow[] = [
@@ -51,6 +61,16 @@ const PREFERENCE_ROWS: PreferenceRow[] = [
     description: "댓글·답글이 달리면 바로 메일로 알려드려요(같은 게시물은 10분에 한 통으로 묶어서)",
   },
   { key: "email_notify_peak", label: "PEAK", description: "내 게시물이 PEAK에 도달하면 메일로 알려드려요" },
+  {
+    key: "email_notify_progress",
+    label: "청취자·PEAK 진행",
+    description: "PEAK 50%·80% 도달은 바로, 새로 들은 사람 수는 하루 한 번 모아서 알려드려요",
+  },
+  {
+    key: "email_notify_companion_post",
+    label: "Companion 새 글",
+    description: "Companion이 올린 새 글을 하루 한 번 모아서 알려드려요",
+  },
 ];
 
 type Preferences = Record<PreferenceKey, boolean>;
@@ -67,7 +87,7 @@ export default function NotificationSettingsPage() {
       const { data: row } = await supabase
         .from("users")
         .select(
-          "push_notify_like, push_notify_comment, push_notify_kick, email_notify_knock, email_notify_companion_request, email_notify_message, email_notify_like, email_notify_kick, email_notify_comment, email_notify_peak",
+          "push_notify_like, push_notify_comment, push_notify_kick, push_notify_companion_post, push_notify_progress, email_notify_companion_post, email_notify_progress, email_notify_knock, email_notify_companion_request, email_notify_message, email_notify_like, email_notify_kick, email_notify_comment, email_notify_peak",
         )
         .eq("id", data.user.id)
         .single();
