@@ -15,11 +15,14 @@ export type NewDrop = {
   authorId: string;
   authorName: string;
   posterSrc: string | null;
-  mediaType: "audio" | "video";
+  // image는 재생 대신 그 게시물로 이동만 한다.
+  mediaType: "audio" | "video" | "image";
   publishedAt: string;
   // PEAK 점수(peakScore) — 기준(PEAK_VIEW_THRESHOLD)에 닿으면 PEAK.
   score: number;
   myLiked: boolean;
+  myKicked: boolean;
+  isMine: boolean;
 };
 
 // 기준 대비 %(1 단위). PEAK 직전이어도 100%로 보이지 않게 99에서 멈춘다.
@@ -35,7 +38,13 @@ export function NewDropsRailList({ drops, userId }: { drops: NewDrop[]; userId: 
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   async function open(drop: NewDrop) {
-    document.getElementById(drop.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const card = document.getElementById(drop.id);
+    card?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (drop.mediaType === "image") {
+      // 지금 피드에 안 그려져 있으면 공유 링크와 같은 주소로 그 게시물을 찾아가게 한다.
+      if (!card) window.location.assign(`/feed?feed=completion#${drop.id}`);
+      return;
+    }
     if (track?.id === drop.id) return;
     setLoadingId(drop.id);
     try {
@@ -63,7 +72,7 @@ export function NewDropsRailList({ drops, userId }: { drops: NewDrop[]; userId: 
         <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">🔥 PEAK 유력 후보</h2>
         <span className="text-xs text-gray-400">반응을 보태 PEAK에 올려주세요</span>
       </div>
-      <div className="mt-2 flex gap-3 overflow-x-auto px-4 pb-1 md:px-0">
+      <div className="mt-2 grid grid-cols-3 gap-2.5 px-4 pb-1 md:px-0">
         {drops.map((drop) => {
           const active = track?.id === drop.id;
           const percent = toPercent(drop.score);
@@ -73,7 +82,7 @@ export function NewDropsRailList({ drops, userId }: { drops: NewDrop[]; userId: 
               key={drop.id}
               type="button"
               onClick={() => open(drop)}
-              className="group flex w-36 shrink-0 flex-col text-left"
+              className="group flex min-w-0 flex-col text-left"
             >
               <span
                 className={`relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900 ${
@@ -104,18 +113,20 @@ export function NewDropsRailList({ drops, userId }: { drops: NewDrop[]; userId: 
               <span className="mt-1.5 block truncate text-sm font-medium text-gray-900 dark:text-gray-100">{drop.title}</span>
               <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{drop.authorName}</span>
               <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-red-600 dark:text-red-400">
-                {!drop.myLiked ? (
+                {drop.isMine ? (
+                  <>내 글 · 공유로 올리기</>
+                ) : !drop.myLiked ? (
                   <>
                     <HeartIcon className="h-3 w-3" filled />
                     좋아요하면 +{toPercent(PEAK_LIKE_WEIGHT)}%
                   </>
-                ) : kickAvailable ? (
+                ) : kickAvailable && !drop.myKicked ? (
                   <>
                     <KickIcon className="h-3 w-3" filled />
                     Kick하면 +{toPercent(PEAK_KICK_WEIGHT)}%
                   </>
                 ) : (
-                  <>공유하면 더 빨리 PEAK</>
+                  <>공유로 더 빨리</>
                 )}
               </span>
               <span className="block truncate text-[11px] text-gray-400">좋아요 {likesLeft}개면 PEAK</span>
