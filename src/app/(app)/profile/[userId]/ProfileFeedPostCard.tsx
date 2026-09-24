@@ -11,6 +11,7 @@ import { PostVideo } from "@/components/PostVideo";
 import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { DoubleTapLikeArea } from "@/components/DoubleTapLikeArea";
 import { PostViewCount } from "@/components/PostViewCount";
+import { ListenInsight } from "@/components/ListenInsight";
 import { EngagementMeter } from "@/components/EngagementMeter";
 import { AddToPlaylistButton } from "@/components/AddToPlaylistButton";
 import { GuestEngagementRow } from "@/app/(app)/feed/GuestEngagementRow";
@@ -201,6 +202,9 @@ export function ProfileFeedPostCard({
               <CommentPanel postId={post.id} userId={currentUserId} isDemo isOwnPost={post.authorId === currentUserId} />
             </div>
             {isDemo && <KickersLine currentUserId={currentUserId} className="-mt-1.5 px-4 pb-3" />}
+            {isDemo && post.authorId === currentUserId && (
+              <ListenInsight postId={post.id} className="-mt-1.5 px-4 pb-3" />
+            )}
           </div>
         )}
       </article>

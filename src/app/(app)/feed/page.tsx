@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { MemoGuideCards } from "@/components/MemoGuideCards";
 import { FeedHero } from "@/components/FeedHero";
+import { UnheardPlayAll } from "@/components/UnheardPlayAll";
 import { initialFeedState } from "./feedQuery";
 import { loadFeedChunk } from "./feedChunk";
 import { isOneScreenFeed } from "./feedRender";
@@ -144,7 +145,11 @@ export default async function FeedPage({
       {/* DEMO 피드는 열자마자 게시물이 아니라 힐링 멘트가 먼저 보이도록 한 판 비운다.
           태그 필터 중일 때는(결과를 보러 온 상태) 생략. */}
       <div className={feedListClass}>
-        {showHero && <FeedHero messages={heroMessages} snap={oneScreenFeed} />}
+        {showHero && (
+          <FeedHero messages={heroMessages} snap={oneScreenFeed}>
+            {currentUser && <UnheardPlayAll />}
+          </FeedHero>
+        )}
         {/* PEAK 유력 후보(0081) — PEAK 직전 DEMO를 피드 맨 위에 모아 반응을 보태도록 유도. */}
         {currentUser && !isComplex && !tagParam && !focused && <NewDropsRail userId={currentUser.id} />}
         <FeedInfiniteList

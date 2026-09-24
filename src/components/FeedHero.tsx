@@ -23,7 +23,16 @@ const FALLBACK_MESSAGES: HeroMessage[] = [
 // 모바일은 snap 값과 무관하게 항상 min-h-svh로 화면 한 판을 비운다(2026-09-23 — 모바일
 // 릴스식 스냅 피드 자체가 없어져서, 예전에 snap=true일 때 쓰던 max-md:h-full·snap-start는
 // 더 이상 의미가 없다). 데스크톱만 snap=true(oneScreenFeed)면 고정 높이(calc)를 쓴다.
-export function FeedHero({ messages, snap = false }: { messages?: HeroMessage[]; snap?: boolean }) {
+// children — 멘트 아래에 붙는 행동 버튼 자리(로그인 회원의 "안 들은 Drop 이어듣기", 2026-09-25).
+export function FeedHero({
+  messages,
+  snap = false,
+  children,
+}: {
+  messages?: HeroMessage[];
+  snap?: boolean;
+  children?: React.ReactNode;
+}) {
   const list = messages && messages.length > 0 ? messages : FALLBACK_MESSAGES;
 
   // 서버 렌더와 첫 클라이언트 렌더는 동일하게(idx 0, 투명). 마운트 후 랜덤으로 골라
@@ -55,6 +64,7 @@ export function FeedHero({ messages, snap = false }: { messages?: HeroMessage[];
           {m.a}
         </p>
       </div>
+      {children}
       {/* 예전엔 text-xs·gray-300이라 아래에 게시물이 있는지 모르겠다는 피드백(2026-09-24) —
           크기·대비를 올리고 튀는 화살표를 달아, 누르면 바로 첫 게시물로 스크롤한다. */}
       <button

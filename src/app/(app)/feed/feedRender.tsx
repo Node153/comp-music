@@ -14,6 +14,7 @@ import { PostOptionsMenu } from "@/components/PostOptionsMenu";
 import { PostViewedBy } from "@/components/PostViewedBy";
 import { PostCaption } from "@/components/PostCaption";
 import { PostViewCount } from "@/components/PostViewCount";
+import { ListenInsight } from "@/components/ListenInsight";
 import { DoubleTapLikeArea } from "@/components/DoubleTapLikeArea";
 import { KickBurst } from "@/components/KickBurst";
 import { LikeButton } from "./LikeButton";
@@ -718,6 +719,8 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                     )}
                   </div>
                   {!isComplex && <KickersLine currentUserId={currentUser.id} className="-mt-1.5 px-4 pb-3" />}
+                  {/* 업로더용 들은 기록(0084) — 내 DEMO 글에만. */}
+                  {!isComplex && isOwnPost && <ListenInsight postId={post.id} className="-mt-1.5 px-4 pb-3" />}
                   </div>
                 )
               )}

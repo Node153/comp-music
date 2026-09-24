@@ -1109,6 +1109,11 @@ export interface Database {
         Args: { pid: string };
         Returns: boolean;
       };
+      // my_post_listen_stats(0084) — 내 글의 들은 사람·끝까지 들은 사람·평균 청취 비율(본인 글만).
+      my_post_listen_stats: {
+        Args: { p_post_ids: string[] };
+        Returns: { post_id: string; listeners: number; finished: number; avg_pct: number | null }[];
+      };
       // awaiting_first_reactions(0076) — 피드 상단 "첫 반응을 기다리는 Drop" 후보.
       awaiting_first_reactions: {
         Args: { p_limit?: number };

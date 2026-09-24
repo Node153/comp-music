@@ -23,6 +23,9 @@ type PlaylistContextValue = {
   clear: () => void;
   /** 큐의 index번째 트랙을 지금 재생 */
   playAt: (index: number) => void;
+  /** 여러 곡을 큐 맨 뒤에 (이미 있으면 그 자리에서 빼서) 순서대로 붙이고 첫 곡부터 재생
+   * — DEMO 첫 화면 "안 들은 Drop 이어듣기". */
+  playAll: (tracks: PlaylistTrack[]) => void;
   /** 현재 재생 중인 트랙 기준으로 다음/이전 곡 재생. 재생했으면 true.
    * 다음 곡은 담기 큐 밖의 곡이면 화면상 다음 카드로 넘어간다. */
   playNext: () => boolean;
@@ -211,6 +214,20 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     [items, play, fetchFreshTrack],
   );
 
+  const playAll = useCallback(
+    (tracks: PlaylistTrack[]) => {
+      const first = tracks[0];
+      if (!first) return;
+      const ids = new Set(tracks.map((t) => t.id));
+      setItems((prev) => [...prev.filter((t) => !ids.has(t.id)), ...tracks]);
+      void fetchFreshTrack(first).then((fresh) => {
+        play(fresh);
+        setItems((prev) => prev.map((t) => (t.id === fresh.id ? fresh : t)));
+      });
+    },
+    [play, fetchFreshTrack],
+  );
+
   const playNow = useCallback(
     (next: PlaylistTrack, opts?: { skipRefresh?: boolean }) => {
       const run = async () => {
@@ -278,6 +295,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         remove,
         clear,
         playAt,
+        playAll,
         playNext,
         playPrev,
         currentIndex,
