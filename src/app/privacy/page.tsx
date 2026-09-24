@@ -26,8 +26,9 @@
 //   안 건드림) — 이 사실을 숨기지 않고 그대로 고지했다.
 //
 // 2026-09-25 개정: 이용 통계 수집(0079 analytics_sessions/analytics_events, /api/t) 추가 고지.
-// IP는 저장하지 않는다(route.ts). 원본 기록 파기 크론은 아직 없음 — 3단계에서 붙일 예정이고
-// 그 전에 보유기간(1년)이 지나는 일은 없다.
+// IP는 저장하지 않는다(route.ts). 1년 지난 원본은 expire-posts 크론이 analytics_maintain(0083)으로
+// 매일 지우고, 그 전에 개인 식별 정보 없는 일별 집계(analytics_daily)로 남긴다 — 보유기간을 바꾸면
+// expire-posts의 ANALYTICS_KEEP_DAYS도 같이 바꿀 것.
 import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
 
 const EFFECTIVE_DATE = "2026-09-25";

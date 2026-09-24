@@ -1069,6 +1069,16 @@ export interface Database {
         Args: { pid: string; uid: string };
         Returns: boolean;
       };
+      // admin_stats_core(0083) — admin_stats의 본문, 관리자 확인 없음. service role 전용(월요일 운영자 요약 메일).
+      admin_stats_core: {
+        Args: { p_days?: number; p_include_admins?: boolean };
+        Returns: unknown;
+      };
+      // analytics_maintain(0083) — 어제까지 일별 집계 채우고 보관기간 지난 원본 삭제. service role 전용.
+      analytics_maintain: {
+        Args: { p_keep_days?: number };
+        Returns: unknown;
+      };
       // admin_stats(0080) — /admin/stats 대시보드 집계(관리자만, 결과 모양은 src/lib/adminStats.ts).
       admin_stats: {
         Args: { p_days?: number; p_include_admins?: boolean };

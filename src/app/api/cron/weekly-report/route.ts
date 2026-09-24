@@ -5,6 +5,7 @@ import { sendPushToUser } from "@/lib/push";
 import { runWithConcurrency } from "@/lib/concurrency";
 import { currentKickWeekStart, currentWeekStartISO } from "@/lib/feedConstants";
 import { escapeHtml } from "@/lib/reactionNotify";
+import { sendAdminWeeklyStats } from "@/lib/adminWeeklyStats";
 
 // 월요일 주간 리포트(0077) — "반응 → 다음 업로드" 루프의 주간 리듬. Kick이 충전되는 월요일
 // (0시 KST) 아침(vercel.json: 월 00:00 UTC = 09:00 KST)에 지난주(월~일, KST) 내 게시물이 받은
@@ -142,7 +143,16 @@ export async function GET(request: NextRequest) {
     await supabase.from("users").update({ weekly_report_week: weekKey }).eq("id", user.id);
   });
 
-  return NextResponse.json({ checked: users?.length ?? 0, emailed, pushed, week: weekKey });
+  // 운영자용 최근 7일 이용 통계 요약 메일(0083) — 실패해도 회원 리포트 결과는 그대로 돌려준다.
+  let adminReport: unknown = null;
+  try {
+    adminReport = await sendAdminWeeklyStats(supabase, weekKey);
+  } catch (err) {
+    console.error("[weekly-report] 운영자 통계 메일 실패", err);
+    adminReport = { error: String(err) };
+  }
+
+  return NextResponse.json({ checked: users?.length ?? 0, emailed, pushed, week: weekKey, adminReport });
 }
 
 function weeklyEmailHtml(stats: Stats, top: { title: string; reactions: number } | null, communityDrops: number) {

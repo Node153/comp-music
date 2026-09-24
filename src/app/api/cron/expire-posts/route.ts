@@ -20,6 +20,8 @@ import { runWithConcurrency } from "@/lib/concurrency";
 //
 // service-role로 RLS를 우회해 모든 사용자의 posts를 갱신해야 하므로 CRON_SECRET으로 보호.
 const DELETE_AFTER_EXPIRY_DAYS = 7;
+// 이용 통계 원본(0079) 보관기간 — 개인정보처리방침 "수집일로부터 1년 후 파기"와 반드시 같은 값.
+const ANALYTICS_KEEP_DAYS = 365;
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -28,6 +30,21 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createAdminClient();
+
+  // 이용 통계 하우스키핑(0083) — 하루 1번 도는 이 크론에 얹는다(크론 개수를 늘리지 않으려고).
+  // 어제까지 일별 집계(개인 식별 정보 없는 숫자만)를 채운 뒤 1년 지난 원본을 지운다. 실패해도 게시물
+  // 만료 처리는 계속한다.
+  let analytics: unknown = null;
+  try {
+    const { data: maintained, error: maintainError } = await supabase.rpc("analytics_maintain", {
+      p_keep_days: ANALYTICS_KEEP_DAYS,
+    });
+    analytics = maintainError ? { error: maintainError.message } : maintained;
+    if (maintainError) console.error("[expire-posts] analytics_maintain 실패", maintainError.message);
+  } catch (err) {
+    console.error("[expire-posts] analytics_maintain 예외", err);
+  }
+
   const { error, data } = await supabase
     .from("posts")
     .update({ status: "expired" })
@@ -70,5 +87,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ expired: data?.length ?? 0, deleted: toDelete?.length ?? 0 });
+  return NextResponse.json({ expired: data?.length ?? 0, deleted: toDelete?.length ?? 0, analytics });
 }
