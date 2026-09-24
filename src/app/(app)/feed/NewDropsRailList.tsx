@@ -86,8 +86,8 @@ export function NewDropsRailList({ drops }: { drops: NewDrop[] }) {
                       : `반응 ${drop.reactionCount}`}
                 </span>
               </span>
-              <span className="mt-1.5 truncate text-sm font-medium text-gray-900 dark:text-gray-100">{drop.title}</span>
-              <span className="truncate text-xs text-gray-500 dark:text-gray-400">
+              <span className="mt-1.5 block truncate text-sm font-medium text-gray-900 dark:text-gray-100">{drop.title}</span>
+              <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
                 {drop.authorName} · {timeAgo(drop.publishedAt)}
               </span>
             </button>
