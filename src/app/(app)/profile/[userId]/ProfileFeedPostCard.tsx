@@ -11,6 +11,8 @@ import { PostVideo } from "@/components/PostVideo";
 import { SoundbarPlayer } from "@/components/SoundbarPlayer";
 import { DoubleTapLikeArea } from "@/components/DoubleTapLikeArea";
 import { PostViewCount } from "@/components/PostViewCount";
+import { EngagementMeter } from "@/components/EngagementMeter";
+import { AddToPlaylistButton } from "@/components/AddToPlaylistButton";
 import { GuestEngagementRow } from "@/app/(app)/feed/GuestEngagementRow";
 import { LikeButton } from "@/app/(app)/feed/LikeButton";
 import { KickButton } from "@/app/(app)/feed/KickButton";
@@ -49,6 +51,21 @@ export function ProfileFeedPostCard({
 }) {
   // Kick(0071)은 DEMO(전체공개) 게시물 전용.
   const isDemo = post.visibility === "public";
+  // 플레이리스트 "담기" 버튼·피크레벨 표시는 피드와 동일하게 재생 가능한(오디오·영상) DEMO
+  // 게시물에만 붙인다(memo는 담기 금지, feedRender.tsx와 동일 규칙).
+  const playlistTrack =
+    isDemo && post.media_type !== "image" && post.videoSrc
+      ? {
+          id: post.id,
+          title: post.title || post.caption || (post.content_type && CONTENT_TYPE_LABEL[post.content_type]) || "음원",
+          author: post.authorName,
+          authorId: post.authorId,
+          videoSrc: post.videoSrc,
+          posterSrc: post.posterSrc,
+          expiresAt: null,
+          mediaType: post.media_type === "audio" ? ("audio" as const) : ("video" as const),
+        }
+      : null;
   // 제목 위에 한 줄(작성자 이름 또는 "상단 고정 게시물")이 이미 있으면 제목 위 여백을 줄인다.
   const hasTopLabel = showAuthor || !!post.pinnedAt;
   return (
@@ -102,6 +119,16 @@ export function ProfileFeedPostCard({
         )}
 
         <div className="relative flex w-full items-center justify-center bg-black">
+          {isDemo && (
+            <div className="absolute right-3 top-3 z-10">
+              <EngagementMeter />
+            </div>
+          )}
+          {playlistTrack && (
+            <div className="absolute bottom-3 right-3 z-10 rounded-full bg-white/90 shadow-sm dark:bg-gray-900/90">
+              <AddToPlaylistButton track={playlistTrack} />
+            </div>
+          )}
           {post.videoSrc && post.media_type === "image" ? (
             currentUserId ? (
               <DoubleTapLikeArea postId={post.id} userId={currentUserId}>
