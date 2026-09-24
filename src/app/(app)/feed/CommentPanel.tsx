@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
 import { Avatar } from "@/components/Avatar";
 import { CommentIcon, XIcon } from "@/components/icons";
+import { notifyReaction } from "@/lib/notifyReaction";
 
 type CommentRow = {
   id: string;
@@ -90,6 +91,7 @@ export function CommentPanel({
 
     setSubmitting(false);
     if (insertError || !inserted) return;
+    notifyReaction({ kind: "comment", commentId: inserted.id });
 
     setComments((prev) => [...prev, { ...inserted, authorName: "나" }]);
     setCommentCount((c) => c + 1);

@@ -161,6 +161,9 @@ export const config = {
     // 비로그인 상태로 요청하면 여기 걸려서 /login으로 리다이렉트되고, 그 결과 오디오 대신
     // 로그인 페이지 HTML이 내려오는 문제가 있었다(사운드가 아니라 로그인 화면 자기 자신을
     // fetch하고 있었던 셈).
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp3|wav|mp4|mov)$).*)",
+    // sw.js/manifest.webmanifest(0074 웹 푸시·PWA)도 제외 — 브라우저가 서비스 워커 갱신 확인이나
+    // 홈 화면 설치 때 세션과 무관하게 받아가는 파일이라, 여기 걸려 /login HTML이 내려오면
+    // 서비스 워커 등록·설치가 통째로 실패한다.
+    "/((?!api|_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp3|wav|mp4|mov)$).*)",
   ],
 };

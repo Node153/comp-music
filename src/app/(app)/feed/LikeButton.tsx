@@ -8,6 +8,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
 import { HeartIcon } from "@/components/icons";
+import { notifyReaction } from "@/lib/notifyReaction";
 
 export function LikeButton({
   postId,
@@ -43,6 +44,7 @@ export function LikeButton({
       ? await supabase.from("likes").insert({ post_id: postId, user_id: userId })
       : await supabase.from("likes").delete().eq("post_id", postId).eq("user_id", userId);
 
+    if (!error && nextLiked) notifyReaction({ kind: "like", postId });
     if (error) {
       // 실패 시 낙관적 업데이트 롤백
       setLiked(!nextLiked);

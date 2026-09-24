@@ -3,7 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { runWithConcurrency } from "@/lib/concurrency";
 
-// 이메일 알림(하루 1회 다이제스트) — Vercel Hobby 플랜 크론이 하루 1회로만 제한돼서(모바일
+// 이메일 알림(하루 1회 다이제스트) — Kick·좋아요·댓글은 즉시 메일이 따로 나가고(0071/0074),
+// 여기선 나머지(노크/신청/메시지/PEAK)와 즉시 메일의 묶음·상한에 걸린 좋아요·댓글만 모은다.
+// 원래 설명: Vercel Hobby 플랜 크론이 하루 1회로만 제한돼서(모바일
 // 앱이 없어 이메일이 유일한 알림 채널인데도) 실시간 발송 대신 이 방식으로 간다. 사용자별
 // last_notification_emailed_at(0035) 이후로 생긴 것만 종류별 설정(email_notify_*)에 맞춰
 // 세어서 한 통으로 모아 보낸다. Kakao 무이메일 가입자(handle_new_user, 0034)의 자리표시자
@@ -42,25 +44,28 @@ export async function GET(request: NextRequest) {
 
     if (!user.email.endsWith(PLACEHOLDER_EMAIL_SUFFIX)) {
       const { data: myPosts } = await supabase.from("posts").select("id, visibility, peaked_at").eq("user_id", user.id);
-      const myPostIds = (myPosts ?? []).map((p) => p.id);
       const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
 
-      if (user.email_notify_like && myPostIds.length > 0) {
+      // 좋아요·댓글은 0074부터 반응이 생기는 즉시 따로 보낸다(lib/reactionNotify.ts). 여기서는
+      // 그때 묶음(같은 게시물 1시간/10분)·하루 상한에 걸려 메일로 못 나간 것만 모아서 보낸다.
+      if (user.email_notify_like) {
         const { count } = await supabase
-          .from("likes")
+          .from("reaction_notifications")
           .select("id", { count: "exact", head: true })
-          .in("post_id", myPostIds)
-          .neq("user_id", user.id)
+          .eq("recipient_id", user.id)
+          .eq("kind", "like")
+          .is("emailed_at", null)
           .gt("created_at", cursor);
         if (count) sections.push(`좋아요 ${count}개`);
       }
 
-      if (user.email_notify_comment && myPostIds.length > 0) {
+      if (user.email_notify_comment) {
         const { count } = await supabase
-          .from("comments")
+          .from("reaction_notifications")
           .select("id", { count: "exact", head: true })
-          .in("post_id", myPostIds)
-          .neq("user_id", user.id)
+          .eq("recipient_id", user.id)
+          .in("kind", ["comment", "reply"])
+          .is("emailed_at", null)
           .gt("created_at", cursor);
         if (count) sections.push(`댓글 ${count}개`);
       }
@@ -113,7 +118,7 @@ export async function GET(request: NextRequest) {
         await sendEmail(
           user.email,
           "Compmusic에 새 알림이 있어요",
-          `<p>${sections.join(", ")}이 와있어요.</p><p><a href="${APP_URL}/notifications">지금 확인하기</a></p>`,
+          `<p>${sections.join(", ")}이 와있어요.</p><p><a href="${APP_URL}/feed">지금 확인하기</a></p>`,
         );
         sent += 1;
       }

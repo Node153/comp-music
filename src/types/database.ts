@@ -79,7 +79,7 @@ export interface Database {
           birth_date: string | null;
           // 이메일 알림 설정(0033) — 모바일 앱이 없어서 이메일이 사실상 유일한 알림 채널이라
           // 종류별로 켜고 끌 수 있게 했다. "답해야 하는" 것(노크/신청/메시지)은 기본 켜짐,
-          // "참고용"인 것(좋아요/댓글/PEAK)은 기본 꺼짐.
+          // "참고용"인 것(좋아요/댓글/PEAK)은 기본 꺼짐 — 단 좋아요/댓글은 0074에서 켜짐으로 바뀜.
           email_notify_like: boolean;
           email_notify_comment: boolean;
           email_notify_knock: boolean;
@@ -88,6 +88,11 @@ export interface Database {
           email_notify_peak: boolean;
           // 0071 — Kick 받으면 즉시 메일(기본 켜짐, 다이제스트 아님).
           email_notify_kick: boolean;
+          // 0074 — 좋아요/댓글 메일도 즉시 발송으로 바뀌고 기본 켜짐. 웹 푸시는 종류별로 따로
+          // 켜고 끈다(기본 켜짐 — 실제 발송은 push_subscriptions에 구독이 있을 때만).
+          push_notify_like: boolean;
+          push_notify_comment: boolean;
+          push_notify_kick: boolean;
           // 이메일 다이제스트 발송 커서(0035) — 크론이 "이 시각 이후로 새로 생긴 것"만 골라
           // 보내고 나면 여기를 now()로 갱신한다.
           last_notification_emailed_at: string;
@@ -124,6 +129,9 @@ export interface Database {
           email_notify_message?: boolean;
           email_notify_kick?: boolean;
           email_notify_peak?: boolean;
+          push_notify_like?: boolean;
+          push_notify_comment?: boolean;
+          push_notify_kick?: boolean;
           last_notification_emailed_at?: string;
           withdrawn_at?: string | null;
           admin_notified_at?: string | null;
@@ -423,6 +431,58 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["comments"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0074 — 웹 푸시 구독(브라우저/기기마다 한 행, endpoint unique). 서버(service_role) 전용.
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          created_at: string;
+          last_success_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          created_at?: string;
+          last_success_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["push_subscriptions"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0074 — 반응(좋아요/댓글/답글) 알림 발송 기록. 중복 방지 + 이메일 묶음/하루 상한 판정용.
+      reaction_notifications: {
+        Row: {
+          id: string;
+          recipient_id: string;
+          actor_id: string;
+          post_id: string;
+          kind: "like" | "comment" | "reply";
+          comment_id: string | null;
+          emailed_at: string | null;
+          pushed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          recipient_id: string;
+          actor_id: string;
+          post_id: string;
+          kind: "like" | "comment" | "reply";
+          comment_id?: string | null;
+          emailed_at?: string | null;
+          pushed_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["reaction_notifications"]["Insert"]>;
         Relationships: [];
       };
       // 0017_companions — 팔로우를 대체하는 맞팔 전용 관계. 쌍당 행 하나, pending → accepted.

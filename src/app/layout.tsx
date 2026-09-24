@@ -25,6 +25,12 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     type: "website",
   },
+  // iPhone "홈 화면에 추가" 시 사파리 주소창 없이 앱처럼 열리게(웹 푸시는 이 상태에서만 됨, 0074).
+  appleWebApp: {
+    capable: true,
+    title: "Compmusic",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({

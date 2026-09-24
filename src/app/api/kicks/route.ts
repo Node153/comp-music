@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { sendPushToUser } from "@/lib/push";
+import { postHref } from "@/lib/reactionNotify";
 
 const APP_URL = "https://compmusic.kr";
 const PLACEHOLDER_EMAIL_SUFFIX = "@no-email.comp.local";
@@ -45,12 +47,25 @@ export async function POST(request: Request) {
   // 메일 실패가 Kick 자체를 실패로 만들면 안 된다(이미 DB에 기록됨) — 로그만 남긴다.
   try {
     const admin = createAdminClient();
-    const { data: post } = await admin.from("posts").select("user_id, title, caption").eq("id", postId).single();
+    const { data: post } = await admin
+      .from("posts")
+      .select("id, user_id, title, caption, visibility")
+      .eq("id", postId)
+      .single();
     if (post) {
       const [{ data: author }, { data: kicker }] = await Promise.all([
-        admin.from("users").select("email, email_notify_kick, status").eq("id", post.user_id).single(),
+        admin.from("users").select("email, email_notify_kick, push_notify_kick, status").eq("id", post.user_id).single(),
         admin.from("users").select("nickname").eq("id", user.id).single(),
       ]);
+      // 웹 푸시(0074) — 메일과 별개로 켜고 끈다.
+      if (author && author.status === "approved" && author.push_notify_kick) {
+        await sendPushToUser(post.user_id, {
+          title: "이번 주 Kick을 받았어요 🥁",
+          body: `${kicker?.nickname ?? "누군가"}님이 「${post.title || post.caption || "회원님의 게시물"}」에 Kick을 줬어요`,
+          url: postHref(post),
+          tag: `kick:${postId}`,
+        });
+      }
       if (
         author &&
         author.status === "approved" &&

@@ -7,6 +7,7 @@
 import { useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
+import { notifyReaction } from "@/lib/notifyReaction";
 
 export function usePostLike(postId: string, userId: string) {
   const { liked, setLiked, setLikeCount, setWeeklyLikeCount } = usePostEngagement();
@@ -18,6 +19,7 @@ export function usePostLike(postId: string, userId: string) {
     setWeeklyLikeCount((c) => c + 1);
 
     const { error } = await createClient().from("likes").insert({ post_id: postId, user_id: userId });
+    if (!error) notifyReaction({ kind: "like", postId });
     if (error) {
       setLiked(false);
       setLikeCount((c) => c - 1);

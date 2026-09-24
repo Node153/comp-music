@@ -18,6 +18,7 @@ import { useNotificationCount, useMarkNotificationsSeen } from "@/components/Not
 import { navRowClass, navLabelClass, topBarIconClass } from "@/components/ui/styles";
 import type { NotificationItem } from "@/lib/notificationList";
 import { FEEDBACK_STATUS_LABEL } from "@/lib/feedback";
+import { PushPromptBanner } from "@/components/PushPromptBanner";
 
 // 옛 /notifications 페이지의 카테고리 필터 그대로(2026-09-16 이전엔 URL ?type=으로 했지만,
 // 이제 페이지가 아니라 패널이라 로컬 상태로 바꿨다).
@@ -185,6 +186,9 @@ export function NotificationsMenu({
                 </button>
               </div>
             </div>
+
+            {/* 웹 푸시(0074) 켜기 안내 — 켤 수 있을 때만 보인다. */}
+            <PushPromptBanner onNavigate={close} />
 
             <div className="flex gap-1.5 overflow-x-auto border-b border-gray-100 px-3 py-2 dark:border-gray-800">
               {CATEGORY_OPTIONS.map((option) => (
