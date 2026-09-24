@@ -442,6 +442,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
             <article
               key={post.id}
               id={post.id}
+              data-post-id={post.id}
               className={`relative scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400 ${articleSnapClass}`}
             >
               <PostEngagementProvider

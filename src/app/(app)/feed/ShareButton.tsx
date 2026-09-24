@@ -14,6 +14,7 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { InstagramIcon, LinkIcon, XIcon, ArrowUpIcon } from "@/components/icons";
+import { track } from "@/lib/analytics";
 
 type StoryKind = "video" | "image";
 type StoryState =
@@ -29,7 +30,9 @@ export function ShareButton({ postId, title, hasSound }: { postId: string; title
   const storyRequested = useRef(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
 
-  const url = () => `${window.location.origin}/feed?feed=completion#${postId}`;
+  // src는 이용 통계(0079)의 유입 태그 — 이 링크로 들어온 방문을 공유 경로별로 센다(도착하면 주소창에서 지워짐).
+  const url = (src: "share_story" | "share_copy" | "share_native") =>
+    `${window.location.origin}/feed?feed=completion&src=${src}#${postId}`;
 
   function loadStory(kind: StoryKind) {
     setStory({ status: "loading", kind });
@@ -59,9 +62,9 @@ export function ShareButton({ postId, title, hasSound }: { postId: string; title
     toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }
 
-  function copyLink(): Promise<boolean> {
+  function copyLink(src: "share_story" | "share_copy" = "share_copy"): Promise<boolean> {
     return navigator.clipboard
-      .writeText(url())
+      .writeText(url(src))
       .then(() => true)
       .catch(() => false);
   }
@@ -70,11 +73,12 @@ export function ShareButton({ postId, title, hasSound }: { postId: string; title
     if (story.status !== "ready") return;
     const file = story.file;
     // 공유 시트보다 먼저 호출 — writeText는 제스처를 소모하지 않지만 navigator.share는 소모한다.
-    const copied = copyLink();
+    const copied = copyLink("share_story");
     if (navigator.canShare?.({ files: [file] })) {
       try {
         // text/url을 같이 넣으면 인스타가 대상 목록에서 빠지는 기기가 있어 파일만 넘긴다.
         await navigator.share({ files: [file] });
+        track("share", { post: postId, props: { method: "story", kind: story.kind } });
         setOpen(false);
         if (await copied) showToast("링크를 복사했어요 — 스토리 링크 스티커에 붙여넣으세요");
       } catch (e) {
@@ -89,6 +93,7 @@ export function ShareButton({ postId, title, hasSound }: { postId: string; title
     a.click();
     window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     await copied;
+    track("share", { post: postId, props: { method: "story_download", kind: story.kind } });
     showToast(
       `스토리 ${story.kind === "video" ? "영상" : "이미지"}을 저장했어요 — 휴대폰에서 누르면 인스타로 바로 올릴 수 있어요`,
     );
@@ -96,16 +101,18 @@ export function ShareButton({ postId, title, hasSound }: { postId: string; title
 
   async function onCopyLink() {
     if (await copyLink()) {
+      track("share", { post: postId, props: { method: "copy" } });
       setOpen(false);
       showToast("링크를 복사했어요");
     } else {
-      window.prompt("이 링크를 복사해서 공유하세요", url());
+      window.prompt("이 링크를 복사해서 공유하세요", url("share_copy"));
     }
   }
 
   async function onNativeShare() {
     try {
-      await navigator.share({ title, text: `「${title}」 — Compmusic에서 들어보세요`, url: url() });
+      await navigator.share({ title, text: `「${title}」 — Compmusic에서 들어보세요`, url: url("share_native") });
+      track("share", { post: postId, props: { method: "native" } });
       setOpen(false);
     } catch {
       // 공유 시트를 닫은 경우 등 — 그냥 둔다.
