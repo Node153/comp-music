@@ -3,6 +3,7 @@
 // "이 기기에서 푸시 알림 받기" 카드(0074) — 알림 설정 화면 맨 위. 상태별로 안내가 다르다:
 // iPhone 사파리 탭이면 홈 화면 추가 방법, 권한 차단이면 브라우저 설정 안내, 그 외엔 켜기/끄기.
 import { usePushStatus, type PushStatus } from "@/lib/pushClient";
+import { openIosInstallGuide } from "@/components/IosInstallGuide";
 
 export function PushSettingsCard() {
   const { status, busy, enable, disable } = usePushStatus();
@@ -35,7 +36,18 @@ export function PushSettingsCard() {
         )}
       </div>
 
-      {status === "ios-needs-install" && <IosInstallGuide />}
+      {status === "ios-needs-install" && (
+        <>
+          <IosInstallGuide />
+          <button
+            type="button"
+            onClick={openIosInstallGuide}
+            className="mt-3 rounded-full bg-black px-4 py-2 text-xs font-semibold text-white transition hover:opacity-80"
+          >
+            화면으로 따라하기
+          </button>
+        </>
+      )}
       {status === "denied" && (
         <p className="mt-3 text-xs leading-relaxed text-black">
           브라우저에서 알림이 차단돼 있어요. 주소창 왼쪽의 사이트 설정(자물쇠 아이콘)에서 <b>알림</b>을
@@ -59,10 +71,10 @@ export function IosInstallGuide() {
   return (
     <ol className="mt-3 flex list-decimal flex-col gap-1 pl-5 text-xs leading-relaxed text-black">
       <li>
-        사파리 하단(또는 상단)의 <b>공유 버튼</b>(네모에서 화살표가 나오는 아이콘)을 눌러요.
+        Safari 맨 아래 <b>···</b> 버튼을 누르고 <b>공유</b>를 눌러요(공유 버튼이 바로 보이면 그걸 눌러도 돼요).
       </li>
       <li>
-        목록에서 <b>홈 화면에 추가</b>를 누르고 &lsquo;추가&rsquo;를 눌러요.
+        아래로 내려 <b>홈 화면에 추가</b>를 누르고, &lsquo;웹 앱으로 열기&rsquo;가 켜진 채로 &lsquo;추가&rsquo;를 눌러요.
       </li>
       <li>홈 화면에 생긴 Compmusic 아이콘으로 열고 한 번 더 로그인해요.</li>
       <li>
