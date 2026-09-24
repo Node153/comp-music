@@ -21,6 +21,9 @@ if (DSN) {
 // 전역 리스너로 잡아 /api/client-error로 보낸다. 웹훅 URL이 없으면 서버에서 no-op.
 if (typeof window !== "undefined") {
   window.addEventListener("error", (e) => {
+    // 크로스오리진 스크립트(주로 브라우저 확장 프로그램) 에러 — 브라우저가 상세 내용을
+    // 숨겨서 스택도 파일명도 없이 이 메시지만 옴. 우리 코드로는 원인 파악이 불가능한 노이즈.
+    if (e.message === "Script error." && !e.error?.stack) return;
     reportClientError("window", e.message || "window error", e.error?.stack);
   });
   window.addEventListener("unhandledrejection", (e) => {
