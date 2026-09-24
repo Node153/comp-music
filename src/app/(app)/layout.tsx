@@ -16,6 +16,7 @@ import { ThemeSync } from "@/components/ThemeSync";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { PushSubscriptionSync } from "@/components/PushSubscriptionSync";
 import { IosInstallPrompt } from "@/components/IosInstallGuide";
+import { AndroidInstallPrompt } from "@/components/AndroidInstallGuide";
 import { FeatureGuideModal } from "@/components/FeatureGuideModal";
 import { FeedbackPulse } from "@/components/FeedbackPulse";
 import { NotificationCountProvider } from "@/components/NotificationCountContext";
@@ -56,6 +57,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   <PushSubscriptionSync />
                   {/* iPhone Safari 사용자에게 홈 화면 추가(웹 앱) 안내 팝업 — 푸시는 웹 앱에서만 된다. */}
                   <IosInstallPrompt userId={user.id} />
+                  {/* Android: 앱 설치(beforeinstallprompt) 또는 브라우저 메뉴 안내 + 푸시 켜기. */}
+                  <AndroidInstallPrompt userId={user.id} />
                   {/* 신규 유저 첫 방문 가이드(DEMO/memo/PEAK/노크) — 로그인 화면 어디든 공통으로
                       한 번만 뜨면 되는 오버레이라 fixed 모달로 여기 둔다(2026-09-23). */}
                   <FeatureGuideModal userId={user.id} />

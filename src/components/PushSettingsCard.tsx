@@ -2,11 +2,17 @@
 
 // "이 기기에서 푸시 알림 받기" 카드(0074) — 알림 설정 화면 맨 위. 상태별로 안내가 다르다:
 // iPhone 사파리 탭이면 홈 화면 추가 방법, 권한 차단이면 브라우저 설정 안내, 그 외엔 켜기/끄기.
-import { usePushStatus, type PushStatus } from "@/lib/pushClient";
+import { useSyncExternalStore } from "react";
+import { isStandalone, usePushStatus, type PushStatus } from "@/lib/pushClient";
 import { openIosInstallGuide } from "@/components/IosInstallGuide";
+import { isAndroid, openAndroidInstallGuide } from "@/components/AndroidInstallGuide";
+
+const noopSubscribe = () => () => {};
 
 export function PushSettingsCard() {
   const { status, busy, enable, disable } = usePushStatus();
+  // Android 브라우저 탭이면 푸시와 별개로 "앱으로 설치" 안내도 연결(AndroidInstallGuide). 서버 렌더에선 false.
+  const canInstallAndroid = useSyncExternalStore(noopSubscribe, () => isAndroid() && !isStandalone(), () => false);
   return (
     <div className="rounded-2xl bg-box-gray p-4">
       <div className="flex items-center justify-between gap-4">
@@ -47,6 +53,15 @@ export function PushSettingsCard() {
             화면으로 따라하기
           </button>
         </>
+      )}
+      {canInstallAndroid && (
+        <button
+          type="button"
+          onClick={openAndroidInstallGuide}
+          className="mt-3 text-xs font-semibold text-black underline underline-offset-2 transition hover:opacity-70"
+        >
+          홈 화면에 앱으로 설치하기
+        </button>
       )}
       {status === "denied" && (
         <p className="mt-3 text-xs leading-relaxed text-black">
