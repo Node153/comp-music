@@ -19,9 +19,12 @@ import { NotifyLandingBanner } from "./NotifyLandingBanner";
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ feed?: string; tag?: string; from?: string }>;
+  searchParams: Promise<{ feed?: string; tag?: string; from?: string; post?: string }>;
 }) {
-  const { feed: feedParam, tag: tagParam, from: fromParam } = await searchParams;
+  const { feed: feedParam, tag: tagParam, from: fromParam, post: postParam } = await searchParams;
+  // 공유·알림 링크(post=<id>)로 들어온 글 — 맞춤 정렬 + 10개씩이라 그 글이 첫 페이지에 없을 수
+  // 있어서 첫 페이지 맨 위에 고정해 보여준다(feedQuery.ts focusId). uuid가 아니면 무시.
+  const focusId = postParam && /^[0-9a-f-]{36}$/i.test(postParam) ? postParam : null;
   // Demo(전체공개, 노출영구) 기본값 · Complex(비공개, 노출시간필수 — 팔로워공개 또는 특정인 초대)는
   // 0012_complex_access_and_chat부터 실제 posts에 저장됨. visibility='public'이 demo, 그 외
   // ('followers'/'invite_only')가 Complex — 같은 posts 테이블을 이 컬럼으로 나눠서 쓴다.
@@ -57,14 +60,19 @@ export default async function FeedPage({
   }
 
   const scope = isComplex ? "memo" : "demo";
-  const { nodes, next, postCount } = await loadFeedChunk(initialFeedState(scope, tagParam ?? null), true);
+  const { nodes, next, postCount, focused } = await loadFeedChunk(
+    initialFeedState(scope, tagParam ?? null),
+    true,
+    tagParam ? null : focusId,
+  );
   const hasPosts = postCount > 0;
   const oneScreenFeed = isOneScreenFeed(currentUser);
   const feedListClass = "flex flex-col gap-4 md:gap-6";
 
   // DEMO 피드 상단 힐링 멘트(관리자가 /admin/feed-hero에서 편집) — 히어로가 실제로 뜰
   // 조건일 때만 조회한다.
-  const showHero = !isComplex && !tagParam && hasPosts;
+  // 링크로 콕 집어 들어왔으면 힐링 멘트·PEAK 후보 목록 없이 그 글부터 바로 보여준다.
+  const showHero = !isComplex && !tagParam && hasPosts && !focused;
   const { data: heroRows } = showHero
     ? await (await createClient())
         .from("feed_hero_messages")
@@ -138,7 +146,7 @@ export default async function FeedPage({
       <div className={feedListClass}>
         {showHero && <FeedHero messages={heroMessages} snap={oneScreenFeed} />}
         {/* PEAK 유력 후보(0081) — PEAK 직전 DEMO를 피드 맨 위에 모아 반응을 보태도록 유도. */}
-        {currentUser && !isComplex && !tagParam && <NewDropsRail userId={currentUser.id} />}
+        {currentUser && !isComplex && !tagParam && !focused && <NewDropsRail userId={currentUser.id} />}
         <FeedInfiniteList
           // 탭/태그가 바뀌면 이어 붙인 페이지를 버리고 새로 시작.
           key={`${scope}:${tagParam ?? ""}`}

@@ -6,11 +6,11 @@ import { FeedCaughtUpDivider, renderFeedPosts, type FeedPostRow } from "./feedRe
 
 // 피드 한 페이지(게시물 선택 + 카드 렌더) — 첫 페이지(page.tsx)와 무한 스크롤(actions.ts)
 // 공용. nodes는 그대로 목록에 이어 붙이면 되는 카드/구분선 배열.
-export async function loadFeedChunk(state: FeedState, isFirstPage: boolean) {
+export async function loadFeedChunk(state: FeedState, isFirstPage: boolean, focusId: string | null = null) {
   const supabase = await createClient();
   const currentUser = await getCurrentUser();
   const isComplex = state.scope === "memo";
-  if (isComplex && !currentUser) return { nodes: [] as React.ReactNode[], next: null, postCount: 0 };
+  if (isComplex && !currentUser) return { nodes: [] as React.ReactNode[], next: null, postCount: 0, focused: false };
 
   const [me, { data: companionRows }, page] = await Promise.all([
     currentUser ? getMyUserRow() : Promise.resolve(null),
@@ -21,7 +21,7 @@ export async function loadFeedChunk(state: FeedState, isFirstPage: boolean) {
           .eq("status", "accepted")
           .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
       : Promise.resolve({ data: [] as { requester_id: string; addressee_id: string }[] }),
-    buildFeedPage(supabase, state, currentUser?.id ?? null, isFirstPage),
+    buildFeedPage(supabase, state, currentUser?.id ?? null, isFirstPage, focusId),
   ]);
   const myCompanionIds = new Set(
     (companionRows ?? []).map((r) => (r.requester_id === currentUser?.id ? r.addressee_id : r.requester_id)),
@@ -39,5 +39,5 @@ export async function loadFeedChunk(state: FeedState, isFirstPage: boolean) {
   const nodes = page.items.map((i) =>
     i.kind === "post" ? cards[n++] : <FeedCaughtUpDivider key="feed-caught-up" />,
   );
-  return { nodes, next: page.next, postCount: posts.length };
+  return { nodes, next: page.next, postCount: posts.length, focused: page.focused };
 }

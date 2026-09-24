@@ -10,6 +10,7 @@ import type { FeedPostRow } from "./feedRender";
 //      다른 게시자가 더 없으면(그 구간 DB를 다 읽음) 규칙을 풀어 그대로 보여준다.
 // 게스트는 재생 기록이 없어 1)만 있다(= 최신순 + 게시자 섞기).
 // memo 고정(Pin) 게시물은 첫 페이지 맨 위에 따로 두고 이후 페이지에서는 exclude로 뺀다.
+// 공유·알림 링크의 post=(focusId)도 같은 방식 — 그 글을 첫 페이지 맨 위에 두고 목록에서는 뺀다.
 
 export const FEED_PAGE_SIZE = 10;
 // 한 페이지를 고를 때 보는 후보 수(carry 포함) — 섞을 다른 게시자를 찾을 여유분.
@@ -126,15 +127,28 @@ export async function buildFeedPage(
   input: FeedState,
   userId: string | null,
   isFirstPage: boolean,
-): Promise<{ items: FeedItem[]; next: FeedState | null }> {
+  focusId: string | null = null,
+): Promise<{ items: FeedItem[]; next: FeedState | null; focused: boolean }> {
   const s: FeedState = { ...input, carry: [...input.carry], exclude: [...input.exclude] };
   const items: FeedItem[] = [];
   let postCount = 0;
+  let focused = false;
+
+  // 링크로 콕 집어 들어온 글 — feed_candidates가 탭(scope)·열람 권한을 그대로 걸러서, 이 탭에서
+  // 볼 수 없는 글이면 그냥 무시된다.
+  if (isFirstPage && focusId) {
+    const [post] = await fetchByIds(supabase, s, [focusId]);
+    if (post) {
+      items.push({ kind: "post", post });
+      s.exclude.push(post.id);
+      focused = true;
+    }
+  }
 
   if (isFirstPage && s.scope === "memo" && userId) {
-    const pinned = await fetchPinned(supabase, s, userId);
+    const pinned = (await fetchPinned(supabase, s, userId)).filter((p) => !s.exclude.includes(p.id));
     for (const post of pinned) items.push({ kind: "post", post });
-    s.exclude = pinned.map((p) => p.id);
+    s.exclude.push(...pinned.map((p) => p.id));
   }
 
   const exclude = new Set(s.exclude);
@@ -187,8 +201,8 @@ export async function buildFeedPage(
       s.pendingDivider = true;
       continue;
     }
-    return { items, next: null };
+    return { items, next: null, focused };
   }
 
-  return { items, next: s };
+  return { items, next: s, focused };
 }
