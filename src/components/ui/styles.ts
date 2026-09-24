@@ -40,7 +40,7 @@ export const card = "rounded-2xl border border-gray-200 bg-white p-4";
 // 폭은 피드 DEMO 카드(feed/page.tsx에서 확정된 659px 고정폭)와 동일하게 맞춤(2026-09-15,
 // 사용자 요청) — 예전 600px에서 살짝 넓어짐.
 export const pageCard =
-  "mx-auto max-w-[659px] bg-main-gray p-6 mb-32 md:mt-6 md:mb-24 md:rounded-lg";
+  "mx-auto max-w-[659px] bg-main-gray p-6 mb-[calc(8rem+env(safe-area-inset-bottom))] md:mt-6 md:mb-24 md:rounded-lg";
 
 // 상단바(TopNav/MobileTopBar) 아이콘 버튼 색 — 피드(흰 상단바)는 기존 gray-100/200 톤 그대로,
 // 그 외 화면(main-gray 상단바 위)은 근처가 거의 흰색이라 붕 떠 보였던 걸 그레이 컬러 시스템의

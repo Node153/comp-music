@@ -82,8 +82,10 @@ export default async function FeedPage({
       // 잘려 보였다, DEMO/memo 탭 공통 문제라 여기 한 곳만 고치면 둘 다 해결됨).
       // 모바일은 이제(스냅 스크롤 제거, 2026-09-23) 일반 페이지 스크롤이라 pb-[6.25rem]
       // (100px = GlobalPlayerBar h-11/44px + BottomNav h-14/56px)로 직접 클리어런스를 준다.
+      // +env(safe-area-inset-bottom)은 2026-09-24 BottomNav 높이 조정(홈 인디케이터 여백 추가)에
+      // 맞춘 것 — BottomNav.tsx 주석 참고.
       className={`mx-auto max-w-[900px] px-0 pt-0 md:px-4 md:pt-4 ${
-        oneScreenFeed ? "pb-[6.25rem] md:pb-24" : "pb-24 md:pb-8"
+        oneScreenFeed ? "pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:pb-24" : "pb-24 md:pb-8"
       }`}
     >
       {!currentUser && (

@@ -17,6 +17,12 @@
 // 지금 보고 있는 사이트 테마를 따른다(2026-09-23 사용자 요청 — DEMO/memo 배경과 동일하게):
 // memo 탭이면 #1c1c1e 다크, 그 외(DEMO 포함)는 demo-bg 라이트. 바로 위 사운드바와 한 덩어리로
 // 이어져 보이고, 탭 전환 시 globals.css .theme-transition으로 같이 부드럽게 바뀐다.
+// 2026-09-24: 홈 인디케이터가 있는 기기에서 탭이 화면 맨 아래에 바짝 붙어 눌리게 보인다는
+// 제보(사운드클라우드 기준으로 높이 조정 요청) — 아이콘 행(h-14=56px)은 그대로 두고 그 아래에
+// env(safe-area-inset-bottom)만큼 여백을 추가해 아이콘이 홈 인디케이터 위로 뜨게 했다(사운드클라우드도
+// 이 구조). 이 바의 총 높이가 56px보다 커졌으므로 위에 뜨는 GlobalPlayerBar(bottom-14)와
+// QueuePanel(bottom-[104px])도 같은 calc(...+env(safe-area-inset-bottom))로 같이 올렸다 —
+// GlobalPlayerBar.tsx, QueuePanel.tsx 참고.
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSearchOverlay } from "@/components/SearchOverlayContext";
 import { useNotificationCount } from "@/components/NotificationCountContext";
@@ -39,7 +45,7 @@ export function BottomNav({ currentUserId }: { currentUserId: string }) {
     <nav
       // 5등분 그리드 — justify-around는 탭마다 라벨 폭(홈/업로드 등)이 달라 가운데 "업로드"가
       // 화면 정중앙에서 어긋났다(2026-09-23 제보). 열 폭을 똑같이 나눠 각 탭을 열 가운데에 둔다.
-      className={`fixed inset-x-0 bottom-0 z-40 grid h-14 grid-cols-5 place-items-center border-t transition-colors md:hidden ${
+      className={`fixed inset-x-0 bottom-0 z-40 grid min-h-14 grid-cols-5 place-items-center border-t pb-[env(safe-area-inset-bottom)] transition-colors md:hidden ${
         isMemoTheme ? "border-white/10 bg-[#1c1c1e] text-white" : "border-black/10 bg-demo-bg text-black"
       }`}
     >
