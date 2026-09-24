@@ -1069,6 +1069,11 @@ export interface Database {
         Args: { pid: string; uid: string };
         Returns: boolean;
       };
+      // admin_stats(0080) — /admin/stats 대시보드 집계(관리자만, 결과 모양은 src/lib/adminStats.ts).
+      admin_stats: {
+        Args: { p_days?: number; p_include_admins?: boolean };
+        Returns: unknown;
+      };
       // analytics_ingest(0079) — service role 전용. 세션 upsert(시간 누적) + 이벤트 일괄 insert.
       analytics_ingest: {
         Args: {

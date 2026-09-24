@@ -1,6 +1,7 @@
 // 관리자 전용 페이지 목록 — /help의 관리자 섹션과 TopNav 프로필 드롭다운이 함께 쓴다.
 // 실제 접근 제어는 proxy.ts(/admin/* 는 role=admin만)가 담당하고, 이 목록은 링크 노출용.
 export const ADMIN_LINKS: { href: string; label: string }[] = [
+  { href: "/admin/stats", label: "이용 통계" },
   { href: "/admin/members", label: "회원 관리" },
   { href: "/admin/activity", label: "활동 로그" },
   { href: "/admin/verifications", label: "심사 대기열" },
