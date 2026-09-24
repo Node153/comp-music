@@ -125,11 +125,15 @@ export default async function ProfilePage({
   // 좋아요 누른 게시물을 모아서 보여준다. "담기"(재생목록)는 아직 계정이 아니라 브라우저
   // localStorage에만 있어서(PlaylistContext) 서버 렌더 프로필엔 못 실음 — 사용자 확인 후
   // 이번엔 좋아요만 구현, 담기는 별도 작업으로 미룸.
-  const { data: likedByUserRows } = await supabase
-    .from("likes")
-    .select("post_id, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  // 나만 보기(2026-09-24 사용자 요청) — 남이 무엇을 좋아요했는지는 본인 프로필에서만 보여야
+  // 하므로, 본인이 아니면 아예 쿼리도 안 돌리고 빈 배열을 내려준다(ProfileFeed도 탭 자체를 숨김).
+  const { data: likedByUserRows } = isOwnProfile
+    ? await supabase
+        .from("likes")
+        .select("post_id, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+    : { data: [] };
   const likedPostIds = (likedByUserRows ?? []).map((r) => r.post_id);
 
   const { data: likedPostsRaw } =

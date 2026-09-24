@@ -119,16 +119,18 @@ export function ProfileFeed({
         >
           보관된 게시물 <span className={tab === "expired" ? "text-white/70" : "text-active-gray"}>{expiredPosts.length}</span>
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("liked")}
-          className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
-            tab === "liked" ? "bg-black text-white" : "border border-box-gray text-active-gray hover:opacity-70"
-          }`}
-        >
-          <HeartIcon className="h-3.5 w-3.5" filled={tab === "liked"} />
-          좋아요 <span className={tab === "liked" ? "text-white/70" : "text-active-gray"}>{likedPosts.length}</span>
-        </button>
+        {isOwnProfile && (
+          <button
+            type="button"
+            onClick={() => setTab("liked")}
+            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+              tab === "liked" ? "bg-black text-white" : "border border-box-gray text-active-gray hover:opacity-70"
+            }`}
+          >
+            <HeartIcon className="h-3.5 w-3.5" filled={tab === "liked"} />
+            좋아요 <span className={tab === "liked" ? "text-white/70" : "text-active-gray"}>{likedPosts.length}</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setTab("kicked")}
