@@ -72,6 +72,9 @@ self.addEventListener("notificationclick", (event) => {
   // 알림 버튼(Android)을 눌렀으면 그 버튼의 주소, 본문을 눌렀으면 기본 주소.
   const path = (event.action && data.actionUrls && data.actionUrls[event.action]) || data.url || "/feed";
   const target = new URL(path, self.location.origin);
+  // 이용 통계(0079) 유입 태그 — 푸시로 들어온 방문을 센다(버튼이면 어떤 버튼인지도). 앱이 도착 즉시
+  // 주소창에서 지운다(AnalyticsTracker).
+  target.searchParams.set("src", event.action ? `push_${event.action}` : "push");
   event.waitUntil(
     (async () => {
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });

@@ -15,6 +15,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { CheckIcon, XIcon } from "@/components/icons";
 import { isStandalone, usePushStatus } from "@/lib/pushClient";
+import { track } from "@/lib/analytics";
 
 const STORAGE_KEY = "comp:android-install-prompt:v1";
 const OPEN_EVENT = "comp:open-android-install-guide";
@@ -118,10 +119,16 @@ export function AndroidInstallPrompt({ userId }: { userId: string }) {
     };
   }, [userId]);
 
+  // 이용 통계(0079) — 설치 안내가 뜬 횟수와 결과.
+  useEffect(() => {
+    if (open) track("install_prompt_shown", { props: { platform: "android" } });
+  }, [open]);
+
   if (!open) return null;
   return (
     <AndroidInstallModal
       onClose={(reason) => {
+        track("install_prompt_result", { props: { platform: "android", result: reason } });
         if (reason === "never") writeState({ ...readState(), never: true });
         else if (reason === "close") writeState({ ...readState(), snoozeUntil: Date.now() + SNOOZE_DAYS_ON_CLOSE * 86_400_000 });
         setOpen(false);
@@ -140,6 +147,7 @@ function AndroidInstallModal({ onClose }: { onClose: (reason: "close" | "never" 
     if (!deferred) return;
     await deferred.prompt();
     const { outcome } = await deferred.userChoice;
+    track("install_prompt_result", { props: { platform: "android", result: `native_${outcome}` } });
     deferredPrompt = null;
     emit();
     if (outcome === "accepted") {

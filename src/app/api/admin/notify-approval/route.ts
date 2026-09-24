@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     await sendEmail(
       target.email,
       "가입 심사가 승인됐어요 — Compmusic 이용을 시작해보세요",
-      `<p>${target.name}님, 가입 심사가 승인됐습니다.</p><p>이제 Compmusic의 모든 기능을 이용하실 수 있어요.</p><p><a href="${APP_URL}/feed">지금 시작하기</a></p>`,
+      `<p>${target.name}님, 가입 심사가 승인됐습니다.</p><p>이제 Compmusic의 모든 기능을 이용하실 수 있어요.</p><p><a href="${APP_URL}/feed?src=email_approval">지금 시작하기</a></p>`,
     );
   } catch (err) {
     console.error("[notify-approval] 메일 발송 실패", err);

@@ -165,8 +165,8 @@ function weeklyEmailHtml(stats: Stats, top: { title: string; reactions: number }
 ${statsTable}${topLine}
 <p>🥁 <b>이번 주 Kick 1개가 충전됐어요.</b> 마음에 드는 Drop에 주면 PEAK에 크게 가까워져요.</p>
 <p style="color:#444;">${nudge}</p>
-<p style="margin:20px 0;"><a href="${APP_URL}/upload" style="display:inline-block;padding:10px 18px;background:#111;color:#fff;border-radius:999px;text-decoration:none;font-weight:600;">새 Drop 올리기</a>
-&nbsp;<a href="${APP_URL}/feed?from=notify" style="color:#111;">피드 둘러보기 →</a></p>
+<p style="margin:20px 0;"><a href="${APP_URL}/upload?src=email_weekly_upload" style="display:inline-block;padding:10px 18px;background:#111;color:#fff;border-radius:999px;text-decoration:none;font-weight:600;">새 Drop 올리기</a>
+&nbsp;<a href="${APP_URL}/feed?from=notify&src=email_weekly" style="color:#111;">피드 둘러보기 →</a></p>
 <p style="margin-top:28px;font-size:12px;color:#999;">주간 리포트는 <a href="${APP_URL}/notifications/settings" style="color:#999;">알림 설정</a>에서 끌 수 있어요.</p>
 </div>`;
 }

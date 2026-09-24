@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { ownPostActions, pushImageFor, sendPushToUser } from "@/lib/push";
+import { withSrc } from "@/lib/linkSrc";
 
 // 반응(좋아요·댓글·답글) 즉시 알림(0074) — 이메일 + 웹 푸시.
 //
@@ -48,8 +49,8 @@ export function reactionEmailHtml(message: string, href: string, quote?: string)
     : "";
   return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:480px;">
 <p>${message}</p>${quoteBlock}
-<p style="margin:20px 0;"><a href="${APP_URL}${href}" style="display:inline-block;padding:10px 18px;background:#111;color:#fff;border-radius:999px;text-decoration:none;font-weight:600;">게시물 보러 가기</a></p>
-<p style="color:#555;">반응이 올 때가 다음 작업을 올리기 좋은 타이밍이에요. <a href="${APP_URL}/upload" style="color:#111;">새 Drop 올리기 →</a></p>
+<p style="margin:20px 0;"><a href="${APP_URL}${withSrc(href, "email_reaction")}" style="display:inline-block;padding:10px 18px;background:#111;color:#fff;border-radius:999px;text-decoration:none;font-weight:600;">게시물 보러 가기</a></p>
+<p style="color:#555;">반응이 올 때가 다음 작업을 올리기 좋은 타이밍이에요. <a href="${APP_URL}/upload?src=email_reaction_upload" style="color:#111;">새 Drop 올리기 →</a></p>
 <p style="margin-top:28px;font-size:12px;color:#999;">알림은 <a href="${APP_URL}/notifications/settings" style="color:#999;">알림 설정</a>에서 종류별로 끌 수 있어요.</p>
 </div>`;
 }

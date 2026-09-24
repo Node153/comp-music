@@ -373,6 +373,51 @@ export interface Database {
         Relationships: [];
       };
       // 유저별 "5초 이상 재생함" 기록(0072) — 피드 정렬(안 들은 글 먼저)용. 본인 것만 조회.
+      // 이용 통계(0079) — /api/t가 analytics_ingest()로만 쓴다. 읽기는 관리자만.
+      analytics_sessions: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          anon_id: string;
+          started_at: string;
+          last_seen_at: string;
+          active_seconds: number;
+          listen_seconds: number;
+          device_type: string | null;
+          os: string | null;
+          browser: string | null;
+          is_pwa: boolean;
+          screen_w: number | null;
+          screen_h: number | null;
+          entry_path: string | null;
+          entry_src: string | null;
+          referrer_host: string | null;
+          utm_source: string | null;
+          utm_medium: string | null;
+          utm_campaign: string | null;
+          user_agent: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      analytics_events: {
+        Row: {
+          id: number;
+          session_id: string;
+          user_id: string | null;
+          anon_id: string;
+          name: string;
+          path: string | null;
+          post_id: string | null;
+          props: Record<string, string | number | boolean | null>;
+          occurred_at: string;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       post_plays: {
         Row: {
           post_id: string;
@@ -1023,6 +1068,25 @@ export interface Database {
       can_access_post_content: {
         Args: { pid: string; uid: string };
         Returns: boolean;
+      };
+      // analytics_ingest(0079) — service role 전용. 세션 upsert(시간 누적) + 이벤트 일괄 insert.
+      analytics_ingest: {
+        Args: {
+          p_session_id: string;
+          p_user_id: string | null;
+          p_anon_id: string;
+          p_meta: Record<string, string | number | boolean | null>;
+          p_active_s: number;
+          p_listen_s: number;
+          p_events: {
+            n: string;
+            t: number;
+            p: string | null;
+            post: string | null;
+            x: Record<string, string | number | boolean | null>;
+          }[];
+        };
+        Returns: undefined;
       };
       // mark_post_played(0072) — 5초 재생 시 내 post_plays 행 추가(중복 무시). 0076부터 이번
       // 호출로 처음 기록됐으면 true(재생 수 알림 트리거 판단용).

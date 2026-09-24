@@ -6,6 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { notifyReaction } from "@/lib/notifyReaction";
+import { onBeforeFlush, track as trackEvent } from "@/lib/analytics";
 
 export type NowPlayingTrack = {
   id: string;
@@ -74,6 +75,31 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
     lastWallClock: number | null;
   }>({ trackId: null, countView: false, watchedMs: 0, counted: false, played: false, lastWallClock: null });
 
+  // 이용 통계(0079) — 한 곡을 몇 초 듣고 넘겼는지. 다른 곡으로 넘어가거나/끝까지 듣거나/닫거나/
+  // 페이지를 떠날 때 지금까지 들은 만큼을 play_end로 남기고 누적을 0으로 돌린다(같은 곡을 다시
+  // 들으면 그 뒤 들은 만큼이 또 한 번의 play_end가 된다). 1초도 안 들었으면 남기지 않는다.
+  // 조회수/post_plays와 같은 watchedMs(실제 경과 시간, 틱당 2초 캡)를 쓴다.
+  const endPlaySession = useCallback((reason: "switch" | "ended" | "close" | "leave") => {
+    const session = viewSessionRef.current;
+    if (!session.trackId || session.watchedMs < 1000) return;
+    const listenedS = Math.round(session.watchedMs / 1000);
+    const duration = videoRef.current?.duration;
+    const durationS = duration && Number.isFinite(duration) ? Math.round(duration) : null;
+    trackEvent("play_end", {
+      post: session.trackId,
+      props: {
+        listened_s: listenedS,
+        duration_s: durationS,
+        pct: durationS ? Math.min(100, Math.round((listenedS / durationS) * 100)) : null,
+        reason,
+        memo: !session.countView,
+      },
+    });
+    session.watchedMs = 0;
+  }, []);
+
+  useEffect(() => onBeforeFlush(() => endPlaySession("leave")), [endPlaySession]);
+
   const play = useCallback((next: NowPlayingTrack) => {
     setTrack(next);
     setIsPlaying(true);
@@ -91,6 +117,8 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
     // 제보: "새로고침하면 조회수가 초기화되는데" — 실제로는 초기화가 아니라 애초에 DB에
     // 반영된 적이 없었던 것).
     if (viewSessionRef.current.trackId === next.id) return;
+    endPlaySession("switch");
+    trackEvent("play_start", { post: next.id, props: { memo: Boolean(next.expiresAt) } });
     viewSessionRef.current = {
       trackId: next.id,
       countView: !next.expiresAt,
@@ -99,7 +127,7 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
       played: false,
       lastWallClock: null,
     };
-  }, []);
+  }, [endPlaySession]);
 
   // 전역 <video>는 (app) 레이아웃에 항상 마운트돼 있어서(GlobalPlayerBar) 이 리스너는
   // 앱이 켜져 있는 동안 한 번만 붙으면 된다.
@@ -108,7 +136,8 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
     if (!video) return;
     const onTimeUpdate = () => {
       const session = viewSessionRef.current;
-      if (!session.trackId || ((session.counted || !session.countView) && session.played)) return;
+      // 조회수·재생 기록이 끝난 뒤에도 누적은 계속한다 — 통계(play_end)의 들은 시간에 쓴다.
+      if (!session.trackId) return;
       const now = Date.now();
       // 실제 경과한 시간(wall clock)만으로 누적한다 — 예전엔 video.currentTime 변화량과도
       // 비슷해야만 인정했는데, R2 signed URL로 스트리밍하는 오디오는 버퍼링 때문에
@@ -151,9 +180,14 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
         setLastCountedView({ id: viewedId, at: now });
       }
     };
+    const onEnded = () => endPlaySession("ended");
     video.addEventListener("timeupdate", onTimeUpdate);
-    return () => video.removeEventListener("timeupdate", onTimeUpdate);
-  }, []);
+    video.addEventListener("ended", onEnded);
+    return () => {
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("ended", onEnded);
+    };
+  }, [endPlaySession]);
 
   const pause = useCallback(() => {
     videoRef.current?.pause();
@@ -175,12 +209,13 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const close = useCallback(() => {
+    endPlaySession("close");
     videoRef.current?.pause();
     currentTrackIdRef.current = null;
     setTrack(null);
     setIsPlaying(false);
     setDuration(0);
-  }, []);
+  }, [endPlaySession]);
 
   return (
     <NowPlayingContext.Provider

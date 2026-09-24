@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         await sendEmail(
           author.email,
           `${kicker?.nickname ?? "누군가"}님이 이번 주 Kick을 회원님 게시물에 줬어요`,
-          `<p><b>${escapeHtml(kicker?.nickname ?? "누군가")}</b>님이 일주일에 한 번뿐인 Kick을 「${escapeHtml(postTitle)}」에 줬어요.</p><p><a href="${APP_URL}/feed?feed=completion#${postId}">게시물 보러 가기</a></p>`,
+          `<p><b>${escapeHtml(kicker?.nickname ?? "누군가")}</b>님이 일주일에 한 번뿐인 Kick을 「${escapeHtml(postTitle)}」에 줬어요.</p><p><a href="${APP_URL}/feed?feed=completion&src=email_kick#${postId}">게시물 보러 가기</a></p>`,
         );
       }
     }

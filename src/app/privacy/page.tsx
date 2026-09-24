@@ -24,9 +24,13 @@
 // - messages(1:1 DM)와 post_chat_messages(memo)의 텍스트 내용은 현재 자동 삭제/만료
 //   크론이 전혀 없다(cleanup-complex-files는 memo의 "첨부파일"만 3일 후 삭제, 텍스트는
 //   안 건드림) — 이 사실을 숨기지 않고 그대로 고지했다.
+//
+// 2026-09-25 개정: 이용 통계 수집(0079 analytics_sessions/analytics_events, /api/t) 추가 고지.
+// IP는 저장하지 않는다(route.ts). 원본 기록 파기 크론은 아직 없음 — 3단계에서 붙일 예정이고
+// 그 전에 보유기간(1년)이 지나는 일은 없다.
 import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
 
-const EFFECTIVE_DATE = "2026-08-29";
+const EFFECTIVE_DATE = "2026-09-25";
 const CONTACT_EMAIL = "jtaein0723@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -112,6 +116,12 @@ export default function PrivacyPolicyPage() {
             IP 주소, 접속일시, 요청 URL, 브라우저·기기 정보 등 호스팅사(Vercel)·CDN(Cloudflare)·
             데이터베이스(Supabase)가 보안 대응·장애 분석 목적으로 표준적으로 남기는 접속·보안 로그
           </li>
+          <li>
+            서비스 이용기록: 접속 기기 종류(모바일·태블릿·PC)·운영체제·브라우저, 홈 화면 앱 사용 여부,
+            화면 크기, 방문 시각과 이용 시간, 열람한 화면, 게시물이 화면에 표시되거나 재생된 기록과
+            재생 시간, 공유·업로드 시도 기록, 알림·공유 링크를 통한 방문 여부. 브라우저에 저장되는 임의의
+            방문자 식별값으로 같은 기기의 방문을 묶습니다. IP 주소는 이 기록에 저장하지 않습니다.
+          </li>
           <li>로그인 세션 유지를 위한 쿠키(세션 토큰) — 자세한 내용은 &quot;10. 자동 수집 장치 및 거부 방법&quot;에서 안내합니다.</li>
         </ul>
       </Section>
@@ -131,6 +141,10 @@ export default function PrivacyPolicyPage() {
           <li>알림 이메일(좋아요·Kick·댓글·노크·Companion 신청·메시지 등) 발송</li>
           <li>공지사항 전달, 이용자 피드백 접수 및 처리</li>
           <li>부정 이용 방지, 서비스 보안 유지 및 장애 대응</li>
+          <li>
+            서비스 이용 통계 분석(이용 시간대·기기·체류 시간·감상 및 반응 현황 등)을 통한 서비스
+            개선과 커뮤니티 운영 — 운영자(관리자)만 열람하며 외부에 제공하지 않습니다
+          </li>
         </ul>
       </Section>
 
@@ -159,6 +173,10 @@ export default function PrivacyPolicyPage() {
             ],
             ["memo 채팅 첨부파일(이미지·음원·영상)", "업로드일로부터 3일 후 자동 삭제"],
             ["접속·보안 로그", "각 호스팅·인프라 공급자의 표준 로그 보존기간에 따름(운영자가 별도로 장기 보관하지 않음)"],
+            [
+              "서비스 이용기록(이용 통계)",
+              "수집일로부터 1년 후 파기. 그 이후에는 특정 개인을 알아볼 수 없는 집계 수치(일별 방문자 수 등)로만 보관",
+            ],
             ["고객문의(피드백) 내용", "처리 완료 후 문의 이력 확인 등 합리적인 목적에 필요한 기간 동안 보관"],
           ]}
         />
@@ -276,6 +294,11 @@ export default function PrivacyPolicyPage() {
           서비스는 로그인 상태 유지를 위해 쿠키(세션 토큰)를 사용합니다. 이용자는 브라우저
           설정에서 쿠키 저장을 거부할 수 있으나, 이 경우 로그인이 유지되지 않아 서비스 이용에
           제한이 있을 수 있습니다.
+        </p>
+        <p>
+          또한 이용 통계를 위해 브라우저 저장소(localStorage)에 임의의 방문자 식별값과 현재 방문 식별값을
+          저장합니다. 브라우저의 사이트 데이터 삭제 기능으로 언제든 지울 수 있으며, 지우면 이후 방문은
+          새로운 방문자로 집계됩니다.
         </p>
       </Section>
 

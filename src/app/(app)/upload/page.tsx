@@ -23,6 +23,7 @@ import { notifyReaction } from "@/lib/notifyReaction";
 import { HAPTIC, haptic } from "@/lib/haptics";
 import { acquireWakeLock } from "@/lib/wakeLock";
 import { takeSharedUploadFile } from "@/lib/shareTarget";
+import { track } from "@/lib/analytics";
 
 const MIN_TAGS = 3;
 
@@ -501,6 +502,10 @@ export default function UploadPage() {
   const [collabAvailable, setCollabAvailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // 이용 통계(0079) — 올리려다 어디서 막혔는지(검증 메시지·업로드 실패). 성공은 posts 테이블로 안다.
+  useEffect(() => {
+    if (error) track("upload_error", { props: { message: error.slice(0, 120) } });
+  }, [error]);
   // 미리보기 aside는 영상 업로드일 때만 나타나고, 버튼으로 접었다 폈다 할 수 있음(음원은 폼 안
   // 사운드바로 이미 충분해서 aside 자체가 안 뜸).
   const [previewOpen, setPreviewOpen] = useState(true);
@@ -838,6 +843,7 @@ export default function UploadPage() {
 
   async function submitPost() {
     setError(null);
+    track("upload_submit", { props: { tab: uploadType } });
 
     if (!title.trim()) {
       setError("제목을 입력해주세요.");

@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -51,7 +53,14 @@ export default function RootLayout({
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* 이용 통계 수집(0079) — 로그인 전 랜딩·가입 화면부터 재야 해서 루트에 둔다. useSearchParams를
+            쓰므로 Suspense로 감싸야 나머지 페이지가 정적 렌더를 유지한다. */}
+        <Suspense fallback={null}>
+          <AnalyticsTracker />
+        </Suspense>
+      </body>
     </html>
   );
 }

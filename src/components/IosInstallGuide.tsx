@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { XIcon, SmartphoneIcon, BellIcon, KeyIcon } from "@/components/icons";
 import { isIOS, isStandalone } from "@/lib/pushClient";
 import { isAndroid } from "@/components/AndroidInstallGuide";
+import { track } from "@/lib/analytics";
 
 const OPEN_EVENT = "comp:open-install-guide";
 const STORAGE_KEY = "comp:ios-install-prompt:v1";
@@ -114,10 +115,16 @@ export function IosInstallPrompt({ userId }: { userId: string }) {
     };
   }, [userId]);
 
+  // 이용 통계(0079) — 설치 안내가 뜬 횟수와 어떻게 닫았는지(설치 따라함/닫기/다시 보지 않기).
+  useEffect(() => {
+    if (open) track("install_prompt_shown", { props: { platform: "ios" } });
+  }, [open]);
+
   if (!open) return null;
   return (
     <IosInstallGuideModal
       onClose={(reason) => {
+        track("install_prompt_result", { props: { platform: "ios", result: reason } });
         if (reason === "never") writeState({ ...readState(), never: true });
         else snooze(reason === "finish" ? SNOOZE_DAYS_ON_FINISH : SNOOZE_DAYS_ON_CLOSE);
         setOpen(false);
