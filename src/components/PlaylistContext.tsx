@@ -23,7 +23,8 @@ type PlaylistContextValue = {
   clear: () => void;
   /** 큐의 index번째 트랙을 지금 재생 */
   playAt: (index: number) => void;
-  /** 현재 재생 중인 트랙 기준으로 다음/이전 곡 재생. 재생했으면 true */
+  /** 현재 재생 중인 트랙 기준으로 다음/이전 곡 재생. 재생했으면 true.
+   * 다음 곡은 담기 큐 밖의 곡이면 화면상 다음 카드로 넘어간다. */
   playNext: () => boolean;
   playPrev: () => boolean;
   currentIndex: number;
@@ -130,15 +131,20 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 
   // 화면에 떠 있는 카드들의 트랙 데이터(id → 트랙). 같은 게시물이 두 번 렌더될 수 있어 개수도 센다.
   const pageTracksRef = useRef(new Map<string, { track: PlaylistTrack; count: number }>());
+  // 카드가 등록/해제될 때마다 올라가는 번호 — 하단 바 "다음" 버튼 활성 여부(pageHasNext)를 다시 계산하는 신호.
+  const [pageVersion, setPageVersion] = useState(0);
+  const [pageHasNext, setPageHasNext] = useState(false);
   const registerPageTrack = useCallback((t: PlaylistTrack) => {
     const map = pageTracksRef.current;
     const entry = map.get(t.id);
     map.set(t.id, { track: t, count: (entry?.count ?? 0) + 1 });
+    setPageVersion((v) => v + 1);
     return () => {
       const cur = map.get(t.id);
       if (!cur) return;
       if (cur.count <= 1) map.delete(t.id);
       else map.set(t.id, { ...cur, count: cur.count - 1 });
+      setPageVersion((v) => v + 1);
     };
   }, []);
 
@@ -154,6 +160,12 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     const nextId = ids.slice(at + 1).find((id) => id !== track.id);
     return nextId ? (pageTracksRef.current.get(nextId)?.track ?? null) : null;
   }, [track]);
+
+  // 화면상 다음 카드가 있는지 — DOM 순서를 봐야 해서 렌더가 끝난 다음 프레임에 계산한다.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setPageHasNext(!!pickNextOnPage()));
+    return () => cancelAnimationFrame(raf);
+  }, [pickNextOnPage, pageVersion]);
 
   // 재생목록/최근들은에서 실제로 재생을 누르는 순간 서버에서 최신 signed URL을 한 번 더
   // 받아온다 — AddToPlaylistButton의 마운트 시 갱신은 그 게시물이 "지금 피드에 보일 때만"
@@ -247,7 +259,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         playNext,
         playPrev,
         currentIndex,
-        hasNext: currentIndex >= 0 && currentIndex < items.length - 1,
+        // 담기 큐 곡이면 큐 기준, 피드·프로필에서 바로 튼 곡이면 화면상 다음 카드 기준.
+        hasNext: currentIndex >= 0 ? currentIndex < items.length - 1 : pageHasNext,
         hasPrev: currentIndex > 0,
         queueOpen,
         setQueueOpen,
