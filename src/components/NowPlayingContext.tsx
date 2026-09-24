@@ -58,12 +58,16 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
   // 지금 재생 중인 트랙 id — play()가 같은 트랙 재호출인지 판단하는 데만 쓴다(state인 track을
   // 읽으려면 play의 의존성이 바뀌어 매 렌더 새 함수가 되므로 ref로 따로 둔다).
   const currentTrackIdRef = useRef<string | null>(null);
+  // 같은 세션으로 "5초 이상 재생함"(post_plays, 0072 — 피드에서 안 들은 글 먼저 보여주기용)도
+  // 잰다. 이건 memo 글도 대상이라 trackId는 항상 싣고, 조회수 대상인지는 countView로 가른다.
   const viewSessionRef = useRef<{
     trackId: string | null;
+    countView: boolean;
     watchedMs: number;
     counted: boolean;
+    played: boolean;
     lastWallClock: number | null;
-  }>({ trackId: null, watchedMs: 0, counted: false, lastWallClock: null });
+  }>({ trackId: null, countView: false, watchedMs: 0, counted: false, played: false, lastWallClock: null });
 
   const play = useCallback((next: NowPlayingTrack) => {
     setTrack(next);
@@ -83,9 +87,11 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
     // 반영된 적이 없었던 것).
     if (viewSessionRef.current.trackId === next.id) return;
     viewSessionRef.current = {
-      trackId: next.expiresAt ? null : next.id,
+      trackId: next.id,
+      countView: !next.expiresAt,
       watchedMs: 0,
       counted: false,
+      played: false,
       lastWallClock: null,
     };
   }, []);
@@ -97,7 +103,7 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
     if (!video) return;
     const onTimeUpdate = () => {
       const session = viewSessionRef.current;
-      if (!session.trackId || session.counted) return;
+      if (!session.trackId || ((session.counted || !session.countView) && session.played)) return;
       const now = Date.now();
       // 실제 경과한 시간(wall clock)만으로 누적한다 — 예전엔 video.currentTime 변화량과도
       // 비슷해야만 인정했는데, R2 signed URL로 스트리밍하는 오디오는 버퍼링 때문에
@@ -113,7 +119,14 @@ export function NowPlayingProvider({ children }: { children: React.ReactNode }) 
         }
       }
       session.lastWallClock = now;
-      if (session.watchedMs >= 30000) {
+      if (!session.played && session.watchedMs >= 5000) {
+        session.played = true;
+        // 비로그인은 함수 권한이 없어 실패한다 — 피드 정렬용 기록일 뿐이라 조용히 무시.
+        createClient()
+          .rpc("mark_post_played", { pid: session.trackId })
+          .then(() => {});
+      }
+      if (session.countView && !session.counted && session.watchedMs >= 30000) {
         session.counted = true;
         const viewedId = session.trackId;
         // ⚠️ postgrest-js의 쿼리 빌더는 .then()을 실제로 호출해야만 fetch가 나간다("thenable"

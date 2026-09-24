@@ -341,6 +341,21 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["post_views"]["Insert"]>;
         Relationships: [];
       };
+      // 유저별 "5초 이상 재생함" 기록(0072) — 피드 정렬(안 들은 글 먼저)용. 본인 것만 조회.
+      post_plays: {
+        Row: {
+          post_id: string;
+          user_id: string;
+          played_at: string;
+        };
+        Insert: {
+          post_id: string;
+          user_id: string;
+          played_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_plays"]["Insert"]>;
+        Relationships: [];
+      };
       // memo 합작 게시물 상단 고정 오버라이드(0054/0055) — 본인만 보는 개인화 표시.
       // 행이 없으면 자동 규칙(본인 글·초대받은 글)을 따르고, 있으면 pinned 값이 덮어쓴다.
       post_pins: {
@@ -898,6 +913,24 @@ export interface Database {
       can_access_post_content: {
         Args: { pid: string; uid: string };
         Returns: boolean;
+      };
+      // mark_post_played(0072) — 5초 재생 시 내 post_plays 행 추가(중복 무시).
+      mark_post_played: {
+        Args: { pid: string };
+        Returns: void;
+      };
+      // feed_candidates(0072) — 피드 한 페이지분 후보(키셋 커서, 재생 여부·scope 필터).
+      feed_candidates: {
+        Args: {
+          p_scope: "demo" | "memo";
+          p_tag?: string | null;
+          p_played?: boolean;
+          p_before_ts?: string | null;
+          p_before_id?: string | null;
+          p_limit?: number;
+          p_ids?: string[] | null;
+        };
+        Returns: Database["public"]["Tables"]["posts"]["Row"][];
       };
       // increment_post_view(0052) — DEMO 조회수 증가. 비로그인 방문자도 호출 가능(anon 권한).
       increment_post_view: {
