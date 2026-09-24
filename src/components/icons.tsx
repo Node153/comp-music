@@ -612,6 +612,42 @@ export function InstagramIcon({ className }: IconProps) {
   );
 }
 
+// 댓글 패널 원탭 반응 칩(0076)의 이모지(🎹🔁🤝)도 브라우저마다 모양이 달라서 선 아이콘으로 교체.
+export function PianoIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="1" />
+      <line x1="7" y1="5" x2="7" y2="13" />
+      <line x1="11" y1="5" x2="11" y2="13" />
+      <line x1="15" y1="5" x2="15" y2="13" />
+      <line x1="3" y1="13" x2="21" y2="13" />
+    </svg>
+  );
+}
+
+export function RepeatIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="m17 2 4 4-4 4" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <path d="m7 22-4-4 4-4" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </svg>
+  );
+}
+
+export function HandshakeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="m11 17 2 2a1 1 0 1 0 3-3" />
+      <path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4" />
+      <path d="m21 3 1 11h-2" />
+      <path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3" />
+      <path d="M3 4h8" />
+    </svg>
+  );
+}
+
 export function LinkIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden="true">

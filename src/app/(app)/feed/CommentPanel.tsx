@@ -9,21 +9,32 @@
 // 누르면 그 문구로 바로 댓글 등록 → 작성자 알림도 댓글과 똑같이 감)과, 지금 이 게시물을 듣는
 // 중이면 재생 위치를 붙여 남기는 "0:42 여기 좋다" 댓글(comments.timestamp_sec). 댓글의 시간
 // 칩을 누르면 그 위치로 이동한다(이 게시물이 재생 중일 때).
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePostEngagement } from "@/components/PostEngagementContext";
 import { Avatar } from "@/components/Avatar";
-import { CommentIcon, XIcon } from "@/components/icons";
+import {
+  CommentIcon,
+  XIcon,
+  FlameIcon,
+  PianoIcon,
+  HeadphonesIcon,
+  MicIcon,
+  RepeatIcon,
+  HandshakeIcon,
+} from "@/components/icons";
 import { notifyReaction } from "@/lib/notifyReaction";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 
-const QUICK_REACTIONS = [
-  "🔥 사운드 좋아요",
-  "🎹 편곡 좋아요",
-  "🎧 믹스 깔끔해요",
-  "🎤 톤 좋아요",
-  "🔁 계속 듣게 돼요",
-  "🤝 같이 작업하고 싶어요",
+// 0076 원탭 반응 — 예전엔 이모지(🔥🎹🎧🎤🔁🤝)를 라벨 앞에 붙였는데 브라우저마다 이모지
+// 폰트/모양이 달라서(특히 컬러 vs 흑백) 다른 UI 아이콘과 마찬가지로 선(stroke) 아이콘으로 교체.
+const QUICK_REACTIONS: { icon: ComponentType<{ className?: string }>; label: string }[] = [
+  { icon: FlameIcon, label: "사운드 좋아요" },
+  { icon: PianoIcon, label: "편곡 좋아요" },
+  { icon: HeadphonesIcon, label: "믹스 깔끔해요" },
+  { icon: MicIcon, label: "톤 좋아요" },
+  { icon: RepeatIcon, label: "계속 듣게 돼요" },
+  { icon: HandshakeIcon, label: "같이 작업하고 싶어요" },
 ];
 
 function formatTimestamp(sec: number) {
@@ -318,15 +329,16 @@ export function CommentPanel({
               {error && <p className="mb-2 text-xs text-red-600">{error}</p>}
               {!isOwnPost && !replyTo && (
                 <div className="-mx-3 mb-2 flex gap-1.5 overflow-x-auto px-3 pb-0.5">
-                  {QUICK_REACTIONS.map((preset) => (
+                  {QUICK_REACTIONS.map(({ icon: Icon, label }) => (
                     <button
-                      key={preset}
+                      key={label}
                       type="button"
-                      onClick={() => submitComment(preset)}
+                      onClick={() => submitComment(label)}
                       disabled={submitting}
-                      className="shrink-0 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                      className="flex shrink-0 items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                     >
-                      {preset}
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
                     </button>
                   ))}
                 </div>
