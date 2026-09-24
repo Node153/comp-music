@@ -5,13 +5,15 @@
 // 카드를 보여준다. 현재/보관된 필터는 그대로 유지하고, 폴더는 큐레이션 도구 성격이 강해
 // 기존 FolderView(썸네일 그리드 + 담기/빼기)를 그대로 재사용한다 — 피드 카드로 안 바꿈.
 // 밑줄 탭 대신 알약 필터 칩으로(2026-09 — ProfileTabs 탭 밑줄과 2단으로 겹쳐 보이지 않게).
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ContentType } from "@/types/database";
 import type { Kicker } from "@/components/PostEngagementContext";
 import { FolderView, type FolderData } from "./FolderView";
 import { NewFolderButton } from "./NewFolderButton";
 import { ProfileFeedPostCard } from "./ProfileFeedPostCard";
 import { HeartIcon, FolderIcon, KickIcon } from "@/components/icons";
+
+export const SHOW_PINNED_POST_EVENT = "profile:show-pinned-post";
 
 export type FeedPost = {
   id: string;
@@ -36,6 +38,9 @@ export type FeedPost = {
   // Likes 탭 참고, 2026-09)는 이 프로필 주인이 아니라 다른 사람 게시물도 섞여 나오기 때문.
   authorName: string;
   authorId: string;
+  // 작성자가 프로필 상단에 고정한 시각(0075) — 좋아요/Kick 필터에 섞인 남의 글도 값은
+  // 실려 오지만, 고정 표시는 이 프로필 주인 글의 "현재 게시물" 목록에서만 의미가 있다.
+  pinnedAt: string | null;
 };
 
 export function ProfileFeed({
@@ -58,15 +63,39 @@ export function ProfileFeed({
 }) {
   const [tab, setTab] = useState<string>("current");
 
+  // 상단 고정(0075) — 페이스북처럼 "현재 게시물" 맨 위에 모은다. 고정은 작성자의 명시적
+  // 선택이라 노출시간이 끝난(보관된) 게시물이어도 맨 위에 그대로 보여준다.
+  const pinnedPosts = posts
+    .filter((post) => post.pinnedAt)
+    .sort((a, b) => (b.pinnedAt ?? "").localeCompare(a.pinnedAt ?? ""));
   const currentPosts = posts.filter((post) => !post.isExpired);
+  const currentFeed = [...pinnedPosts, ...currentPosts.filter((post) => !post.pinnedAt)];
+
+  // 왼쪽 "상단 고정" 카드(PinnedPostsCard)의 썸네일을 누르면 SHOW_PINNED_POST_EVENT가 온다 —
+  // 다른 필터를 보고 있었으면 현재 게시물로 돌아온 뒤 그 카드로 스크롤한다. 모바일/데스크톱
+  // ProfileFeed가 둘 다 마운트돼 있어서(한쪽은 display:none) DOM id 대신 이 인스턴스 안에서만 찾는다.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function onShow(e: Event) {
+      const id = (e as CustomEvent<string>).detail;
+      setTab("current");
+      requestAnimationFrame(() =>
+        rootRef.current
+          ?.querySelector(`[data-post-id="${id}"]`)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+    }
+    window.addEventListener(SHOW_PINNED_POST_EVENT, onShow);
+    return () => window.removeEventListener(SHOW_PINNED_POST_EVENT, onShow);
+  }, []);
   const expiredPosts = posts.filter((post) => post.isExpired);
   const activeFolder = folders.find((f) => f.id === tab);
   const visiblePosts =
-    tab === "current" ? currentPosts : tab === "expired" ? expiredPosts : tab === "kicked" ? kickedPosts : likedPosts;
+    tab === "current" ? currentFeed : tab === "expired" ? expiredPosts : tab === "kicked" ? kickedPosts : likedPosts;
   const showAuthor = tab === "liked" || tab === "kicked";
 
   return (
-    <div className="min-w-0">
+    <div ref={rootRef} className="min-w-0">
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -139,7 +168,13 @@ export function ProfileFeed({
       ) : (
         <div className="mt-4 flex flex-col gap-4">
           {visiblePosts.map((post) => (
-            <ProfileFeedPostCard key={post.id} post={post} currentUserId={currentUserId} showAuthor={showAuthor} />
+            <ProfileFeedPostCard
+              key={post.id}
+              post={post}
+              currentUserId={currentUserId}
+              showAuthor={showAuthor}
+              canPin={isOwnProfile && !showAuthor}
+            />
           ))}
           {visiblePosts.length === 0 && (
             <p className="py-10 text-center text-sm text-active-gray">

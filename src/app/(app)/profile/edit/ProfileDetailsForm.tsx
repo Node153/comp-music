@@ -48,6 +48,7 @@ type ProfileDetails = {
   favoriteGenres: string[];
   soundcloud: string;
   youtube: string;
+  instagram: string;
 };
 
 const EMPTY: ProfileDetails = {
@@ -62,7 +63,18 @@ const EMPTY: ProfileDetails = {
   favoriteGenres: [],
   soundcloud: "",
   youtube: "",
+  instagram: "",
 };
+
+// 인스타그램은 "@아이디"·"아이디"·전체 URL 무엇을 넣어도 URL로 저장한다(0075) — 프로필
+// 링크 카드(ProfileLinks)는 항상 URL만 다루면 되게.
+function normalizeInstagram(input: string) {
+  const v = input.trim();
+  if (!v) return "";
+  if (/^https?:\/\//i.test(v)) return v;
+  if (/^(www\.)?instagram\.com\//i.test(v)) return `https://${v}`;
+  return `https://www.instagram.com/${v.replace(/^@/, "")}`;
+}
 
 
 export function ProfileDetailsForm() {
@@ -108,6 +120,7 @@ export function ProfileDetailsForm() {
           favoriteGenres: row.favorite_genres ?? [],
           soundcloud: row.portfolio_links?.soundcloud ?? "",
           youtube: row.portfolio_links?.youtube ?? "",
+          instagram: row.portfolio_links?.instagram ?? "",
         });
       } else {
         setDetails((d) => ({ ...d, userType }));
@@ -131,6 +144,8 @@ export function ProfileDetailsForm() {
     const portfolioLinks: Record<string, string> = {};
     if (details.soundcloud.trim()) portfolioLinks.soundcloud = details.soundcloud.trim();
     if (details.youtube.trim()) portfolioLinks.youtube = details.youtube.trim();
+    const instagram = normalizeInstagram(details.instagram);
+    if (instagram) portfolioLinks.instagram = instagram;
 
     const { error } = await supabase.from("profiles").upsert(
       {
@@ -229,7 +244,15 @@ export function ProfileDetailsForm() {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className={blackLabel}>포트폴리오 링크</span>
+        <span className={blackLabel}>링크</span>
+        <input
+          type="text"
+          placeholder="Instagram 아이디 또는 링크 (예: @compmusic)"
+          disabled={!loaded}
+          value={details.instagram}
+          onChange={(e) => setDetails((d) => ({ ...d, instagram: e.target.value }))}
+          className={grayField}
+        />
         <input
           type="url"
           placeholder="SoundCloud 링크"

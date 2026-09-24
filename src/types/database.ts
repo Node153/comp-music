@@ -196,6 +196,8 @@ export interface Database {
           bio: string | null;
           portfolio_links: Record<string, string> | null;
           profile_image_url: string | null;
+          // 프로필 커버 사진 R2 key(0075) — /api/cover/[userId]가 표시.
+          cover_image_url: string | null;
         };
         Insert: {
           user_id: string;
@@ -211,6 +213,7 @@ export interface Database {
           bio?: string | null;
           portfolio_links?: Record<string, string> | null;
           profile_image_url?: string | null;
+          cover_image_url?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -268,6 +271,8 @@ export interface Database {
           // PEAK 진입 시각(0056) — check_and_set_post_peak()이 조회수+좋아요*10>=1000을
           // 처음 넘긴 순간 한 번만 찍고 이후 영구 고정(좋아요 취소해도 안 지워짐).
           peaked_at: string | null;
+          // 작성자가 자기 프로필 맨 위에 고정한 시각(0075, 최대 3개) — 보는 사람 모두에게 동일.
+          profile_pinned_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -292,6 +297,7 @@ export interface Database {
           expires_at?: string | null;
           view_count?: number;
           peaked_at?: string | null;
+          profile_pinned_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["posts"]["Insert"]>;

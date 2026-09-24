@@ -7,7 +7,8 @@
 // 사이드바가 세로로 너무 길어 보인다는 사용자 피드백) — 애플 이모지(🎓🎤🏫📍)도 작은 크기에서
 // 깨져 보여서(포트폴리오 링크 🎧가 "..'로 렌더된 버그 발견) 전부 icons.tsx의 선(stroke)
 // 아이콘으로 교체.
-import { GraduationCapIcon, MicIcon, SchoolIcon, MapPinIcon, HeadphonesIcon, PlayIcon } from "@/components/icons";
+import { GraduationCapIcon, MicIcon, SchoolIcon, MapPinIcon } from "@/components/icons";
+import { ProfileLinks, profileLinkEntries } from "./ProfileLinks";
 
 const USER_TYPE_LABEL: Record<string, string> = {
   student: "전공생",
@@ -52,14 +53,16 @@ function Fact({ icon: Icon, children }: { icon: typeof GraduationCapIcon; childr
 export function AboutSection({
   profile,
   isOwnProfile,
+  hideLinks = false,
 }: {
   profile: AboutProfile | null;
   isOwnProfile: boolean;
+  // 데스크톱 왼쪽 컬럼은 링크를 페이스북처럼 별도 "링크" 카드로 빼서(0075) 여기선 숨긴다.
+  hideLinks?: boolean;
 }) {
   const instruments = profile?.instruments ?? [];
   const favoriteGenres = profile?.favorite_genres ?? [];
-  const soundcloud = profile?.portfolio_links?.soundcloud;
-  const youtube = profile?.portfolio_links?.youtube;
+  const hasLinks = !hideLinks && profileLinkEntries(profile?.portfolio_links).length > 0;
 
   const hasAnything =
     (profile?.user_type && (profile.user_type_public || isOwnProfile)) ||
@@ -67,12 +70,15 @@ export function AboutSection({
     (profile?.region && (profile.region_public || isOwnProfile)) ||
     instruments.length > 0 ||
     favoriteGenres.length > 0 ||
-    soundcloud ||
-    youtube ||
+    hasLinks ||
     profile?.bio;
 
   if (!hasAnything) {
-    return <p className="mt-4 py-10 text-center text-sm text-active-gray">아직 등록된 소개 정보가 없습니다</p>;
+    return hideLinks ? (
+      <p className="mt-2 text-xs text-active-gray">아직 등록된 소개 정보가 없습니다</p>
+    ) : (
+      <p className="mt-4 py-10 text-center text-sm text-active-gray">아직 등록된 소개 정보가 없습니다</p>
+    );
   }
 
   const UserTypeIcon = profile?.user_type ? USER_TYPE_ICON[profile.user_type] : null;
@@ -116,30 +122,9 @@ export function AboutSection({
           </div>
         </Row>
       )}
-      {(soundcloud || youtube) && (
-        <Row label="포트폴리오 링크">
-          <div className="flex flex-col gap-1.5">
-            {soundcloud && (
-              <a
-                href={soundcloud}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 hover:underline"
-              >
-                <HeadphonesIcon className="h-4 w-4 text-active-gray" /> SoundCloud
-              </a>
-            )}
-            {youtube && (
-              <a
-                href={youtube}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 hover:underline"
-              >
-                <PlayIcon className="h-4 w-4 text-active-gray" /> YouTube
-              </a>
-            )}
-          </div>
+      {hasLinks && (
+        <Row label="링크">
+          <ProfileLinks links={profile?.portfolio_links} />
         </Row>
       )}
       {profile?.bio && <Row label="소개글">{profile.bio}</Row>}

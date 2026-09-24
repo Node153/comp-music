@@ -20,6 +20,8 @@ import { tagColorClass } from "@/lib/feedConstants";
 import Link from "next/link";
 import type { ContentType } from "@/types/database";
 import type { FeedPost } from "./ProfileFeed";
+import { ProfilePinButton } from "./ProfilePinButton";
+import { PinIcon } from "@/components/icons";
 
 // feed/page.tsx의 CONTENT_TYPE_LABEL과 동일 — 그 파일은 page.tsx라 export가 없어 그대로 복사.
 const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
@@ -35,15 +37,20 @@ export function ProfileFeedPostCard({
   post,
   currentUserId,
   showAuthor = false,
+  canPin = false,
 }: {
   post: FeedPost;
   currentUserId: string | null;
+  // 본인 프로필의 본인 글에서만(0075) — 좋아요/Kick 필터의 남의 글엔 안 붙는다.
+  canPin?: boolean;
   // "좋아요"·"Kick" 필터에서만 켠다 — 현재/보관된/폴더는 항상 이 프로필 주인의 글이라 다시 밝힐
   // 필요가 없다(2026-09, 사운드클라우드 Likes 탭 참고).
   showAuthor?: boolean;
 }) {
   // Kick(0071)은 DEMO(전체공개) 게시물 전용.
   const isDemo = post.visibility === "public";
+  // 제목 위에 한 줄(작성자 이름 또는 "상단 고정 게시물")이 이미 있으면 제목 위 여백을 줄인다.
+  const hasTopLabel = showAuthor || !!post.pinnedAt;
   return (
     <PostEngagementProvider
       initialLikeCount={post.likeCount}
@@ -56,8 +63,22 @@ export function ProfileFeedPostCard({
       initialKickers={post.kickers}
       peakThreshold={0}
     >
-      <article className="relative overflow-hidden rounded-xl border border-box-gray">
+      <article
+        data-post-id={post.id}
+        className="relative scroll-mt-6 overflow-hidden rounded-xl border border-box-gray"
+      >
         <KickBurst />
+        {canPin && (
+          <div className="absolute right-1.5 top-1.5 z-10">
+            <ProfilePinButton postId={post.id} pinned={!!post.pinnedAt} />
+          </div>
+        )}
+        {post.pinnedAt && !showAuthor && (
+          <p className="flex items-center gap-1 px-3 pt-3 text-xs font-semibold text-active-gray">
+            <PinIcon className="h-3.5 w-3.5" filled />
+            상단 고정 게시물
+          </p>
+        )}
         {showAuthor && (
           <Link
             href={`/profile/${post.authorId}`}
@@ -67,12 +88,16 @@ export function ProfileFeedPostCard({
           </Link>
         )}
         {post.title && (
-          <p className={`px-3 pb-0.5 ${showAuthor ? "pt-1" : "pt-3"} text-sm font-bold text-black`}>{post.title}</p>
+          <p
+            className={`px-3 pb-0.5 ${hasTopLabel ? "pt-1" : "pt-3"} ${canPin ? "pr-11" : ""} text-sm font-bold text-black`}
+          >
+            {post.title}
+          </p>
         )}
         {post.caption && (
           <PostCaption
             text={post.caption}
-            className={`px-3 ${post.title ? "" : showAuthor ? "pt-1" : "pt-3"} pb-2 text-sm text-black`}
+            className={`px-3 ${post.title ? "" : `${hasTopLabel ? "pt-1" : "pt-3"} ${canPin ? "pr-11" : ""}`} pb-2 text-sm text-black`}
           />
         )}
 
