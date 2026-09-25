@@ -117,7 +117,7 @@ export function NewDropsRailList({ drops, userId }: { drops: NewDrop[]; userId: 
               <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{drop.authorName}</span>
               <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-red-600 dark:text-red-400">
                 {drop.isMine ? (
-                  <>내 글 · 공유로 올리기</>
+                  <>내 글 · 친구에게 링크 공유하면 PEAK↑</>
                 ) : !drop.myLiked ? (
                   <>
                     <HeartIcon className="h-3 w-3" filled />
@@ -129,7 +129,7 @@ export function NewDropsRailList({ drops, userId }: { drops: NewDrop[]; userId: 
                     Kick하면 +{toPercent(PEAK_KICK_WEIGHT)}%
                   </>
                 ) : (
-                  <>공유로 더 빨리</>
+                  <>친구에게 링크 공유하면 PEAK↑</>
                 )}
               </span>
               <span className="mt-0.5 flex items-center gap-1.5 text-[11px] tabular-nums text-gray-500 dark:text-gray-400">
