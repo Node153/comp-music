@@ -43,15 +43,6 @@ function demoBandColor(v: number): string {
   return "#f5d999";
 }
 
-// memo 트랙용 violet 3단계 — 골드 버전과 같은 명암 단계, 가장 밝은 단계가 플레이헤드 색
-// (#c4b5f2, 아래 playheadColor)과 같은 값이라 골드 쪽(제일 밝은 단계 = 플레이헤드 색)과
-// 동일한 패턴이다.
-function memoBandColor(v: number): string {
-  if (v < 0.35) return "#5b3fa0";
-  if (v < 0.65) return "#8b6fd9";
-  return "#c4b5f2";
-}
-
 // 실제 분석이 끝나기 전(또는 실패 시) 보여줄 프리셋 파형 — 트랙 id로 시드를 고정해 0~1 진폭 배열.
 function presetBars(seed: string): number[] {
   let h = 0;
@@ -208,10 +199,11 @@ export function GlobalPlayerBar() {
   // 영구노출이라 안 붙는 필드). 바 색(사이트 테마)과 트랙 색(브랜드 포인트)은 서로 다른
   // 기준이라 각자 트랙을 memo 탭 밖에서 재생해도(예: 대기열에 담아뒀다 DEMO 탭에서 이어
   // 재생) 파형은 그 트랙 고유의 색을 유지한다. 골드와 마찬가지로 진폭(v)에 따라 3단계로
-  // 명암을 주되(사용자 요청 — "볼륨에 따라 색조정"), 색상 자체만 violet 계열로.
-  const isMemoTrack = !!track?.expiresAt;
-  const playedColor = (v: number) => (isMemoTrack ? memoBandColor(v) : demoBandColor(v));
-  const playheadColor = isMemoTrack ? "#c4b5f2" : "#f5d999";
+  // 2026-09-26(사용자 요청) — memo가 DEMO에 통합되면서 노출기간(expiresAt) 있는 글도 이제
+  // 평범한 DEMO 게시물이라 expiresAt으로 memo/violet을 가르던 예전 기준은 더 이상 맞지 않다.
+  // 재생 파형은 항상 DEMO 골드 하나로 통일.
+  const playedColor = demoBandColor;
+  const playheadColor = "#f5d999";
 
   // React state(duration)가 아니라 <video> 엘리먼트의 실시간 값을 직접 읽는다 — 위 duration
   // 우회 로직이 아직 안 끝났거나 상태 갱신이 한 박자 늦어도 탐색은 항상 되게.
@@ -240,8 +232,8 @@ export function GlobalPlayerBar() {
           배경(#1c1c1e)으로 어둡게. 배경이 바뀌므로 아이콘·글씨·파형 미재생 구간·재생 버튼
           색은 전부 isMemoTheme 하나로 자동 반전(barText/barMuted/barBorder/barHover/
           barActive/coverBg/coverIcon/playButtonBg, 위 선언부 참고) — 가독성이 항상 유지된다.
-          재생 중인 파형(playedColor/playheadColor)만은 트랙 자체의 종류(isMemoTrack)를 따라
-          기존처럼 DEMO 골드/memo violet 포인트 컬러 그대로.
+          재생 중인 파형(playedColor/playheadColor)은 2026-09-26부터 트랙 종류와 무관하게
+          항상 DEMO 골드 하나(memo 통합으로 violet 트랙 구분이 없어짐).
           데스크톱 레이아웃: 파형(가운데 열)을 고정폭(900px — feed/page.tsx <main>의
           max-w-[900px]과 동일 값, 게시물 카드(760px)보다 조금 더 넓게)으로 두고, 좌우 열을
           똑같은 minmax(0,1fr)로 줘서 파형이 "화면 자체의" 정중앙에 오게 만든다(사용자 요청 —

@@ -44,8 +44,10 @@ export function TimeLimitBadge({ expiresAt }: { expiresAt: string }) {
 
   return (
     <span
-      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold text-white shadow-lg ${
-        isExpired ? "bg-gray-500" : isUrgent ? "animate-pulse bg-red-600" : "bg-violet-500"
+      // 2026-09-26(사용자 요청) — memo가 DEMO에 통합되면서 노출기간 뱃지도 이제 평범한
+      // DEMO 게시물에 붙으므로, 예전 memo색(violet)이 아니라 DEMO 골드로 통일.
+      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold shadow-lg ${
+        isExpired ? "bg-gray-500 text-white" : isUrgent ? "animate-pulse bg-red-600 text-white" : "bg-demo-gold text-neutral-900"
       }`}
       title="노출 시간이 지나면 메인 피드에서 사라져요 (프로필에는 계속 남아요)"
     >
