@@ -18,7 +18,7 @@ export function VerticalVolumeMeter({ level }: { level: number }) {
   const isPeak = level >= 1;
   const clamped = Math.max(0, Math.min(1, level));
   // PEAK 전에는 막대가 절대 꽉 차 보이면 안 된다 — round를 쓰면 0.95만 넘어도 10/10칸이
-  // 다 켜져서 아직 기준(1000점)에 못 미쳤는데도 "이미 PEAK인 줄" 착각하게 만든다(사용자
+  // 다 켜져서 아직 기준(PEAK_VIEW_THRESHOLD)에 못 미쳤는데도 "이미 PEAK인 줄" 착각하게 만든다(사용자
   // 제보 — 사이드바엔 안 뜨는데 카드 막대는 꽉 차 보였던 원인). PEAK 미만이면 floor로
   // 최대 9칸까지만 채우고, 실제로 기준을 넘겨야만(isPeak) 10칸이 다 켜지게 한다.
   const litCount = isPeak
