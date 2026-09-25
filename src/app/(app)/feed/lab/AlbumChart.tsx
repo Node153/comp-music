@@ -4,8 +4,8 @@
 // 거르고, 추천·취소 뒤에는 router.refresh()로 album_chart를 다시 받는다.
 // 세부 장르가 70개가 넘어서 한 장르에 추천이 몇 개 없을 때가 많다 — 그래서 상위 분류 "전체"
 // 차트(그 분류의 세부 장르를 합친 순위)와 전체 장르 차트를 같이 둔다.
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ALBUM_CERTIFY_AT,
   ALBUM_CHART_MIN,
@@ -47,7 +47,17 @@ export function AlbumChart({
   const [genre, setGenre] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showRest, setShowRest] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  // DEMO의 명반 추천 배너(AlbumPromoCard)에서 오면(recommend=1) 추천 창을 바로 연다 — 한 번 더
+  // 누르는 단계가 없어야 실제 추천으로 이어진다. 새로고침 때 또 열리지 않게 주소에서는 지운다.
+  const searchParams = useSearchParams();
+  const [modalOpen, setModalOpen] = useState(() => !!currentUserId && searchParams.get("recommend") === "1");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("recommend")) return;
+    params.delete("recommend");
+    const rest = params.toString();
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${rest ? `?${rest}` : ""}${window.location.hash}`);
+  }, []);
 
   const genreBySlug = useMemo(() => new Map(genres.map((g) => [g.slug, g])), [genres]);
   const groups = useMemo(() => {

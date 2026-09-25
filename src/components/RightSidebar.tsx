@@ -8,6 +8,7 @@
 // 후보만 후보로 삼는다 — 안 그러면 RLS(post_access_insert_knock_self)에서 막히는 죽은
 // 노크 버튼을 보여주게 된다.
 import { InstallAdCard } from "@/components/InstallAdCard";
+import { AlbumPromoCard } from "@/components/AlbumPromoCard";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -219,6 +220,8 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
 
   return (
     <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-4 md:flex">
+      {/* 명반 차트 유입 배너(2026-09-26) — DEMO에서만. 앱 설치 광고와 붙지 않게 맨 위에 둔다. */}
+      {!isMemoTab && <AlbumPromoCard userId={currentUserId} placement="sidebar" />}
       <section>
         <h2 className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           온라인 — {onlineCompanions?.length ?? 0}명

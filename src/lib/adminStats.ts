@@ -87,6 +87,8 @@ const SOURCE_LABELS: Record<string, string> = {
   share_story: "공유 · 인스타 스토리",
   share_copy: "공유 · 링크 복사",
   share_native: "공유 · 다른 앱",
+  album_promo_sidebar: "명반 추천 배너 · 사이드바",
+  album_promo_feed: "명반 추천 배너 · 피드(모바일)",
 };
 
 export function sourceLabel(key: string): string {

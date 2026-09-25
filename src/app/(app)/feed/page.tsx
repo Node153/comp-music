@@ -11,6 +11,7 @@ import { FeedInfiniteList } from "./FeedInfiniteList";
 import { NewDropsRail } from "./NewDropsRail";
 import { NotifyLandingBanner } from "./NotifyLandingBanner";
 import { AlbumChartSection } from "./lab/AlbumChartSection";
+import { AlbumPromoCard } from "@/components/AlbumPromoCard";
 
 // S6 메인 피드 (FEED-05~09, INTERACT-01/02)
 // 웹 기준 카드형 피드(페이스북 참고) — 영상이 화면을 꽉 채우지 않고 카드 안에 담기도록 구성.
@@ -79,6 +80,18 @@ export default async function FeedPage({
     tagParam ? null : focusId,
   );
   const hasPosts = postCount > 0;
+  // 모바일엔 오른쪽 사이드바가 없어서 명반 차트 유입 배너(AlbumPromoCard)를 첫 페이지 5번째 글
+  // 다음에 한 번 끼운다(2026-09-26 사용자 요청). 데스크톱은 사이드바에 있으니 md:hidden.
+  const feedNodes =
+    currentUser && !tagParam && hasPosts
+      ? [
+          ...nodes.slice(0, 5),
+          <div key="album-promo" className="md:hidden">
+            <AlbumPromoCard userId={currentUser.id} placement="feed" />
+          </div>,
+          ...nodes.slice(5),
+        ]
+      : nodes;
   const feedListClass = "flex flex-col gap-4 md:gap-6";
 
   // DEMO 피드 상단 힐링 멘트(관리자가 /admin/feed-hero에서 편집) — 히어로가 실제로 뜰
@@ -146,7 +159,7 @@ export default async function FeedPage({
           initialState={next}
           hasPosts={hasPosts}
         >
-          {nodes}
+          {feedNodes}
         </FeedInfiniteList>
       </div>
     </main>
