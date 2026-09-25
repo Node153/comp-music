@@ -85,7 +85,9 @@ function snooze(days: number) {
   writeState({ ...readState(), snoozeUntil: Date.now() + days * 24 * 3_600_000 });
 }
 
-export function IosInstallPrompt({ userId }: { userId: string }) {
+// userId가 null이면 비로그인 방문자 — 자동으로는 안 띄우고, QR·링크(?installGuide=)로 들어왔을 때만 연다
+// (사이드바 설치 광고 QR을 로그인 안 된 폰으로 찍어도 설치 안내가 떠야 해서, 2026-09-25).
+export function IosInstallPrompt({ userId }: { userId: string | null }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export function IosInstallPrompt({ userId }: { userId: string }) {
     const forced = param === "ios" || (param === "1" && !isAndroid());
     if (forced) {
       timer = window.setTimeout(() => setOpen(true), 300);
-    } else if (isIOS() && !isStandalone()) {
+    } else if (userId && isIOS() && !isStandalone()) {
       const state = readState();
       let featureGuideSeen = true;
       try {

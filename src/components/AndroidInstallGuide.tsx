@@ -105,7 +105,9 @@ function writeState(state: { snoozeUntil?: number; never?: boolean }) {
   }
 }
 
-export function AndroidInstallPrompt({ userId }: { userId: string }) {
+// userId가 null이면 비로그인 방문자 — 자동으로는 안 띄우고, QR·링크(?installGuide=)로 들어왔을 때만 연다
+// (사이드바 설치 광고 QR을 로그인 안 된 폰으로 찍어도 설치 안내가 떠야 해서, 2026-09-25).
+export function AndroidInstallPrompt({ userId }: { userId: string | null }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export function AndroidInstallPrompt({ userId }: { userId: string }) {
     const param = new URLSearchParams(window.location.search).get("installGuide");
     if (param === "android" || (param === "1" && isAndroid())) {
       timer = window.setTimeout(() => setOpen(true), 300);
-    } else if (isAndroid() && !isStandalone()) {
+    } else if (userId && isAndroid() && !isStandalone()) {
       const state = readState();
       let featureGuideSeen = true;
       try {

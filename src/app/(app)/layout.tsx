@@ -93,6 +93,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <GuestTopNav />
             {children}
             <GuestBottomBar />
+            {/* 비로그인도 설치 안내 QR·링크(?installGuide=)로 들어오면 팝업이 떠야 한다(자동 표시는 로그인 후만). */}
+            <IosInstallPrompt userId={null} />
+            <AndroidInstallPrompt userId={null} />
           </GuestSignupPromptProvider>
         </div>
       )}
