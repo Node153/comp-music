@@ -20,6 +20,9 @@ export type NewDrop = {
   publishedAt: string;
   // PEAK 점수(peakScore) — 기준(PEAK_VIEW_THRESHOLD)에 닿으면 PEAK.
   score: number;
+  viewCount: number;
+  likeCount: number;
+  kickCount: number;
   myLiked: boolean;
   myKicked: boolean;
   isMine: boolean;
@@ -128,6 +131,20 @@ export function NewDropsRailList({ drops, userId }: { drops: NewDrop[]; userId: 
                 ) : (
                   <>공유로 더 빨리</>
                 )}
+              </span>
+              <span className="mt-0.5 flex items-center gap-1.5 text-[11px] tabular-nums text-gray-500 dark:text-gray-400">
+                <span className="inline-flex items-center gap-0.5" title="조회수">
+                  <HeadphonesIcon className="h-3 w-3" />
+                  {drop.viewCount}
+                </span>
+                <span className="inline-flex items-center gap-0.5" title="좋아요">
+                  <HeartIcon className="h-3 w-3" />
+                  {drop.likeCount}
+                </span>
+                <span className="inline-flex items-center gap-0.5" title="Kick">
+                  <KickIcon className="h-3 w-3" />
+                  {drop.kickCount}
+                </span>
               </span>
               <span className="block truncate text-[11px] text-gray-400">좋아요 {likesLeft}개면 PEAK</span>
             </button>
