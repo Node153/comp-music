@@ -84,6 +84,7 @@ export function ComplexAccessGate({
           src={videoSrc}
           title={contentTypeLabel ?? "음원"}
           posterSrc={posterSrc}
+          postId={postId}
           downloadUrl={collabAvailable ? videoSrc : undefined}
           downloadName={contentTypeLabel ?? "음원"}
         />

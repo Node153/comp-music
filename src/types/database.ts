@@ -511,6 +511,21 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["post_plays"]["Insert"]>;
         Relationships: [];
       };
+      // 0090 — 업로드 때 미리 계산한 파형(0~100 정수 200개, src/lib/waveform.ts).
+      post_waveforms: {
+        Row: {
+          post_id: string;
+          bars: number[];
+          created_at: string;
+        };
+        Insert: {
+          post_id: string;
+          bars: number[];
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_waveforms"]["Insert"]>;
+        Relationships: [];
+      };
       // memo 합작 게시물 상단 고정 오버라이드(0054/0055) — 본인만 보는 개인화 표시.
       // 행이 없으면 자동 규칙(본인 글·초대받은 글)을 따르고, 있으면 pinned 값이 덮어쓴다.
       post_pins: {
@@ -1073,6 +1088,11 @@ export interface Database {
       // 0071 — Kick 주기(주 1회, 번복 불가). 실패 사유는 예외 메시지 코드로.
       give_kick: {
         Args: { pid: string };
+        Returns: undefined;
+      };
+      // 0090 — 업로드 때 파형 계산에 실패한 음원을 처음 재생한 회원이 채운다(이미 있으면 무시).
+      save_post_waveform: {
+        Args: { p_post_id: string; p_bars: number[] };
         Returns: undefined;
       };
       // 0087 — 명반 추천(세부 장르당 5장, 첫 추천은 이유 필수). 추천 후 그 앨범의 추천 수를 돌려준다.

@@ -9,6 +9,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
+import { PROFILE_COVER_MAX_SIDE, resizeImageFile } from "@/lib/resizeImage";
 import { CameraIcon, TrashIcon } from "@/components/icons";
 
 const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024;
@@ -45,14 +46,16 @@ export function CoverPhoto({
       setError("이미지 파일만 올릴 수 있어요.");
       return;
     }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      setError("파일이 너무 커요 (최대 8MB).");
-      return;
-    }
     setUploading(true);
     setError(null);
     try {
-      await save(await uploadFileToR2(file));
+      // 올리기 전에 긴 변 1600px로 줄인다(resizeImage.ts — 커버 트래픽 절감). 용량 제한은 줄인 뒤 결과에.
+      const resized = await resizeImageFile(file, { maxSide: PROFILE_COVER_MAX_SIDE });
+      if (resized.size > MAX_FILE_SIZE_BYTES) {
+        setError("파일이 너무 커요 (최대 8MB).");
+        return;
+      }
+      await save(await uploadFileToR2(resized));
       setShowCover(true);
       setVersion((v) => v + 1);
       router.refresh();

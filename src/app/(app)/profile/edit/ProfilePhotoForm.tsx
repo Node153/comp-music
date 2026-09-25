@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFileToR2 } from "@/lib/uploadToR2";
+import { AVATAR_MAX_SIDE, resizeImageFile } from "@/lib/resizeImage";
 import { Avatar } from "@/components/Avatar";
 import { errorText } from "@/components/ui/styles";
 
@@ -42,15 +43,18 @@ export function ProfilePhotoForm() {
       setError("이미지 파일만 올릴 수 있어요.");
       return;
     }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      setError("파일이 너무 커요 (최대 5MB).");
-      return;
-    }
 
     setUploading(true);
     setError(null);
     try {
-      const key = await uploadFileToR2(file);
+      // 올리기 전에 512px 정사각형으로 줄인다(resizeImage.ts — 아바타 트래픽 절감). 용량 제한은
+      // 줄인 뒤 결과에 건다 — 큰 원본도 줄이면 충분히 작아지니 원본 크기로 막을 이유가 없다.
+      const resized = await resizeImageFile(file, { maxSide: AVATAR_MAX_SIDE, square: true });
+      if (resized.size > MAX_FILE_SIZE_BYTES) {
+        setError("파일이 너무 커요 (최대 5MB).");
+        return;
+      }
+      const key = await uploadFileToR2(resized);
       // upsert — profiles 행이 아직 없는 유저(온보딩 미완/ SQL 승인)도 바로 만들어 저장.
       const { error: updateError } = await supabase
         .from("profiles")

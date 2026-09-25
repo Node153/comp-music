@@ -13,7 +13,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylist } from "@/components/PlaylistContext";
 import { useMediaProgress } from "@/lib/useMediaProgress";
-import { computeWaveformBars } from "@/lib/waveform";
+import { usePostWaveform } from "@/lib/usePostWaveform";
 import { ExpandedPlayer } from "@/components/ExpandedPlayer";
 import { useScrub } from "@/lib/useScrub";
 import { useMediaSession } from "@/lib/useMediaSession";
@@ -103,31 +103,12 @@ export function GlobalPlayerBar() {
     if (!track) setExpanded(false);
   }, [track]);
 
-  // #1 — 프리셋이 아니라 현재 트랙의 실제 오디오를 분석한 파형.
+  // #1 — 프리셋이 아니라 현재 트랙의 실제 오디오 파형. 업로드 때 미리 계산해 둔 값을 읽는다
+  // (usePostWaveform — 예전처럼 재생마다 원본 파일을 서버 프록시로 받지 않는다). 없거나 실패하면
+  // 프리셋 파형으로 계속 — 재생엔 지장 없음.
   const preset = useMemo(() => presetBars(track?.id ?? ""), [track?.id]);
-  const [analyzed, setAnalyzed] = useState<number[] | null>(null);
+  const { bars: analyzed } = usePostWaveform({ postId: track?.id, src: track?.videoSrc, barCount: BAR_COUNT });
   const bars = analyzed ?? preset;
-
-  useEffect(() => {
-    setAnalyzed(null);
-    const src = track?.videoSrc;
-    if (!src) return;
-    let cancelled = false;
-    // 같은 출처(/... 로컬 파일)는 바로 fetch, R2 signed URL은 CORS 때문에 서버 프록시 경유.
-    const url = src.startsWith("/") ? src : `/api/media/waveform-proxy?url=${encodeURIComponent(src)}`;
-    fetch(url)
-      .then((res) => res.arrayBuffer())
-      .then((buf) => computeWaveformBars(buf, BAR_COUNT))
-      .then((result) => {
-        if (!cancelled) setAnalyzed(result);
-      })
-      .catch(() => {
-        // 분석 실패해도 프리셋 파형으로 계속 — 재생엔 지장 없음.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [track?.videoSrc]);
 
   useEffect(() => {
     const video = videoRef.current;

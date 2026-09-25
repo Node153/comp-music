@@ -29,6 +29,7 @@ import { ALL_GENRES } from "@/lib/genres";
 import { tagColorClass } from "@/lib/feedConstants";
 import type { ExpireHours } from "@/types/database";
 import { editVideoFile } from "@/lib/trimVideo";
+import { computeStoredWaveform } from "@/lib/waveform";
 import { VideoEditor, type TrimRange } from "./VideoEditor";
 import { notifyReaction } from "@/lib/notifyReaction";
 import { HAPTIC, haptic } from "@/lib/haptics";
@@ -803,9 +804,13 @@ export default function UploadPage() {
     }
 
     // R2로 이전(2026-07-29) — presigned PUT URL을 발급받아 브라우저가 R2에 직접 업로드.
+    // 파형(0090)은 올리는 최종 파일로 업로드와 동시에 로컬에서 계산한다 — 재생 화면이 매번 원본을
+    // 서버 프록시로 받아 분석하던 트래픽을 없애려고. 실패하면 null(첫 재생 때 대신 채워진다).
     let mediaPath: string;
+    let waveform: number[] | null;
     try {
-      mediaPath = await uploadFileToR2(await applyVideoEditIfNeeded(mediaFile, mediaKind));
+      const finalFile = await applyVideoEditIfNeeded(mediaFile, mediaKind);
+      [mediaPath, waveform] = await Promise.all([uploadFileToR2(finalFile), computeStoredWaveform(finalFile)]);
     } catch (err) {
       setError(`업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
       setLoading(false);
@@ -861,6 +866,11 @@ export default function UploadPage() {
       setError(`게시 실패: ${insertError?.message ?? "알 수 없는 오류"}`);
       setLoading(false);
       return;
+    }
+
+    // 파형 저장 실패는 게시를 막지 않는다(음원이면 첫 재생 때 채워지고, 아니면 프리셋 파형으로 보인다).
+    if (waveform) {
+      await supabase.from("post_waveforms").insert({ post_id: post.id, bars: waveform });
     }
 
     // 특정인 초대 — post_access에 invited 상태로 일괄 등록(0012). 초대 인원별로 DB row 하나씩,

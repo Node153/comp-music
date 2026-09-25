@@ -429,6 +429,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                   src={post.videoSrc}
                   title={post.title || post.caption || "음원"}
                   posterSrc={post.posterSrc}
+                  postId={post.id}
                   downloadUrl={post.videoSrc}
                   downloadName={post.title || post.caption || "음원"}
                 />

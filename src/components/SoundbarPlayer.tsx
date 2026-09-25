@@ -1,9 +1,8 @@
 "use client";
 
 // SoundbarPreview(업로드 미리보기)와 같은 파형 재생 위젯을 피드 카드에서도 보여주기 위한 버전.
-// 업로드 쪽은 File을 바로 갖고 있지만 피드는 R2 signed URL만 있어서, fetch로 받아온 뒤
-// 같은 computeWaveformBars로 분석한다. signed URL이 만료되기 전(발급 후 30분)에만 유효 —
-// 이미 <audio src>가 같은 URL을 쓰고 있어서 새로운 제약은 아니다.
+// 게시물 파형은 업로드 때 미리 계산해 둔 값을 읽는다(usePostWaveform, 0090) — 게시물이 아닌
+// 파일(합작 채팅 첨부)만 예전처럼 signed URL을 서버 프록시로 받아 분석한다.
 // posterSrc(커버 이미지)가 있으면 파형 대신 이미지 위에 재생 버튼을 얹은 형태로 바뀐다.
 //
 // mode:
@@ -11,7 +10,8 @@
 //  - "global" (DEMO 탭): 재생을 하단 GlobalPlayerBar(<video> 하나)로 넘기고 "최근 들은"에 기록.
 //    카드는 파형·재생버튼만 보여주고, 이 트랙이 하단 바의 현재 곡일 때만 진행률이 반영된다.
 import { useEffect, useRef, useState } from "react";
-import { computeWaveformBars, formatWaveformTime } from "@/lib/waveform";
+import { formatWaveformTime } from "@/lib/waveform";
+import { usePostWaveform } from "@/lib/usePostWaveform";
 import { useMediaProgress } from "@/lib/useMediaProgress";
 import { useNowPlaying } from "@/components/NowPlayingContext";
 import { usePlaylistOptional, usePageTrack, PAGE_TRACK_ATTR } from "@/components/PlaylistContext";
@@ -50,6 +50,7 @@ export function SoundbarPlayer({
   tone = "memo",
   mode = "inline",
   trackId,
+  postId,
   author,
   authorId,
   expiresAt,
@@ -67,6 +68,8 @@ export function SoundbarPlayer({
   tone?: "demo" | "memo";
   mode?: "inline" | "global";
   trackId?: string;
+  // 파형 조회용 게시물 id — trackId(전역 재생용)를 안 넘기는 게시물 화면(합작방 인라인 등)에서 쓴다.
+  postId?: string;
   author?: string;
   authorId?: string;
   // memo 게시물의 노출 만료 시각 — 재생목록/최근들은에 그대로 실어서 남은 시간을 보여준다.
@@ -75,8 +78,6 @@ export function SoundbarPlayer({
   downloadUrl?: string | null;
   downloadName?: string;
 }) {
-  const [bars, setBars] = useState<number[] | null>(null);
-  const [failed, setFailed] = useState(false);
   const style = TONE[tone];
   const isGlobal = mode === "global";
 
@@ -90,23 +91,13 @@ export function SoundbarPlayer({
         ? downloadUrl
         : `/api/media/download-proxy?url=${encodeURIComponent(downloadUrl)}&name=${encodeURIComponent(downloadName ?? title)}`;
 
-  // ---- 파형 분석 (모드 공통) ----
-  useEffect(() => {
-    if (posterSrc) return; // 커버 이미지 모드에서는 파형을 안 그리니 분석 자체를 건너뛴다.
-    let cancelled = false;
-    fetch(`/api/media/waveform-proxy?url=${encodeURIComponent(src)}`)
-      .then((res) => res.arrayBuffer())
-      .then((buf) => computeWaveformBars(buf, SLIM_BAR_COUNT))
-      .then((result) => {
-        if (!cancelled) setBars(result);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [src, posterSrc]);
+  // ---- 파형 (모드 공통) — 커버 이미지 모드에서는 파형을 안 그리니 조회 자체를 건너뛴다 ----
+  const { bars, failed } = usePostWaveform({
+    postId: postId ?? trackId,
+    src,
+    barCount: SLIM_BAR_COUNT,
+    enabled: !posterSrc,
+  });
 
   // ---- inline 모드: 자체 <audio> ----
   const audioRef = useRef<HTMLAudioElement>(null);
