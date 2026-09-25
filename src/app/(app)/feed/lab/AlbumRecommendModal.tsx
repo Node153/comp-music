@@ -25,7 +25,7 @@ const inputClass =
 function chipClass(active: boolean, disabled = false) {
   if (active) return "shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white";
   if (disabled) return "shrink-0 rounded-full bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-300 dark:bg-gray-900 dark:text-gray-600";
-  return "shrink-0 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700";
+  return "shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 transition hover:ring-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:ring-gray-500";
 }
 
 type ItunesResults = { artists: ItunesArtist[]; albums: AlbumCandidate[] };
@@ -286,59 +286,101 @@ export function AlbumRecommendModal({
                 앨범이에요.{alreadyMine ? " 나도 이미 추천했어요." : " 추천에 한 표 보태주세요."}
               </p>
             ) : (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">어떤 장르의 명반인가요?</p>
-                <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
-                  {groups.map((g) => (
-                    <button
-                      key={g.key}
-                      type="button"
-                      onClick={() => {
-                        setGrp(g.key);
-                        setGenre(null);
-                        setNewGenreOpen(false);
-                        setGenreNote(null);
-                      }}
-                      className={chipClass(grp === g.key)}
-                    >
-                      {g.name}
-                    </button>
-                  ))}
+              // 상위 장르(큰 타일 그리드) → 세부 장르(별도 패널 안의 작은 칩) 두 단계로 나눠 보여준다
+              // (2026-09-26 사용자 요청 — 예전엔 둘 다 같은 칩이라 어느 줄이 상위인지 헷갈렸다).
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-[11px] font-bold text-white">1</span>
+                    상위 장르
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                    {groups.map((g) => {
+                      const active = grp === g.key;
+                      const subCount = allGenres.filter((x) => x.grp === g.key).length;
+                      return (
+                        <button
+                          key={g.key}
+                          type="button"
+                          onClick={() => {
+                            setGrp(g.key);
+                            setGenre(null);
+                            setNewGenreOpen(false);
+                            setGenreNote(null);
+                          }}
+                          aria-pressed={active}
+                          className={`flex items-center justify-between gap-1 rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition ${
+                            active
+                              ? "border-violet-500 bg-violet-50 text-violet-800 dark:border-violet-400 dark:bg-violet-500/15 dark:text-violet-100"
+                              : "border-gray-200 bg-white text-gray-800 hover:border-gray-400 dark:border-gray-700 dark:bg-[#1c1c1e] dark:text-gray-200 dark:hover:border-gray-500"
+                          }`}
+                        >
+                          <span className="truncate">{g.name}</span>
+                          <span className={`shrink-0 text-[11px] font-medium ${active ? "text-violet-500 dark:text-violet-300" : "text-gray-400"}`}>
+                            {subCount}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                {grp && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {allGenres
-                      .filter((g) => g.grp === grp)
-                      .map((g) => {
-                        const full = (myCountByGenre.get(g.slug) ?? 0) >= ALBUM_GENRE_LIMIT;
-                        return (
+
+                <div className="flex flex-col gap-2">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
+                        grp ? "bg-violet-600 text-white" : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                      }`}
+                    >
+                      2
+                    </span>
+                    세부 장르
+                    {grp && (
+                      <span className="font-normal text-gray-500 dark:text-gray-400">
+                        · {groups.find((g) => g.key === grp)?.name}
+                        {genre && <> › <b className="font-semibold text-violet-700 dark:text-violet-300">{genreBySlug.get(genre)?.name}</b></>}
+                      </span>
+                    )}
+                  </p>
+                  <div className="rounded-xl bg-gray-50 p-2.5 dark:bg-gray-900">
+                    {!grp ? (
+                      <p className="py-2 text-center text-xs text-gray-400">위에서 상위 장르를 먼저 골라주세요</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {allGenres
+                          .filter((g) => g.grp === grp)
+                          .map((g) => {
+                            const full = (myCountByGenre.get(g.slug) ?? 0) >= ALBUM_GENRE_LIMIT;
+                            return (
+                              <button
+                                key={g.slug}
+                                type="button"
+                                disabled={full}
+                                onClick={() => setGenre(g.slug)}
+                                title={full ? `이 장르는 ${ALBUM_GENRE_LIMIT}장을 다 추천했어요` : undefined}
+                                className={chipClass(genre === g.slug, full)}
+                              >
+                                {g.name}
+                              </button>
+                            );
+                          })}
+                        {!newGenreOpen && (
                           <button
-                            key={g.slug}
                             type="button"
-                            disabled={full}
-                            onClick={() => setGenre(g.slug)}
-                            title={full ? `이 장르는 ${ALBUM_GENRE_LIMIT}장을 다 추천했어요` : undefined}
-                            className={chipClass(genre === g.slug, full)}
+                            onClick={() => {
+                              setNewGenreOpen(true);
+                              setGenreNote(null);
+                            }}
+                            className="flex shrink-0 items-center gap-0.5 rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-500 transition hover:border-gray-500 hover:text-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
                           >
-                            {g.name}
+                            <PlusIcon className="h-3 w-3" />
+                            장르 추가
                           </button>
-                        );
-                      })}
-                    {!newGenreOpen && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNewGenreOpen(true);
-                          setGenreNote(null);
-                        }}
-                        className="flex shrink-0 items-center gap-0.5 rounded-full border border-dashed border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-500 transition hover:border-gray-500 hover:text-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
-                      >
-                        <PlusIcon className="h-3 w-3" />
-                        장르 추가
-                      </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
+                </div>
                 {grp && newGenreOpen && (
                   <div className="flex gap-2">
                     <input
