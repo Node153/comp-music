@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { USER_TYPE_LABEL } from "@/lib/adminMembers";
 import { MemberDrawer } from "./MemberDrawer";
+import { MemberEmailComposer } from "./MemberEmailComposer";
 import { STATUS_PILL, formatBytes, formatDateTime, formatRelative, formatShortDate, isOnline } from "./format";
 
 export type MemberRow = {
@@ -45,10 +46,12 @@ export function MembersTable({ rows, meId }: { rows: MemberRow[]; meId: string |
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
 
   const selected = rows.find((r) => r.id === selectedId) ?? null;
   const checkedRows = rows.filter((r) => checked.has(r.id));
   const approvable = checkedRows.filter((r) => (r.status === "pending" || r.status === "rejected") && r.id !== meId);
+  const mailable = checkedRows.filter((r) => r.status !== "withdrawn");
   const allChecked = rows.length > 0 && rows.every((r) => checked.has(r.id));
 
   function toggle(id: string) {
@@ -236,6 +239,14 @@ export function MembersTable({ rows, meId }: { rows: MemberRow[]; meId: string |
             >
               {bulkBusy ? "처리 중..." : `일괄 승인${approvable.length ? ` (${approvable.length})` : ""}`}
             </button>
+            <button
+              type="button"
+              disabled={mailable.length === 0}
+              onClick={() => setComposing(true)}
+              className="rounded-md px-2 py-1 transition hover:bg-white/10 disabled:opacity-40"
+            >
+              메일{mailable.length ? ` (${mailable.length})` : ""}
+            </button>
             <button type="button" onClick={exportChecked} className="rounded-md px-2 py-1 transition hover:bg-white/10">
               CSV
             </button>
@@ -248,6 +259,17 @@ export function MembersTable({ rows, meId }: { rows: MemberRow[]; meId: string |
             </button>
           </div>
         </div>
+      )}
+
+      {composing && (
+        <MemberEmailComposer
+          recipients={mailable.map((r) => ({ id: r.id, name: r.name }))}
+          onClose={() => setComposing(false)}
+          onSent={(msg) => {
+            setBulkMessage(msg);
+            setChecked(new Set());
+          }}
+        />
       )}
 
       {selected && <MemberDrawer key={selected.id} member={selected} meId={meId} onClose={() => setSelectedId(null)} />}

@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { USER_TYPE_LABEL, MEMBER_STATUS_LABEL } from "@/lib/adminMembers";
 import { MemberStatusActions } from "@/components/admin/MemberStatusActions";
 import { StatusPill, type MemberRow } from "./MembersTable";
+import { MemberEmailComposer } from "./MemberEmailComposer";
 import { formatBytes, formatDateTime, formatRelative } from "./format";
 
 type Note = { id: number; author_id: string | null; body: string; created_at: string; authorName: string | null };
@@ -52,6 +53,8 @@ export function MemberDrawer({
   const [nameDraft, setNameDraft] = useState(m.name);
   const [nameSaving, setNameSaving] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
+  const [mailMessage, setMailMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -295,6 +298,19 @@ export function MemberDrawer({
             </section>
           )}
 
+          {!withdrawn && (
+            <section className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
+              <span className="text-xs text-gray-500">{mailMessage ?? "회원에게 메일"}</span>
+              <button
+                type="button"
+                onClick={() => setComposing(true)}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                메일 보내기
+              </button>
+            </section>
+          )}
+
           <section className="flex flex-col gap-2">
             <h3 className="text-xs font-semibold text-gray-500">관리자 메모</h3>
             <div className="flex flex-col gap-1.5">
@@ -377,6 +393,16 @@ export function MemberDrawer({
           </section>
         </div>
       </aside>
+      {composing && (
+        <MemberEmailComposer
+          recipients={[{ id: m.id, name: m.name }]}
+          onClose={() => setComposing(false)}
+          onSent={(msg) => {
+            setMailMessage(msg);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }
