@@ -62,6 +62,20 @@ function useDeferredPrompt() {
   );
 }
 
+// 다른 곳(오른쪽 사이드바 설치 광고, InstallAdCard)에서도 같은 네이티브 설치 창을 쓴다 — 데스크톱
+// 크롬·엣지도 설치 조건이 맞으면 같은 beforeinstallprompt를 준다.
+export const useNativeInstallPrompt = useDeferredPrompt;
+
+export async function promptNativeInstall(): Promise<"accepted" | "dismissed" | "unavailable"> {
+  const prompt = deferredPrompt;
+  if (!prompt) return "unavailable";
+  await prompt.prompt();
+  const { outcome } = await prompt.userChoice;
+  deferredPrompt = null;
+  emit();
+  return outcome;
+}
+
 export function isAndroid() {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 }

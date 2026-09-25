@@ -7,6 +7,7 @@
 // Companion인 게시물만 보이므로(feed/page.tsx와 동일한 원칙) 여기서도 Companion 필터를 거친
 // 후보만 후보로 삼는다 — 안 그러면 RLS(post_access_insert_knock_self)에서 막히는 죽은
 // 노크 버튼을 보여주게 된다.
+import { InstallAdCard } from "@/components/InstallAdCard";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -400,6 +401,10 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
           )}
         </div>
       </section>
+
+      {/* 앱 설치 광고(InstallAdCard) — 설치 유도가 중요해서 팝업과 별개로 사이드바에 상시 노출.
+          이미 설치한 앱이거나 닫은 지 7일이 안 됐으면 알아서 안 그린다. */}
+      <InstallAdCard />
     </aside>
   );
 }
