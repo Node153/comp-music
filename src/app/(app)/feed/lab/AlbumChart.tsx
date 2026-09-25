@@ -25,10 +25,10 @@ import { AlbumRecommendModal } from "./AlbumRecommendModal";
 
 function chipClass(active: boolean, empty = false) {
   if (active) return "shrink-0 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white";
-  return `shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+  return `shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium ring-1 transition dark:bg-gray-800 ${
     empty
-      ? "bg-gray-50 text-gray-400 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-500 dark:hover:bg-gray-800"
-      : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+      ? "text-gray-400 ring-gray-100 hover:ring-gray-300 dark:text-gray-500 dark:ring-gray-800"
+      : "text-gray-700 ring-gray-200 hover:ring-gray-400 dark:text-gray-200 dark:ring-gray-700"
   }`;
 }
 
@@ -139,43 +139,63 @@ export function AlbumChart({
         </button>
       </div>
 
+      {/* 장르 필터 — 추천 창(AlbumRecommendModal)과 같은 두 단계: 상위 장르는 앨범 수가 붙은 타일,
+          세부 장르는 고른 상위 장르 아래 별도 패널의 작은 칩(2026-09-26 사용자 요청). */}
       <div className="flex flex-col gap-2">
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-          <button type="button" onClick={() => selectScope(null, null)} className={chipClass(!grp && !genre)}>
-            전체
-          </button>
-          {groups.map((g) => (
-            <button
-              key={g.key}
-              type="button"
-              onClick={() => selectScope(g.key, null)}
-              className={chipClass(grp === g.key, !countByGrp.get(g.key))}
-            >
-              {g.name}
-            </button>
-          ))}
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+          {[{ key: null as string | null, name: "전체" }, ...groups].map((g) => {
+            const active = g.key === null ? !grp && !genre : grp === g.key;
+            const n = g.key === null ? albums.length : (countByGrp.get(g.key) ?? 0);
+            return (
+              <button
+                key={g.key ?? "all"}
+                type="button"
+                onClick={() => selectScope(g.key, null)}
+                aria-pressed={active}
+                className={`flex items-center justify-between gap-1 rounded-xl border px-2.5 py-2 text-left text-xs font-semibold transition sm:text-sm ${
+                  active
+                    ? "border-violet-500 bg-violet-50 text-violet-800 dark:border-violet-400 dark:bg-violet-500/15 dark:text-violet-100"
+                    : n === 0
+                      ? "border-gray-100 bg-white text-gray-400 hover:border-gray-300 dark:border-gray-800 dark:bg-transparent dark:text-gray-500 dark:hover:border-gray-600"
+                      : "border-gray-200 bg-white text-gray-800 hover:border-gray-400 dark:border-gray-700 dark:bg-transparent dark:text-gray-200 dark:hover:border-gray-500"
+                }`}
+              >
+                <span className="min-w-0 break-keep leading-tight">{g.name}</span>
+                {n > 0 && (
+                  <span className={`shrink-0 text-[11px] font-medium ${active ? "text-violet-500 dark:text-violet-300" : "text-gray-400"}`}>
+                    {n}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
         {grp && (
-          <div className="flex flex-wrap gap-1.5">
-            <button type="button" onClick={() => selectScope(grp, null)} className={chipClass(!genre)}>
-              {groups.find((g) => g.key === grp)?.name} 전체
-            </button>
-            {genres
-              .filter((g) => g.grp === grp)
-              .map((g) => {
-                const n = countByGenre.get(g.slug) ?? 0;
-                return (
-                  <button
-                    key={g.slug}
-                    type="button"
-                    onClick={() => selectScope(grp, g.slug)}
-                    className={chipClass(genre === g.slug, n === 0)}
-                  >
-                    {g.name}
-                    {n > 0 && <span className="ml-1 opacity-60">{n}</span>}
-                  </button>
-                );
-              })}
+          <div className="flex flex-col gap-1.5 rounded-xl bg-gray-50 p-2.5 dark:bg-gray-900">
+            <p className="px-0.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+              세부 장르 · {groups.find((g) => g.key === grp)?.name}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => selectScope(grp, null)} className={chipClass(!genre)}>
+                전체
+              </button>
+              {genres
+                .filter((g) => g.grp === grp)
+                .map((g) => {
+                  const n = countByGenre.get(g.slug) ?? 0;
+                  return (
+                    <button
+                      key={g.slug}
+                      type="button"
+                      onClick={() => selectScope(grp, g.slug)}
+                      className={chipClass(genre === g.slug, n === 0)}
+                    >
+                      {g.name}
+                      {n > 0 && <span className="ml-1 opacity-60">{n}</span>}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         )}
       </div>
