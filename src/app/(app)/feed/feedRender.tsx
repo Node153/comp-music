@@ -24,7 +24,8 @@ import { PinButton } from "./PinButton";
 import { CommentPanel } from "./CommentPanel";
 import { ShareButton } from "./ShareButton";
 import { GuestEngagementRow } from "./GuestEngagementRow";
-import { EyeIcon, LockIcon } from "@/components/icons";
+import { CommentIcon, EyeIcon, LockIcon } from "@/components/icons";
+import { feedbackFocusText } from "@/lib/feedbackFocus";
 import type { ContentType, Database } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
@@ -512,8 +513,23 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                 />
               )}
 
-              {(isPrivate || post.collab_available) && (
+              {(isPrivate || post.collab_available || post.feedback_focus) && (
                 <div className="flex shrink-0 flex-wrap items-center gap-1.5 px-3 pb-2">
+                  {/* 피드백 받기(0089) — 작성자가 원하는 의견 분야와 한 줄 요청. */}
+                  {post.feedback_focus && (
+                    <span
+                      title={post.feedback_note ?? undefined}
+                      className="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    >
+                      <CommentIcon className="h-3 w-3 shrink-0" />
+                      <span className="truncate">피드백 환영 · {feedbackFocusText(post.feedback_focus)}</span>
+                    </span>
+                  )}
+                  {post.feedback_note && (
+                    <span className="w-full truncate text-xs text-gray-500 dark:text-gray-400">
+                      &ldquo;{post.feedback_note}&rdquo;
+                    </span>
+                  )}
                   {isPrivate && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
                       {post.visibility === "invite_only" ? <LockIcon className="h-3 w-3" /> : <EyeIcon className="h-3 w-3" />}
@@ -726,7 +742,13 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                     <LikeButton postId={post.id} userId={currentUser.id} />
                     {/* Kick(0071) — 하트 바로 옆, DEMO 전용 */}
                     {!isPrivate && <KickButton postId={post.id} userId={currentUser.id} isOwnPost={isOwnPost} />}
-                    <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isPrivate} isOwnPost={isOwnPost} />
+                    <CommentPanel
+                      postId={post.id}
+                      userId={currentUser.id}
+                      isDemo={!isPrivate}
+                      isOwnPost={isOwnPost}
+                      feedbackFocus={feedbackFocusText(post.feedback_focus)}
+                    />
                     {/* 공유(0076) — PEAK 진행 알림의 행동 버튼, 외부 유입 경로. DEMO 전용. */}
                     {!isPrivate && <ShareButton postId={post.id} title={post.title || post.caption || "Drop"} />}
                     {isOwnPost && isPrivate && (

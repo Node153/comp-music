@@ -58,6 +58,7 @@ export function CommentPanel({
   buttonClassName = "",
   isDemo = false,
   isOwnPost = false,
+  feedbackFocus = null,
 }: {
   postId: string;
   userId: string;
@@ -67,6 +68,8 @@ export function CommentPanel({
   // demo(공개 피드)의 댓글은 누구나 보는 공간이라 작성자가 나와 Companion이어도 닉네임만
   // 보여준다(사용자 요청) — memo(기본값)는 그대로 user_display(0018)로 실명/닉네임을 가른다.
   isDemo?: boolean;
+  // 작성자가 "피드백 받기"로 고른 분야(0089, feedbackFocusText 결과) — 댓글 안내 문구에 쓴다.
+  feedbackFocus?: string | null;
 }) {
   const supabase = createClient();
   const { commentCount, setCommentCount } = usePostEngagement();
@@ -369,7 +372,7 @@ export function CommentPanel({
                 <input
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="댓글 달기..."
+                  placeholder={feedbackFocus && !isOwnPost ? `${feedbackFocus}에 대한 의견 남기기...` : "댓글 달기..."}
                   className="flex-1 rounded-full border border-gray-300 px-3.5 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                 />
                 <button

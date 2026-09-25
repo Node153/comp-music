@@ -10,7 +10,18 @@ import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
-import { LockIcon, EyeIcon, HeartIcon, CommentIcon, SearchIcon, ArrowUpIcon } from "@/components/icons";
+import {
+  LockIcon,
+  EyeIcon,
+  HeartIcon,
+  CommentIcon,
+  SearchIcon,
+  ArrowUpIcon,
+  FlameIcon,
+  GlobeIcon,
+  ChevronDownIcon,
+  ImageIcon,
+} from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
@@ -24,6 +35,7 @@ import { HAPTIC, haptic } from "@/lib/haptics";
 import { acquireWakeLock } from "@/lib/wakeLock";
 import { takeSharedUploadFile } from "@/lib/shareTarget";
 import { track } from "@/lib/analytics";
+import { FEEDBACK_FOCUS_OPTIONS, FEEDBACK_NOTE_MAX, feedbackFocusText } from "@/lib/feedbackFocus";
 
 const MIN_TAGS = 3;
 
@@ -53,12 +65,10 @@ const AUDIENCE_OPTIONS: { value: Audience; label: string }[] = [
   { value: "companion", label: "Companion" },
   { value: "specific", label: "특정인" },
 ];
-// 옛 memo는 단독 6/12/24/48h, 콜라보 1/3/5/7d였다 — 합치면서 한 줄에 들어가게 다섯 개로 줄임.
+// 2026-09-26(사용자 요청) 계속·24시간·7일 세 개로 줄임(6시간·3일 제거 — 실제로 기간을 고른 글이 0건).
 const EXPIRE_OPTIONS: { hours: ExpireHours | null; label: string }[] = [
-  { hours: null, label: "영구" },
-  { hours: 6, label: "6시간" },
+  { hours: null, label: "계속" },
   { hours: 24, label: "24시간" },
-  { hours: 72, label: "3일" },
   { hours: 168, label: "7일" },
 ];
 
@@ -67,22 +77,21 @@ function expiresAtFromNow(hours: ExpireHours | null) {
   return hours === null ? null : new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
 }
 
-function settingsSummary(audience: Audience, expireHours: ExpireHours | null, collab: boolean) {
-  const who =
-    audience === "public" ? "누구나 볼 수 있고" : audience === "companion" ? "Companion에게만 보이고" : "초대한 사람만 볼 수 있고";
+// 게시 설정은 평소 한 줄 요약만 보이고 눌러야 펼쳐진다(2026-09-26 — 거의 모두 기본값으로 올림).
+function settingsSummary(audience: Audience, expireHours: ExpireHours | null) {
+  const who = audience === "public" ? "전체 공개" : audience === "companion" ? "Companion 공개" : "특정인 공개";
   const label = EXPIRE_OPTIONS.find((o) => o.hours === expireHours)?.label ?? "";
-  const when = expireHours === null ? "계속 유지돼요" : `${label} 뒤 자동으로 숨겨져요`;
-  return `${who} ${when}.${collab ? " 콜라보는 음원 스택과 채팅으로 함께 곡을 만들어요(음원만)." : ""}`;
+  return `${who} · ${expireHours === null ? "계속 유지" : `${label} 뒤 숨김`}`;
 }
 
 // posts.expire_hours는 not null 컬럼이라 demo(영구노출)에도 값이 필요하지만,
 // 영구노출 여부는 expires_at(null)로만 판단하므로(feed/page.tsx 쿼리 참고) 이 값 자체는 화면에 노출되지 않는다.
 const PERMANENT_POST_EXPIRE_HOURS_PLACEHOLDER: ExpireHours = 48;
 
-// 영상/음원 둘 다 올릴 수 있고, 콜라보만 음원(mp3/wav) 전용(재창작물 스택이 0015부터 음원 전용).
+// 영상/음원 둘 다 올릴 수 있다. 콜라보(음원 전용)는 2026-09-26 업로드 화면에서 숨김(사용자 결정 —
+// 실사용 0건). DB 컬럼(collab_available)과 피드 쪽 콜라보 화면은 기존 글을 위해 그대로 둔다.
 type DetectedMediaKind = "video" | "audio";
 const VIDEO_OR_AUDIO_ACCEPT = "video/mp4,video/quicktime,audio/mpeg,audio/mp3,audio/wav,audio/x-wav";
-const AUDIO_ONLY_ACCEPT = "audio/mpeg,audio/mp3,audio/wav,audio/x-wav";
 
 function detectMediaKind(file: File): DetectedMediaKind | null {
   if (file.type.startsWith("video/")) return "video";
@@ -150,15 +159,11 @@ function cropImageFileToSquare(
 // DEMO 탭 배경색)와 텍스트/보더 전용 active-gray만 쓴다(globals.css 참고, 2026-09-16 재조정
 // — 배경 4단계는 전부 데모탭 기준 살짝 어두운 밝은 톤, active-gray는 글씨·테두리용으로 유지).
 // 이 페이지 밖(예: /profile/manage)에도 재사용되는 공유 스타일(pageCard/labelClass/errorText)은
-// 건드리지 않고, 여기서만 색만 이 4가지+검정 글씨로 덮어써(grayField는 아예 새로 정의) 확장한다.
+// 건드리지 않고, 여기서만 색만 이 4가지+검정 글씨로 덮어써(입력칸 스타일은 아래 innerField/bareField로 새로 정의) 확장한다.
 // w-full: pageCard는 max-w만 있어서 카드 폭이 내용물 고유 너비를 따라간다 — 해시태그 검색으로
 // 칩 목록이 줄면 폼 전체가 좁아지는 문제가 있어 이 페이지에서는 폭을 항상 max-w까지 고정.
 const wideCard = `${pageCard} w-full`;
 const blackLabel = `${labelClass} !text-black`;
-// 폼 안의 인풋 = "박스 안에 박스"라 옅은 그레이 배경(채색된 박스라 평소엔 테두리 없음),
-// 포커스만 활성화 상태를 나타내는 테두리(짙은 그레이)로 보여준다.
-const grayField =
-  "w-full rounded-xl border border-transparent bg-box-gray px-3.5 py-2.5 text-sm text-black placeholder:text-active-gray focus:border-active-gray focus:outline-none focus:ring-1 focus:ring-active-gray";
 // 네이티브 <input type="file">를 그대로 쓰면 브라우저 기본 버튼("Choose File" 등)이 file:
 // 유사요소로만 살짝 꾸며져서 다른 화면 요소들과 톤이 안 맞고 허접해 보였다(사용자 지적,
 // 2026-09-16) — UploadDropbox와 같은 패턴(숨긴 input + 직접 만든 버튼)으로 바꿈.
@@ -166,7 +171,13 @@ const grayField =
 // 보인다는 피드백(2026-09-16) — 위 메인 업로드 박스(UploadDropbox)와 같은 점선 정사각형
 // 언어로 통일해서, 파일 고르기 전/후 모두 CoverPositionPicker와 같은 자리·같은 크기(160px
 // 정사각형)의 요소가 서로 바뀌어 끼워지는 느낌으로 만든다 — 더 정돈되고 일관돼 보인다.
-function CoverFileButton({ onChange }: { onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
+function CoverFileButton({
+  onChange,
+  size = 160,
+}: {
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  size?: number;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -181,60 +192,68 @@ function CoverFileButton({ onChange }: { onChange: (e: React.ChangeEvent<HTMLInp
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        style={{ width: 160, height: 160 }}
+        style={{ width: size, height: size }}
         className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-canvas-gray"
       >
-        <ArrowUpIcon className="h-6 w-6" />
-        <span className="text-sm font-bold">이미지 선택</span>
+        <ImageIcon className="h-6 w-6" />
+        <span className="text-sm font-bold">커버 이미지</span>
         <span className="text-[11px]">PNG · JPG · WEBP</span>
       </button>
     </>
   );
 }
 
-// CoverFileButton과 같은 자리에 나란히 두는 두 번째 선택지 — "GIF로 만들기"가 텍스트
-// 버튼 하나뿐이라 선택하고 싶게 안 생겼다는 피드백(2026-09-16) — 같은 정사각형 점선
-// 언어로 맞춰서 둘이 진짜 "둘 중 하나 고르는" 카드처럼 보이게 했다.
-function GifPickerButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{ width: 160, height: 160 }}
-      className="flex shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-active-gray bg-box-gray text-center text-active-gray transition-colors hover:bg-canvas-gray"
-    >
-      <SearchIcon className="h-6 w-6" />
-      <span className="text-sm font-bold">GIF 검색</span>
-      <span className="text-[11px]">GIPHY에서 찾기</span>
-    </button>
-  );
-}
 // 공유 <Button variant="primary">는 기본이 검정 배경(다른 화면들과 공유하는 토큰이라 그대로 둠) —
 // 이 화면(그레이 3단계 규칙)에서만 !important로 활성화 박스 색(demo-bg)으로 덮어쓴다.
 // !important가 배경색을 고정해버려서 Button 기본 hover:bg-gray-800이 안 먹으니, 다른 버튼들과
 // 같은 hover:opacity로 눌렀을 때 짙어지는 느낌을 따로 챙겨준다.
 const primaryButtonClass = "!bg-demo-bg !text-black hover:opacity-80";
 
-// 채색(배경)이 있는 박스는 테두리를 따로 안 그린다 — 배경색만으로 구분.
-function selectableButtonClass(active: boolean, base: string) {
-  const colors = active ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-80";
-  return `${base} ${colors}`;
+// 게시 설정 세그먼트(공개·기간) — main-gray 홈 안에서 고른 칸만 밝은 활성화 박스로 떠오른다.
+function segmentClass(active: boolean) {
+  const colors = active ? "bg-demo-bg font-semibold text-black ring-1 ring-canvas-gray" : "text-active-gray hover:text-black";
+  return `flex items-center justify-center gap-1 rounded-md px-1 py-1.5 text-xs transition ${colors}`;
+}
+
+// 섹션(box-gray) 안의 입력칸 — 한 단계 밝은 활성화 박스 색 위에 적는다.
+const innerField =
+  "w-full rounded-lg border border-transparent bg-demo-bg px-3 py-2 text-sm text-black placeholder:text-active-gray/70 focus:border-active-gray focus:outline-none";
+// 작업물 카드의 제목·캡션 — 칸 테두리 없이 카드에 바로 적는 느낌(포커스 때만 밑줄 없이 그대로).
+const bareField =
+  "w-full border-none bg-transparent p-0 text-black placeholder:text-active-gray/70 focus:outline-none focus:ring-0";
+const COVER_SLOT = 128;
+
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-active-gray" : "bg-canvas-gray"}`}
+    >
+      <span
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-demo-bg shadow transition-all ${checked ? "left-[22px]" : "left-0.5"}`}
+      />
+    </button>
+  );
 }
 
 // 해시태그 목록 박스는 채색 없이 테두리만(사용자 지시 — "이전처럼") 그려서 안의 바탕은
 // 카드 자체 색(main-gray)이 그대로 비친다 — 칩은 그 위에서 옅은 톤(box-gray)으로 도드라지고,
 // 선택되면 활성화 박스 색(demo-bg)으로 바뀐다.
 function chipButtonClass(active: boolean) {
+  // 섹션(box-gray) 위라 안 고른 칩은 한 단계 짙은 main-gray, 고른 칩은 밝은 활성화 박스+테두리.
   const colors = active
-    ? "bg-demo-bg text-black"
-    : "bg-box-gray text-black hover:opacity-80";
-  return `rounded-full px-3 py-1.5 text-sm font-medium transition ${colors}`;
+    ? "bg-demo-bg text-black font-semibold ring-1 ring-active-gray"
+    : "bg-main-gray text-black hover:bg-canvas-gray";
+  return `rounded-full px-3 py-1.5 text-sm transition ${colors}`;
 }
 
 // 파일 input을 감춘 큰 dropzone — 클릭·드래그앤드롭 둘 다 지원. 업로드 가능한 확장자를
 // 박스 안에 나열해서 별도 라벨 없이 이 박스 하나로 파일 선택 UI를 대체한다.
 const UPLOADABLE_FORMATS = "mp3 · wav · mp4 · mov";
-const MEMO_UPLOADABLE_FORMATS = "mp3 · wav";
 
 function UploadDropbox({
   file,
@@ -276,9 +295,16 @@ function UploadDropbox({
       // (사용자 지적, 2026-09-15). 그래서 채움 자체를 명확히 다른 색으로 바꿔서 점선 안 전체
       // 표면이 눈에 띄게 짙어지게 했다 — hover 색은 그레이 4단계 중 가장 짙은 canvas-gray를
       // 재사용(2026-09-16, 팔레트를 전체적으로 밝게 재조정하며 하드코딩된 #adadad를 정리).
-      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-6 text-center text-active-gray transition-colors ${
-        dragOver ? "bg-demo-bg" : "bg-box-gray hover:bg-canvas-gray"
-      }`}
+      // 파일을 고른 뒤엔 큰 점선 박스 대신 파일 정보 한 줄로 줄어든다(2026-09-26 — 여전히 클릭·드롭으로 교체).
+      className={
+        file
+          ? `flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-active-gray transition-colors ${
+              dragOver ? "bg-demo-bg" : "bg-main-gray hover:bg-canvas-gray"
+            }`
+          : `relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-10 text-center text-active-gray transition-colors ${
+              dragOver ? "bg-demo-bg" : "bg-box-gray hover:bg-canvas-gray"
+            }`
+      }
     >
       <input
         ref={inputRef}
@@ -290,28 +316,27 @@ function UploadDropbox({
           e.target.value = "";
         }}
       />
-      {file && (
-        <button
-          type="button"
-          aria-label="파일 제거"
-          title="파일 제거"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(null);
-          }}
-          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-main-gray text-sm font-bold text-black transition hover:opacity-80"
-        >
-          ×
-        </button>
-      )}
-      <ArrowUpIcon className="h-6 w-6" />
       {file ? (
         <>
-          <p className="max-w-full truncate text-sm font-semibold">{file.name}</p>
-          <p className="text-xs">Click or drop to replace</p>
+          <ArrowUpIcon className="h-4 w-4 shrink-0" />
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-black">{file.name}</p>
+          <span className="shrink-0 text-xs">{file.size < 1024 * 1024 ? "1MB 미만" : formatMB(file.size)} · 교체</span>
+          <button
+            type="button"
+            aria-label="파일 제거"
+            title="파일 제거"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(null);
+            }}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold text-black transition hover:bg-demo-bg"
+          >
+            ×
+          </button>
         </>
       ) : (
         <>
+          <ArrowUpIcon className="h-6 w-6" />
           <p className="text-base font-bold text-active-gray">Upload</p>
           <p className="text-xs">{formatsLabel}</p>
         </>
@@ -332,11 +357,13 @@ function CoverPositionPicker({
   position,
   onChange,
   size = 160,
+  hint = true,
 }: {
   src: string;
   position: { x: number; y: number };
   onChange: (next: { x: number; y: number }) => void;
   size?: number;
+  hint?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startY: number; startPos: { x: number; y: number } } | null>(null);
@@ -388,7 +415,7 @@ function CoverPositionPicker({
           style={{ objectPosition: `${position.x}% ${position.y}%` }}
         />
       </div>
-      <p className="text-[11px] text-active-gray">드래그해서 노출 영역을 조정하세요</p>
+      {hint && <p className="text-[11px] text-active-gray">드래그해서 노출 영역을 조정하세요</p>}
     </div>
   );
 }
@@ -445,7 +472,14 @@ export default function UploadPage() {
   // 미리보기 카드의 남은시간 뱃지용 — 렌더 중 Date.now()를 부르지 않도록 노출 기간을 고를 때 계산.
   const [previewExpiresAt, setPreviewExpiresAt] = useState<string | null>(null);
   const [inviteUsers, setInviteUsers] = useState<PickedUser[]>([]);
-  const [collabAvailable, setCollabAvailable] = useState(false);
+  // 피드백 받기(0089) — 켜면 feedback_focus에 고른 분야(없으면 빈 배열=전체적으로)를 저장.
+  const [feedbackOn, setFeedbackOn] = useState(false);
+  const [feedbackFocus, setFeedbackFocus] = useState<string[]>([]);
+  const [feedbackNote, setFeedbackNote] = useState("");
+  // 게시 설정(공개·기간)은 한 줄 요약으로 접혀 있다가 눌러야 펼쳐진다.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // 해시태그 추천 칩은 처음엔 두어 줄만 — "더 보기"로 전체(예전 스크롤 박스는 칩이 반쯤 잘려 보였다).
+  const [showAllTags, setShowAllTags] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // 이용 통계(0079) — 올리려다 어디서 막혔는지(검증 메시지·업로드 실패). 성공은 posts 테이블로 안다.
@@ -574,13 +608,6 @@ export default function UploadPage() {
       return;
     }
     const kind = file ? detectMediaKind(file) : null;
-    // 콜라보는 재창작 스택이 음원 전용이라 영상은 받지 않는다.
-    if (file && collabAvailable && kind === "video") {
-      setMediaFile(null);
-      setMediaKind(null);
-      setMediaFileError("콜라보 게시물은 음원(mp3/wav) 파일만 올릴 수 있어요.");
-      return;
-    }
     setMediaFile(file);
     setMediaKind(kind);
   }
@@ -663,18 +690,6 @@ export default function UploadPage() {
     setGifPickerOpen(false);
   }
 
-  // 콜라보를 나중에 켜서 이미 골라둔 영상이 더 이상 허용 안 되는 경우 정리. 콜라보는 채팅 중심
-  // 화면이라 커버 이미지도 쓰지 않는다.
-  function handleCollabChange(on: boolean) {
-    setCollabAvailable(on);
-    if (on && mediaKind === "video") {
-      setMediaFile(null);
-      setMediaKind(null);
-      resetVideoEdit();
-      setMediaFileError("콜라보 게시물은 음원(mp3/wav) 파일만 올릴 수 있어요.");
-    }
-  }
-
   function handleExpireChange(hours: ExpireHours | null) {
     setExpireHours(hours);
     setPreviewExpiresAt(expiresAtFromNow(hours));
@@ -704,10 +719,29 @@ export default function UploadPage() {
     tag.toLowerCase().includes(tagSearch.trim().toLowerCase()),
   );
 
+  // 추천 칩 — 이미 고른 태그는 위 "선택됨" 줄에 있으니 뺀다. 검색 중이거나 "더 보기"를 눌렀으면
+  // 전부, 아니면 인기 6개 + 기본 12개만(두어 줄).
+  const collapsedTags = !showAllTags && !tagSearch.trim();
+  const popularCandidates = filteredPopularUserTags.filter((t) => !selectedTags.includes(t));
+  const genreCandidates = filteredGenres.filter((t) => !selectedTags.includes(t) && !popularCandidates.includes(t));
+  const visiblePopularTags = collapsedTags ? popularCandidates.slice(0, 6) : popularCandidates;
+  const visibleGenreTags = collapsedTags ? genreCandidates.slice(0, 12) : genreCandidates;
+  const hiddenTagCount =
+    popularCandidates.length + genreCandidates.length - visiblePopularTags.length - visibleGenreTags.length;
+  const suggestedTags = [...popularCandidates, ...genreCandidates];
+
+  // 게시 버튼에 보여줄 남은 필수 항목(submitPost 검증과 같은 순서·조건).
+  const missingItems: string[] = [];
+  if (!mediaFile || !mediaKind) missingItems.push("파일");
+  if (mediaKind === "audio" && !coverFile && !coverGifUrl) missingItems.push("커버");
+  if (!title.trim()) missingItems.push("제목");
+  if (audience === "public" && selectedTags.length < MIN_TAGS) missingItems.push(`해시태그 ${MIN_TAGS - selectedTags.length}개`);
+  if (audience === "specific" && inviteUsers.length === 0) missingItems.push("초대할 사람");
+
   // 인스타그램처럼 "게시하면 이렇게 보여요"를 실시간으로 보여주는 미리보기 — 콜라보는 채팅 중심의
   // 다른 화면이라 제외. 커버 이미지가 메인 비주얼이라 영상이 없어도(음원만 골랐거나 아직 아무것도
   // 안 골랐어도) 커버+캡션+해시태그만으로 띄운다.
-  const showsFeedLikePreview = !collabAvailable;
+  const showsFeedLikePreview = true;
   // 미리보기도 다듬은 구간만 재생되게 media fragment(#t=시작,끝)를 붙인다.
   const previewVideoSrc =
     showsFeedLikePreview && mediaKind === "video" && mediaObjectUrl
@@ -738,12 +772,11 @@ export default function UploadPage() {
       return;
     }
     if (!mediaFile || !mediaKind) {
-      setError(collabAvailable ? "음원(mp3/wav) 파일을 업로드해주세요." : "영상 또는 음원(mp3/wav)을 업로드해주세요.");
+      setError("영상 또는 음원(mp3/wav)을 업로드해주세요.");
       return;
     }
-    // 영상은 그 자체로 보여줄 화면이 있어서 커버 이미지 필수에서 예외(사용자 요청). 콜라보는 채팅
-    // 중심이라 커버가 없다.
-    if (!collabAvailable && mediaKind === "audio" && !coverFile && !coverGifUrl) {
+    // 영상은 그 자체로 보여줄 화면이 있어서 커버 이미지 필수에서 예외(사용자 요청).
+    if (mediaKind === "audio" && !coverFile && !coverGifUrl) {
       setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
       return;
     }
@@ -783,18 +816,16 @@ export default function UploadPage() {
     // 그대로 쓰고(resolveMediaUrl이 읽을 때 구분), 직접 올린 사진이면 coverPosition(드래그로 고른
     // 노출 영역)을 반영해 여기서 한 번만 정사각형으로 크롭해 R2에 올린다.
     let thumbnailPath: string | null = null;
-    if (!collabAvailable) {
-      try {
-        if (coverGifUrl) {
-          thumbnailPath = coverGifUrl;
-        } else if (coverFile) {
-          thumbnailPath = await uploadFileToR2(await cropImageFileToSquare(coverFile, coverPosition));
-        }
-      } catch (err) {
-        setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
-        setLoading(false);
-        return;
+    try {
+      if (coverGifUrl) {
+        thumbnailPath = coverGifUrl;
+      } else if (coverFile) {
+        thumbnailPath = await uploadFileToR2(await cropImageFileToSquare(coverFile, coverPosition));
       }
+    } catch (err) {
+      setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
+      setLoading(false);
+      return;
     }
 
     const publishedAt = new Date();
@@ -814,7 +845,9 @@ export default function UploadPage() {
         caption: caption || null,
         instrument_tags: selectedTags,
         visibility: audience === "public" ? "public" : audience === "companion" ? "followers" : "invite_only",
-        collab_available: collabAvailable,
+        collab_available: false,
+        feedback_focus: feedbackOn ? feedbackFocus : null,
+        feedback_note: feedbackOn && feedbackNote.trim() ? feedbackNote.trim().slice(0, FEEDBACK_NOTE_MAX) : null,
         collab_role_needed: null,
         status: "published",
         published_at: publishedAt.toISOString(),
@@ -911,16 +944,15 @@ export default function UploadPage() {
     // 스크롤 대신 미리보기가 아래로 줄바꿈되게 한다.
     <div className="mx-auto flex max-w-[1420px] flex-col gap-6 px-4 md:flex-row md:flex-wrap md:items-start md:justify-center">
       <main className={`${wideCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
-        {/* 2026-09-25(사용자 요청) memo 통합 + 컴팩트하게 — 게시 유형 선택을 없애고 파일 → 제목·캡션 →
-            해시태그 → 게시 설정(공개·노출·콜라보 한 줄씩) 순서로 한 폼에 담았다. 기본값(전체·영구·
-            콜라보 끔)이면 옛 DEMO 업로드와 똑같이 저장된다. */}
+        {/* 2026-09-26(사용자 요청) 업로드 화면 개편 — 섹션 네 개(파일 / 작업물 카드 / 피드백 받기 /
+            해시태그) + 게시 설정 한 줄 + 남은 필수 항목을 알려주는 게시 버튼. 콜라보는 숨김. */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
             <UploadDropbox
               file={mediaFile}
               onSelect={handleFileChange}
-              accept={collabAvailable ? AUDIO_ONLY_ACCEPT : VIDEO_OR_AUDIO_ACCEPT}
-              formatsLabel={collabAvailable ? MEMO_UPLOADABLE_FORMATS : UPLOADABLE_FORMATS}
+              accept={VIDEO_OR_AUDIO_ACCEPT}
+              formatsLabel={UPLOADABLE_FORMATS}
             />
             {mediaFile && !mediaKind && (
               <p className="text-sm text-amber-600">
@@ -928,15 +960,6 @@ export default function UploadPage() {
               </p>
             )}
             {mediaFileError && <p className={errorText}>{mediaFileError}</p>}
-            {showPostPreview && (
-              <button
-                type="button"
-                onClick={() => setPreviewOpen((v) => !v)}
-                className="hidden self-start text-xs font-medium text-active-gray hover:underline md:inline"
-              >
-                {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
-              </button>
-            )}
             {mediaFile && mediaKind === "audio" && mediaObjectUrl && (
               <SoundbarPreview
                 key={`${mediaFile.name}-${mediaFile.size}-${mediaFile.lastModified}`}
@@ -946,83 +969,142 @@ export default function UploadPage() {
               />
             )}
             {mediaKind === "video" && mediaObjectUrl && renderVideoEditor(mediaObjectUrl)}
-            {/* 커버 이미지는 음원일 때만 — 영상은 그 자체가 화면이라 버튼 자체를 안 보여준다
-                (사용자 요청: "없어도 되는 게 아니라 없어야 해"). 콜라보는 채팅 화면이라 커버 없음. */}
-            {!collabAvailable && mediaKind === "audio" && (
-              <>
-                <div className="border-t border-canvas-gray/60 pt-3">
-                  <span className={blackLabel}>커버 이미지 (필수)</span>
-                </div>
+            {showPostPreview && (
+              <button
+                type="button"
+                onClick={() => setPreviewOpen((v) => !v)}
+                className="hidden self-start text-xs font-medium text-active-gray hover:underline md:inline"
+              >
+                {previewOpen ? "미리보기 접기" : "미리보기 펼치기"}
+              </button>
+            )}
+          </div>
+
+          {/* 작업물 카드 — 음원이면 왼쪽에 커버(필수), 오른쪽에 제목·캡션(앨범 재킷처럼). 영상은 그
+              자체가 화면이라 커버 자리가 없다(사용자 요청: "없어야 해"). */}
+          <div className="flex gap-3 rounded-xl bg-box-gray p-3">
+            {mediaKind === "audio" && (
+              <div className="flex shrink-0 flex-col items-center gap-1.5">
                 {coverGifUrl ? (
-                  <div className="flex items-start gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={coverGifUrl}
-                      alt="선택한 GIF"
-                      style={{ width: 160, height: 160 }}
-                      className="shrink-0 rounded-xl object-cover"
-                    />
-                    <div className="flex flex-col items-start gap-2 pt-1">
-                      <Button type="button" variant="ghost" onClick={() => setCoverGifUrl(null)} className="text-sm">
-                        GIF 제거
-                      </Button>
-                    </div>
-                  </div>
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={coverGifUrl}
+                    alt="선택한 GIF"
+                    style={{ width: COVER_SLOT, height: COVER_SLOT }}
+                    className="rounded-lg object-cover"
+                  />
                 ) : coverObjectUrl ? (
-                  <div className="flex items-start gap-3">
-                    <CoverPositionPicker src={coverObjectUrl} position={coverPosition} onChange={setCoverPosition} />
-                    <div className="flex flex-col items-start gap-2 pt-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          setCoverFile(null);
-                          setCoverFileError(null);
-                          setCoverPosition({ x: 50, y: 50 });
-                        }}
-                        className="text-sm"
-                      >
-                        이미지 제거
-                      </Button>
-                    </div>
-                  </div>
+                  <CoverPositionPicker
+                    src={coverObjectUrl}
+                    position={coverPosition}
+                    onChange={setCoverPosition}
+                    size={COVER_SLOT}
+                    hint={false}
+                  />
                 ) : (
-                  <div className="flex items-start gap-3">
-                    <CoverFileButton onChange={handleCoverChange} />
-                    <GifPickerButton onClick={() => setGifPickerOpen(true)} />
-                  </div>
+                  <CoverFileButton onChange={handleCoverChange} size={COVER_SLOT} />
                 )}
-                {coverFileError && <p className={errorText}>{coverFileError}</p>}
+                {coverGifUrl || coverObjectUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoverGifUrl(null);
+                      setCoverFile(null);
+                      setCoverFileError(null);
+                      setCoverPosition({ x: 50, y: 50 });
+                    }}
+                    className="text-[11px] text-active-gray hover:underline"
+                  >
+                    {coverGifUrl ? "GIF 제거" : "드래그로 위치 조정 · 제거"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setGifPickerOpen(true)}
+                    className="flex items-center gap-1 text-[11px] text-active-gray hover:underline"
+                  >
+                    <SearchIcon className="h-3 w-3" />
+                    GIF로 대신하기
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <input
+                type="text"
+                aria-label="제목"
+                placeholder="제목"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                // Safari가 이 필드를 이름/연락처로 오인해 자동완성 아이콘을 얹는 걸 방지
+                // (사용자 제보 — 제목 칸에 사람 아이콘이 떴음).
+                autoComplete="off"
+                className={`${bareField} text-lg font-bold`}
+              />
+              <textarea
+                aria-label="캡션"
+                placeholder="어떤 작업물인가요? (선택)"
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                rows={mediaKind === "audio" ? 4 : 2}
+                className={`${bareField} flex-1 resize-none text-sm`}
+              />
+            </div>
+          </div>
+          {coverFileError && <p className={errorText}>{coverFileError}</p>}
+
+          {/* 피드백 받기(0089) — 켜면 분야 칩(복수)과 한 줄 요청. 피드 카드에 칩으로 표시된다. */}
+          <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
+            <div className="flex items-center gap-3">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-black">
+                  <CommentIcon className="h-4 w-4" />
+                  피드백 받기
+                </span>
+                <span className="text-xs text-active-gray">카드에 표시돼서 어떤 의견을 원하는지 알 수 있어요</span>
+              </div>
+              <Switch checked={feedbackOn} onChange={setFeedbackOn} label="피드백 받기" />
+            </div>
+            {feedbackOn && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs text-active-gray">어떤 부분을 봐줬으면 하나요? (여러 개, 안 고르면 전체적으로)</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FEEDBACK_FOCUS_OPTIONS.map((focus) => (
+                      <button
+                        key={focus}
+                        type="button"
+                        onClick={() =>
+                          setFeedbackFocus((prev) =>
+                            prev.includes(focus) ? prev.filter((f) => f !== focus) : [...prev, focus],
+                          )
+                        }
+                        className={chipButtonClass(feedbackFocus.includes(focus))}
+                      >
+                        {focus}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  aria-label="피드백 요청 한 줄"
+                  placeholder="한 줄로 구체적으로 (선택) — 후렴에서 킥이 묻히는지 봐주세요"
+                  value={feedbackNote}
+                  maxLength={FEEDBACK_NOTE_MAX}
+                  onChange={(e) => setFeedbackNote(e.target.value)}
+                  autoComplete="off"
+                  className={innerField}
+                />
               </>
             )}
           </div>
 
-          {/* 제목(필수)·캡션(선택) — 라벨 대신 placeholder로 안내해 세로 공간을 줄였다. */}
-          <input
-            type="text"
-            aria-label="제목"
-            placeholder="제목 (필수)"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            // Safari가 이 필드를 이름/연락처로 오인해 자동완성 아이콘을 얹는 걸 방지
-            // (사용자 제보 — 제목 칸에 사람 아이콘이 떴음).
-            autoComplete="off"
-            className={grayField}
-          />
-          <textarea
-            aria-label="캡션"
-            placeholder="캡션 — 어떤 작업물인가요? (선택)"
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            rows={2}
-            className={grayField}
-          />
-
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2.5 rounded-xl bg-box-gray p-3">
             <div className="flex items-center justify-between">
-              <span className={blackLabel}>해시태그</span>
+              <span className="text-sm font-semibold text-black"># 해시태그</span>
               <span className="text-xs text-active-gray">
-                {audience === "public" ? `${selectedTags.length}/${MIN_TAGS}개 이상 선택` : "선택"}
+                {audience === "public" ? `${selectedTags.length} / ${MIN_TAGS}개 이상` : "선택"}
               </span>
             </div>
 
@@ -1033,7 +1115,7 @@ export default function UploadPage() {
                     key={tag}
                     type="button"
                     onClick={() => toggleTag(tag)}
-                    className="flex items-center gap-1 rounded-full bg-demo-bg px-3 py-1.5 text-sm font-medium text-black"
+                    className={`${chipButtonClass(true)} flex items-center gap-1`}
                   >
                     #{tag}
                     <span aria-hidden>×</span>
@@ -1045,7 +1127,7 @@ export default function UploadPage() {
             <div className="flex gap-1.5">
               <input
                 type="text"
-                placeholder="해시태그 검색 또는 직접 입력"
+                placeholder="검색하거나 직접 입력 후 Enter"
                 value={tagSearch}
                 onChange={(e) => setTagSearch(e.target.value)}
                 onKeyDown={(e) => {
@@ -1054,129 +1136,138 @@ export default function UploadPage() {
                     addCustomTag();
                   }
                 }}
-                className={grayField}
+                className={innerField}
               />
-              <Button type="button" onClick={addCustomTag} className="shrink-0 px-4 !bg-box-gray !text-black hover:opacity-80">
-                추가
-              </Button>
+              {tagSearch.trim() && (
+                <Button type="button" onClick={addCustomTag} className="shrink-0 px-4 !bg-demo-bg !text-black hover:opacity-80">
+                  추가
+                </Button>
+              )}
             </div>
-            {/* 예전엔 훑어보는 용도로 자동 무한 스크롤(marquee)했는데, 항목이 계속 움직이면
-                원하는 태그를 클릭하기 불편하다는 피드백으로 고정 목록 + 수동 스크롤로 변경. */}
-            <div className="max-h-32 overflow-y-auto rounded-xl border border-box-gray p-2.5">
-              {filteredGenres.length === 0 && filteredPopularUserTags.length === 0 ? (
-                <p className="py-1 text-sm text-active-gray">
-                  일치하는 해시태그가 없어요. Enter나 추가 버튼으로 그대로 추가할 수 있어요.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {filteredPopularUserTags.length > 0 && (
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-medium text-black">🔥 인기 사용자 태그</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {filteredPopularUserTags.map((tag) => (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => toggleTag(tag)}
-                            className={chipButtonClass(selectedTags.includes(tag))}
-                          >
-                            #{tag}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-1.5">
-                    {filteredGenres.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => toggleTag(tag)}
-                        className={chipButtonClass(selectedTags.includes(tag))}
-                      >
+
+            {suggestedTags.length === 0 ? (
+              <p className="text-xs text-active-gray">일치하는 해시태그가 없어요. Enter로 그대로 추가할 수 있어요.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {visiblePopularTags.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="flex items-center gap-1 pr-1 text-xs font-medium text-active-gray">
+                      <FlameIcon className="h-3.5 w-3.5" />
+                      인기
+                    </span>
+                    {visiblePopularTags.map((tag) => (
+                      <button key={tag} type="button" onClick={() => toggleTag(tag)} className={chipButtonClass(false)}>
                         #{tag}
                       </button>
                     ))}
                   </div>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {visibleGenreTags.map((tag) => (
+                    <button key={tag} type="button" onClick={() => toggleTag(tag)} className={chipButtonClass(false)}>
+                      #{tag}
+                    </button>
+                  ))}
+                  {hiddenTagCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllTags(true)}
+                      className="rounded-full border border-dashed border-active-gray px-3 py-1.5 text-sm text-active-gray transition hover:bg-demo-bg"
+                    >
+                      더 보기 +{hiddenTagCount}
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* 게시 설정 — 옛 memo 기능(공개 범위·시간 제한·콜라보)을 한 줄씩. */}
-          <div className="flex flex-col gap-2 border-t border-box-gray pt-3">
-            <div className="flex items-center gap-3">
-              <span className={`${blackLabel} w-12 shrink-0`}>공개</span>
-              <div className="grid flex-1 grid-cols-3 gap-1.5">
-                {AUDIENCE_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setAudience(option.value)}
-                    className={selectableButtonClass(
-                      audience === option.value,
-                      "flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition",
-                    )}
-                  >
-                    {option.value === "companion" && <EyeIcon className="h-3.5 w-3.5" />}
-                    {option.value === "specific" && <LockIcon className="h-3.5 w-3.5" />}
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {audience === "specific" && (
-              <div className="md:pl-[3.75rem]">
-                <InviteUserPicker
-                  currentUserId={currentUserId ?? ""}
-                  value={inviteUsers}
-                  onChange={setInviteUsers}
-                  inputClassName={grayField}
-                />
               </div>
             )}
-            <div className="flex items-center gap-3">
-              <span className={`${blackLabel} w-12 shrink-0`}>노출</span>
-              <div className="grid flex-1 grid-cols-5 gap-1.5">
-                {EXPIRE_OPTIONS.map((option) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => handleExpireChange(option.hours)}
-                    className={selectableButtonClass(
-                      expireHours === option.hours,
-                      "rounded-lg px-1 py-1.5 text-xs font-semibold transition",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+          </div>
+
+          {/* 게시 설정 — 한 줄 요약, 누르면 공개 범위·기간이 펼쳐진다. */}
+          <div className="rounded-xl bg-box-gray">
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((v) => !v)}
+              aria-expanded={settingsOpen}
+              className="flex w-full items-center gap-2 px-3 py-3 text-left"
+            >
+              {audience === "public" ? (
+                <GlobeIcon className="h-4 w-4 text-active-gray" />
+              ) : audience === "companion" ? (
+                <EyeIcon className="h-4 w-4 text-active-gray" />
+              ) : (
+                <LockIcon className="h-4 w-4 text-active-gray" />
+              )}
+              <span className="flex-1 text-sm font-medium text-black">{settingsSummary(audience, expireHours)}</span>
+              <span className="text-xs text-active-gray">변경</span>
+              <ChevronDownIcon
+                className={`h-4 w-4 text-active-gray transition-transform ${settingsOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {settingsOpen && (
+              <div className="flex flex-col gap-2.5 px-3 pb-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-8 shrink-0 text-xs text-active-gray">공개</span>
+                  <div className="grid flex-1 grid-cols-3 gap-1 rounded-lg bg-main-gray p-1">
+                    {AUDIENCE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setAudience(option.value)}
+                        className={segmentClass(audience === option.value)}
+                      >
+                        {option.value === "companion" && <EyeIcon className="h-3.5 w-3.5" />}
+                        {option.value === "specific" && <LockIcon className="h-3.5 w-3.5" />}
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {audience === "specific" && (
+                  <div className="pl-11">
+                    <InviteUserPicker
+                      currentUserId={currentUserId ?? ""}
+                      value={inviteUsers}
+                      onChange={setInviteUsers}
+                      inputClassName={innerField}
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <span className="w-8 shrink-0 text-xs text-active-gray">기간</span>
+                  <div className="grid flex-1 grid-cols-3 gap-1 rounded-lg bg-main-gray p-1">
+                    {EXPIRE_OPTIONS.map((option) => (
+                      <button
+                        key={option.label}
+                        type="button"
+                        onClick={() => handleExpireChange(option.hours)}
+                        className={segmentClass(expireHours === option.hours)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`${blackLabel} w-12 shrink-0`}>콜라보</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={collabAvailable}
-                aria-label="콜라보 게시물"
-                onClick={() => handleCollabChange(!collabAvailable)}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition ${collabAvailable ? "bg-active-gray" : "bg-box-gray"}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-demo-bg shadow transition-all ${
-                    collabAvailable ? "left-[22px]" : "left-0.5"
-                  }`}
-                />
-              </button>
-              <span className="text-xs text-active-gray">음원 스택·채팅으로 함께 만들기</span>
-            </div>
-            <p className="px-1 text-xs text-active-gray">{settingsSummary(audience, expireHours, collabAvailable)}</p>
+            )}
           </div>
 
           {error && <p className={errorText}>{error}</p>}
-          <Button type="submit" disabled={loading} className={`w-full ${primaryButtonClass}`}>
-            {loading ? loadingLabel : <span suppressHydrationWarning>&quot;{submitPhrase}&quot;</span>}
+          {/* 필수 항목이 남았으면 버튼이 뭐가 남았는지 알려주고(눌러도 아래 검증 메시지가 뜸), 다
+              채우면 사투리 문구로 바뀌며 진하게 활성화된다. */}
+          <Button
+            type="submit"
+            disabled={loading}
+            className={`h-12 w-full rounded-xl ${
+              missingItems.length === 0 ? `${primaryButtonClass} font-bold ring-1 ring-active-gray` : "!bg-box-gray !font-normal !text-active-gray hover:opacity-80"
+            }`}
+          >
+            {loading ? (
+              loadingLabel
+            ) : missingItems.length > 0 ? (
+              `${missingItems.join(" · ")} 남았어요`
+            ) : (
+              <span suppressHydrationWarning>&quot;{submitPhrase}&quot;</span>
+            )}
           </Button>
         </form>
       </main>
@@ -1223,6 +1314,17 @@ export default function UploadPage() {
                 {caption || <span className="text-gray-400">캡션이 여기 보여요</span>}
               </p>
               {/* 비공개 글은 피드 카드처럼 공개 범위 표시(feedRender.tsx와 같은 모양). */}
+              {feedbackOn && (
+                <div className="px-3 pb-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
+                    <CommentIcon className="h-3 w-3" />
+                    피드백 환영 · {feedbackFocusText(feedbackFocus)}
+                  </span>
+                  {feedbackNote.trim() && (
+                    <p className="truncate pt-1 text-xs text-gray-500">&ldquo;{feedbackNote.trim()}&rdquo;</p>
+                  )}
+                </div>
+              )}
               {audience !== "public" && (
                 <div className="px-3 pb-2">
                   <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">

@@ -283,6 +283,8 @@ export interface Database {
           published_at: string | null;
           expire_hours: ExpireHours;
           expires_at: string | null;
+          feedback_focus: string[] | null;
+          feedback_note: string | null;
           // DEMO(visibility='public') 조회수(0052) — increment_post_view() 함수로만 증가.
           view_count: number;
           // PEAK 진입 시각(0056) — check_and_set_post_peak()이 조회수+좋아요*10>=1000을
@@ -312,6 +314,8 @@ export interface Database {
           published_at?: string | null;
           expire_hours: ExpireHours;
           expires_at?: string | null;
+          feedback_focus?: string[] | null;
+          feedback_note?: string | null;
           view_count?: number;
           peaked_at?: string | null;
           profile_pinned_at?: string | null;
