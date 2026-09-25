@@ -24,6 +24,7 @@ import { PinButton } from "./PinButton";
 import { CommentPanel } from "./CommentPanel";
 import { ShareButton } from "./ShareButton";
 import { GuestEngagementRow } from "./GuestEngagementRow";
+import { EyeIcon, LockIcon } from "@/components/icons";
 import type { ContentType, Database } from "@/types/database";
 import { tagColorClass, peakThresholdFromMemberCount, currentWeekStartISO } from "@/lib/feedConstants";
 import { timeAgo } from "@/lib/timeAgo";
@@ -51,7 +52,6 @@ export type FeedRenderCtx = {
   supabase: Awaited<ReturnType<typeof createClient>>;
   currentUser: { id: string } | null;
   currentUserName: string;
-  isComplex: boolean;
   myCompanionIds: Set<string>;
 };
 
@@ -61,21 +61,28 @@ export function isOneScreenFeed(currentUser: { id: string } | null) {
 }
 
 export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx): Promise<React.ReactNode[]> {
-  const { supabase, currentUser, currentUserName, isComplex, myCompanionIds } = ctx;
+  const { supabase, currentUser, currentUserName, myCompanionIds } = ctx;
   if (posts.length === 0) return [];
   const oneScreenFeed = isOneScreenFeed(currentUser);
 
+  // 2026-09-25(사용자 요청) memo가 DEMO에 합쳐져서, 옛 memo 탭 단위 분기(isComplex)를 이제
+  // 글마다 판단한다 — 비공개(Companion·특정인 공개) 글인지, 콜라보(채팅·재창작 스택) 글인지.
   const postIds = posts.map((p) => p.id);
   const userIds = [...new Set(posts.map((p) => p.user_id))];
+  const publicPostIds = posts.filter((p) => p.visibility === "public").map((p) => p.id);
+  const publicAuthorIds = [...new Set(posts.filter((p) => p.visibility === "public").map((p) => p.user_id))];
+  const privateAuthorIds = [...new Set(posts.filter((p) => p.visibility !== "public").map((p) => p.user_id))];
+  const collabPostIds = posts.filter((p) => p.collab_available).map((p) => p.id);
 
-  // 이름 표시는 demo/memo가 다르다 — memo(Companion 전용)는 user_display 뷰(0018)로 뷰어가
-  // Companion이면 실명, 아니면 닉네임. demo(공개 피드)는 누구나 보는 공간이라 뷰어가 작성자의
+  // 이름 표시는 공개 범위에 따라 다르다 — 비공개 글은 user_display 뷰(0018)로 뷰어가 Companion이면
+  // 실명, 아니면 닉네임(옛 memo 규칙). 전체공개 글은 누구나 보는 공간이라 뷰어가 작성자의
   // Companion이어도 닉네임만 보여준다(사용자 요청) — public_post_authors(0024)는 애초에
   // 닉네임만 내려주고 로그인 여부도 안 가려서 그대로 쓸 수 있다.
   // 게시물 목록이 정해지면 그에 딸린 조회들(작성자·프로필·좋아요·댓글)과 PEAK 기준치용
   // 회원 수는 서로 독립이라 한 번에 병렬로 — 예전엔 5개를 순차 await 했다.
   const [
     { data: users },
+    { data: privateUsers },
     { data: profiles },
     { data: likeRows },
     { data: commentRows },
@@ -83,10 +90,11 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
     { data: pinRows },
     { data: kickRows },
   ] = await Promise.all([
-    userIds.length > 0
-      ? isComplex
-        ? supabase.from("user_display").select("id, display_name").in("id", userIds)
-        : supabase.from("public_post_authors").select("id, display_name").in("id", userIds)
+    publicAuthorIds.length > 0
+      ? supabase.from("public_post_authors").select("id, display_name").in("id", publicAuthorIds)
+      : { data: [] as { id: string; display_name: string }[] },
+    currentUser && privateAuthorIds.length > 0
+      ? supabase.from("user_display").select("id, display_name").in("id", privateAuthorIds)
       : { data: [] as { id: string; display_name: string }[] },
     userIds.length > 0
       ? supabase.from("profiles").select("user_id, school, school_public, instruments").in("user_id", userIds)
@@ -98,22 +106,23 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
       ? supabase.from("comments").select("post_id").in("post_id", postIds)
       : { data: [] as { post_id: string }[] },
     supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "approved").neq("role", "admin"),
-    // memo 합작 게시물 고정 오버라이드(post_pins, 0054/0055) — 행이 있으면 그 pinned 값이
+    // 콜라보 게시물 고정 오버라이드(post_pins, 0054/0055) — 행이 있으면 그 pinned 값이
     // 아래 isAutoPinnedCollab 자동 규칙을 덮어쓴다(양방향: 자동 고정 해제도, 그 외 글을
     // 고정하는 것도 같은 테이블).
-    currentUser && isComplex && postIds.length > 0
-      ? supabase.from("post_pins").select("post_id, pinned").eq("user_id", currentUser.id).in("post_id", postIds)
+    currentUser && collabPostIds.length > 0
+      ? supabase.from("post_pins").select("post_id, pinned").eq("user_id", currentUser.id).in("post_id", collabPostIds)
       : { data: [] as { post_id: string; pinned: boolean }[] },
-    // Kick(0071)은 DEMO 전용. 로그인 회원은 누가 Kick했는지(닉네임)까지 공개 — post_kickers RPC.
+    // Kick(0071)은 전체공개 글 전용. 로그인 회원은 누가 Kick했는지(닉네임)까지 공개 — post_kickers RPC.
     // 게스트는 숫자만(kicks_select_public_posts 정책).
-    !isComplex && postIds.length > 0
+    publicPostIds.length > 0
       ? currentUser
-        ? supabase.rpc("post_kickers", { pids: postIds })
-        : supabase.from("kicks").select("post_id, user_id").in("post_id", postIds)
+        ? supabase.rpc("post_kickers", { pids: publicPostIds })
+        : supabase.from("kicks").select("post_id, user_id").in("post_id", publicPostIds)
       : { data: [] as { post_id: string; user_id: string; nickname?: string }[] },
   ]);
 
   const userMap = new Map((users ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
+  const privateUserMap = new Map((privateUsers ?? []).map((u) => [u.id, { id: u.id, name: u.display_name }]));
   const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
   const pinOverrides = new Map((pinRows ?? []).map((r) => [r.post_id, r.pinned]));
   const peakThreshold = peakThresholdFromMemberCount(approvedMemberCount ?? 0);
@@ -146,7 +155,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
     commentCountMap.set(row.post_id, (commentCountMap.get(row.post_id) ?? 0) + 1);
   }
 
-  // Complex 전용 접근 제어 — followers/invite_only 게시물의 실제 열람 가능 여부를 계산한다.
+  // 비공개 글 접근 제어 — followers/invite_only 게시물의 실제 열람 가능 여부를 계산한다.
   // posts 행 자체는(캡션/작성자/태그/노크 버튼) 모두에게 보이지만, 미디어 signed URL과 채팅은
   // 여기서 계산한 canViewMedia가 true일 때만 발급한다(0012 설계 — R2는 버킷 RLS가 없어서
   // 이 조건부 서명이 실제 프라이버시 경계).
@@ -171,7 +180,6 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
   const accessNameMap = new Map((accessUsers ?? []).map((u) => [u.id, u.display_name]));
 
   function canViewMediaFor(post: { id: string; user_id: string; visibility: string }): boolean {
-    if (!isComplex) return true;
     if (post.visibility === "public") return true;
     if (!currentUser) return false;
     if (post.user_id === currentUser.id) return true;
@@ -187,12 +195,12 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
     return false;
   }
 
-  // memo 상단 자동 고정 대상(사용자 요청) — 합작 게시물 중 "내 글이거나 특정인으로서
+  // 피드 상단 자동 고정 대상(사용자 요청) — 콜라보 게시물 중 "내 글이거나 특정인으로서
   // 초대된 글"만. 처음엔 합작 게시물 전부를 고정했는데, Companion 공개(followers)로
   // 그냥 보이는 남의 합작 글까지 전부 고정되는 건 과하다는 지적을 받고 범위를 좁혔다 —
   // 그 외 합작 게시물은 보는 사람이 원하면 PinButton(post_pins, 0054)으로 직접 고정한다.
   function isAutoPinnedCollab(post: { id: string; user_id: string; visibility: string; collab_available: boolean }) {
-    if (!isComplex || !post.collab_available || !currentUser) return false;
+    if (!post.collab_available || !currentUser) return false;
     if (post.user_id === currentUser.id) return true;
     if (post.visibility === "invite_only") {
       return accessRows.some(
@@ -223,7 +231,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
   // 참여 전인 뷰어에게 비Companion 참여자의 닉네임이 응답 페이로드로라도 새지 않는다.
   // 방장 본인은 별도의 invitedNames 경로로 이미 전체 명단을 보고 있어 대상에서 제외.
   const participantSummaryByPost = new Map<string, string>();
-  if (currentUser && isComplex) {
+  if (currentUser) {
     const inviteOnlyForOthers = posts.filter(
       (p) => p.visibility === "invite_only" && p.user_id !== currentUser.id,
     );
@@ -258,9 +266,12 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
     }
   }
 
-  // 열람 가능한 Complex 게시물의 채팅+재창작물 스택을 서버에서 미리 가져온다(초기 렌더용 —
-  // ComplexPostChat의 "새로고침" 버튼만 /api/complex/chat을 다시 부른다).
-  const accessiblePostIds = isComplex ? posts.filter((p) => canViewMediaFor(p)).map((p) => p.id) : [];
+  // 열람 가능한 콜라보·특정인 공개 게시물의 채팅+재창작물 스택을 서버에서 미리 가져온다(초기
+  // 렌더용 — ComplexPostChat의 "새로고침" 버튼만 /api/complex/chat을 다시 부른다). 채팅 RLS가 승인
+  // 회원만 허용이라 게스트는 부르지 않는다.
+  const accessiblePostIds = currentUser
+    ? posts.filter((p) => (p.collab_available || p.visibility === "invite_only") && canViewMediaFor(p)).map((p) => p.id)
+    : [];
   const { data: chatRows } =
     accessiblePostIds.length > 0
       ? await supabase
@@ -355,9 +366,10 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
   //   우리가 정한 게시물 크기 기준으로"). 합작 게시물의 "집중 모드"(확대, PostFocusToggle)는
   //   position:fixed로 뷰포트 전체를 덮어써서 article의 max-width와 무관하게 커지므로,
   //   평소엔 이 좁은 카드 안에 미디어/채팅을 절반씩 나눠 담아도 필요할 때 확대해서 볼 수 있다.
-  const articleSnapClass = !oneScreenFeed
+  // 2026-09-25부터 memo 탭이 없어져서 고정 프레임은 채팅이 있는 콜라보 글에만 건다.
+  const articleSnapClassFor = (chatFrame: boolean) => !oneScreenFeed
     ? ""
-    : isComplex
+    : chatFrame
       // memo: 데스크톱에서만 article 자체를 flex-col 고정 프레임(878px)으로 만들어야 안의
       // ComplexPostChat이 grow로 남는 세로 공간을 흡수해서 메시지 입력칸을 프레임 맨 아래로
       // 밀어낼 수 있다(사용자 요청). 채팅이 프레임보다 길면 article의 overflow-y-auto가
@@ -368,9 +380,13 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
       : "flex shrink-0 flex-col md:h-auto md:mx-auto md:w-full md:max-w-[659px]";
 
   return postsWithVideo.map((post) => {
-          const author = userMap.get(post.user_id);
+          // Companion 공개·특정인 공개(옛 memo) 글 — Kick·PEAK·공유·플레이리스트 담기는 전체공개 전용.
+          const isPrivate = post.visibility !== "public";
+          const author = (isPrivate ? privateUserMap.get(post.user_id) : undefined) ?? userMap.get(post.user_id);
           const profile = profileMap.get(post.user_id);
           const isOwnPost = currentUser?.id === post.user_id;
+          // 콜라보(채팅·재창작 스택) 화면 — 채팅은 승인 회원만 쓸 수 있어서 게스트에겐 일반 카드로.
+          const isCollabRoom = post.collab_available && !!currentUser;
           const likeCount = likeCountMap.get(post.id) ?? 0;
           const commentCount = commentCountMap.get(post.id) ?? 0;
           const weeklyLikeCount = weeklyLikeCountMap.get(post.id) ?? 0;
@@ -383,11 +399,11 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
           // "Companion 공개"(followers) 게시물은 피드 쿼리 단계에서 이미 Companion만
           // 걸러진 상태라(위 posts 필터) 항상 열람 가능.
           // 재생 가능한(오디오·영상) DEMO 게시물이면 헤더에 "플레이리스트에 담기" 버튼을
-          // 붙인다. memo는 담기 금지(사용자 요청 — 한 번 "합작 제외하고 허용"으로 열었다가
-          // 다시 완전히 막기로 정정받음) — !isComplex로 DEMO만 남긴다.
+          // 붙인다. 옛 memo(비공개 글)는 담기 금지(사용자 요청 — 한 번 "합작 제외하고 허용"으로
+          // 열었다가 다시 완전히 막기로 정정받음) — !isPrivate로 전체공개 글만 남긴다.
           const playlistSrc = post.videoSrc;
           const playlistTrack =
-            !!currentUser && !isComplex && post.media_type !== "image" && playlistSrc
+            !!currentUser && !isPrivate && post.media_type !== "image" && playlistSrc
               ? {
                   id: post.id,
                   title:
@@ -404,7 +420,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                 }
               : null;
 
-          const useInlineChatLayout = isComplex && post.collab_available;
+          const useInlineChatLayout = isCollabRoom;
           const inlineMediaEl =
             useInlineChatLayout && post.videoSrc ? (
               post.media_type === "audio" ? (
@@ -435,7 +451,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
           // memo 합작 게시물 헤더의 고정 아이콘 — 자동/수동 구분 없이 항상 켜고 끌 수 있는
           // PinButton 하나로 통일(사용자 요청, 0055).
           const pinButtonEl =
-            isComplex && post.collab_available && currentUser ? (
+            isCollabRoom && currentUser ? (
               <PinButton postId={post.id} userId={currentUser.id} initialPinned={isPinned(post)} />
             ) : undefined;
 
@@ -444,7 +460,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
               key={post.id}
               id={post.id}
               data-post-id={post.id}
-              className={`relative scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400 ${articleSnapClass}`}
+              className={`relative scroll-mt-20 overflow-hidden border-y border-gray-200 bg-white transition-shadow md:rounded-2xl md:border dark:border-gray-800 dark:bg-gray-950 target:ring-2 target:ring-red-400 ${articleSnapClassFor(isCollabRoom)}`}
             >
               <PostEngagementProvider
                 initialLikeCount={likeCount}
@@ -466,9 +482,9 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                 expiresAt={post.expires_at}
                 // 집중 모드(확대) 버튼은 채팅이 있는 공동창작 게시물에만 의미가 있다 —
                 // 공동창작 미체크는 DEMO처럼 평범한 카드라 확대할 것도 없다.
-                isComplex={isComplex && post.collab_available}
+                isComplex={isCollabRoom}
                 optionsMenu={
-                  isOwnPost && !isComplex ? (
+                  isOwnPost ? (
                     <PostOptionsMenu
                       postId={post.id}
                       mediaPath={post.image_url ?? post.audio_url ?? post.video_url ?? ""}
@@ -496,7 +512,23 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                 />
               )}
 
-              {isComplex && post.visibility === "invite_only" ? (
+              {(isPrivate || post.collab_available) && (
+                <div className="flex shrink-0 flex-wrap items-center gap-1.5 px-3 pb-2">
+                  {isPrivate && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                      {post.visibility === "invite_only" ? <LockIcon className="h-3 w-3" /> : <EyeIcon className="h-3 w-3" />}
+                      {post.visibility === "invite_only" ? "특정인 공개" : "Companion 공개"}
+                    </span>
+                  )}
+                  {post.collab_available && (
+                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                      콜라보
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {post.visibility === "invite_only" ? (
                 <ComplexAccessGate
                   postId={post.id}
                   authorId={post.user_id}
@@ -540,38 +572,28 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                 />
               ) : (
                 <>
-                  {/* "Companion 공개"(followers) 라벨은 없앰 — memo 피드에 뜨는 글은 이제
+                  {/* (옛 memo 피드 시절 주석) "Companion 공개"(followers) 라벨은 없앴었다 — memo가 DEMO에
+                      합쳐진 뒤(2026-09-25)로는 캡션 아래 공개 범위 칩으로 다시 표시한다. 옛 설명: memo 피드에 뜨는 글은 이제
                       전부(followers/invite_only 가리지 않고) 방장과 Companion인 사람에게만
                       보이므로, 굳이 이 유형만 따로 표시할 이유가 없다(위 posts 필터 참고). */}
                   {useInlineChatLayout ? null : (
                     <div
-                      className={`relative flex w-full items-center ${isComplex ? "md:items-end" : ""} justify-center bg-black ${
-                        // DEMO(!isComplex)는 article이 이제 md:h-auto(내용물 높이 그대로)라
-                        // 미디어 박스가 남는 공간을 흡수할 필요 자체가 없다 — 그냥 657px
-                        // 정사각형 그대로 두면 카드도 딱 그만큼만 높아지고 여백이 아예 안
-                        // 생긴다(2026-09-14 최종 확정, 위 feedListClass 설명 참고).
-                        // memo 비합작(isComplex && !collab)은 article이 여전히 md:h-[878px]
-                        // 고정(채팅 스크롤 프레임 때문)이라 남는 공간이 생길 수 있음 — 이
-                        // 경우만 md:flex-1로 미디어 박스가 직접 흡수하고 md:items-end로 그
-                        // 여유를 미디어 "위"에만 몰아서 반응줄 바로 위는 항상 딱 붙게 한다.
-                        // min-h-0 없이 flex-1만 쓰면 정사각 자식의 내용 높이가 flex-basis로
-                        // 강제돼 줄어들 공간이 안 생기므로 같이 필요. max-h-[40svh]도 breakpoint
-                        // 없이 항상 걸리는 값이라 md:max-h-none으로 지워줘야 flex-1이 실제로
-                        // 커질 수 있다(안 그러면 40svh=396px에 눌려서 정사각 미디어가 위아래로
-                        // 잘림 — 배포 직후 실측으로 발견·수정).
+                      className={`relative flex w-full items-center justify-center bg-black ${
+                        // article이 md:h-auto(내용물 높이 그대로)라 미디어 박스가 남는 공간을
+                        // 흡수할 필요 자체가 없다 — 그냥 657px 정사각형 그대로 두면 카드도 딱
+                        // 그만큼만 높아지고 여백이 아예 안 생긴다(2026-09-14 최종 확정, 위
+                        // feedListClass 설명 참고). 옛 memo 비합작 카드는 878px 고정 프레임이라
+                        // md:flex-1로 남는 공간을 흡수했는데, memo가 DEMO에 합쳐지며(2026-09-25)
+                        // 고정 프레임은 채팅이 있는 콜라보 글에만 남아 이 분기는 DEMO 방식 하나다.
                         // max-h-[40svh]는 breakpoint 없이 항상 걸리는 값이라(모바일 릴스 프레임용)
                         // flex-1을 안 쓰는 DEMO 분기에서도 md:max-h-none으로 반드시 지워줘야
                         // 한다 — 안 그러면 이 값(990px 기준 396px)이 657px 정사각 미디어보다
                         // 작아서 desktop에서도 영상이 그 안에 잘려 들어간다(재배포 직후 실측
                         // 으로 또 발견·수정 — DEMO/memo 두 분기 모두 이 override가 필요).
-                        oneScreenFeed
-                          ? isComplex
-                            ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-none md:min-h-0 md:flex-1"
-                            : "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-none"
-                          : ""
+                        oneScreenFeed ? "max-md:shrink-0 overflow-hidden max-h-[40svh] md:max-h-none" : ""
                       }`}
                     >
-                      {!isComplex && (
+                      {!isPrivate && (
                         <div className="absolute right-3 top-3 z-10">
                           <EngagementMeter />
                         </div>
@@ -616,7 +638,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                             src={post.videoSrc}
                             title={post.title || post.caption || "음원"}
                             posterSrc={post.posterSrc}
-                            tone={isComplex ? "memo" : "demo"}
+                            tone="demo"
                             mode={currentUser ? "global" : "inline"}
                             trackId={post.id}
                             author={author?.name ?? "알 수 없음"}
@@ -659,8 +681,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                     {/* 해시태그는 demo 전용 개념(업로드 폼에도 memo 쪽엔 태그 입력 자체가 없음) —
                         memo(Companion)는 태그로 탐색하는 구조가 아니라 여기서는 표시하지 않는다.
                         클릭하면 같은 태그가 달린 게시물만 걸러본다(위 allPosts 필터와 대응). */}
-                    {!isComplex &&
-                      (post.instrument_tags ?? []).map((tag) => (
+                    {(post.instrument_tags ?? []).map((tag) => (
                         <Link
                           key={tag}
                           href={`/feed?feed=completion&tag=${encodeURIComponent(tag)}`}
@@ -671,7 +692,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                       ))}
                   </div>
 
-                  {isComplex && post.collab_available ? (
+                  {isCollabRoom ? (
                     <ComplexPostChat
                       postId={post.id}
                       currentUserId={currentUser?.id ?? ""}
@@ -683,9 +704,9 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                     />
                   ) : !currentUser ? (
                     <GuestEngagementRow
-                      showViewCount={!isComplex}
+                      showViewCount
                       likeCount={likeCount}
-                      kickCount={isComplex ? undefined : (kickCountMap.get(post.id) ?? 0)}
+                      kickCount={kickCountMap.get(post.id) ?? 0}
                       commentCount={commentCount}
                     />
                   ) : (
@@ -696,7 +717,7 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                   // gap만으로 나란히 놓는 guest/mock 줄과 같은 방식이라 몇 개가 오든 안전하다.
                   <div className="border-t border-gray-100 shrink-0">
                   <div className="flex flex-wrap items-center gap-6 px-4 py-3.5">
-                    {!isComplex && (
+                    {!isPrivate && (
                       <PostViewCount
                         className="inline-flex items-center gap-1 text-base font-semibold text-gray-600 dark:text-gray-300"
                         iconClassName="h-5 w-5"
@@ -704,11 +725,11 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                     )}
                     <LikeButton postId={post.id} userId={currentUser.id} />
                     {/* Kick(0071) — 하트 바로 옆, DEMO 전용 */}
-                    {!isComplex && <KickButton postId={post.id} userId={currentUser.id} isOwnPost={isOwnPost} />}
-                    <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isComplex} isOwnPost={isOwnPost} />
+                    {!isPrivate && <KickButton postId={post.id} userId={currentUser.id} isOwnPost={isOwnPost} />}
+                    <CommentPanel postId={post.id} userId={currentUser.id} isDemo={!isPrivate} isOwnPost={isOwnPost} />
                     {/* 공유(0076) — PEAK 진행 알림의 행동 버튼, 외부 유입 경로. DEMO 전용. */}
-                    {!isComplex && <ShareButton postId={post.id} title={post.title || post.caption || "Drop"} />}
-                    {isOwnPost && isComplex && (
+                    {!isPrivate && <ShareButton postId={post.id} title={post.title || post.caption || "Drop"} />}
+                    {isOwnPost && isPrivate && (
                       // memo 공동창작 미체크 본인 글은 이 자리에 조회자 목록(인스타
                       // 스토리 참고, 사용자 요청) — DEMO 본인 글은 이 슬롯 자체가 없다.
                       <PostViewedBy
@@ -718,9 +739,9 @@ export async function renderFeedPosts(posts: FeedPostRow[], ctx: FeedRenderCtx):
                       />
                     )}
                   </div>
-                  {!isComplex && <KickersLine currentUserId={currentUser.id} className="-mt-1.5 px-4 pb-3" />}
+                  {!isPrivate && <KickersLine currentUserId={currentUser.id} className="-mt-1.5 px-4 pb-3" />}
                   {/* 업로더용 들은 기록(0084) — 내 DEMO 글에만. */}
-                  {!isComplex && isOwnPost && <ListenInsight postId={post.id} className="-mt-1.5 px-4 pb-3" />}
+                  {!isPrivate && isOwnPost && <ListenInsight postId={post.id} className="-mt-1.5 px-4 pb-3" />}
                   </div>
                 )
               )}

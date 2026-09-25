@@ -9,7 +9,7 @@ export async function loadMoreFeed(state: FeedState) {
   const uuid = /^[0-9a-f-]{36}$/i;
   const valid =
     state &&
-    (state.scope === "demo" || state.scope === "memo") &&
+    state.scope === "demo" &&
     (state.phase === "unplayed" || state.phase === "played") &&
     (state.tag === null || (typeof state.tag === "string" && state.tag.length <= 50)) &&
     Array.isArray(state.carry) && state.carry.length <= 50 && state.carry.every((id) => uuid.test(id)) &&

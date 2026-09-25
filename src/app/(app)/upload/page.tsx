@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { SoundbarPreview } from "@/components/SoundbarPreview";
 import { InviteUserPicker, type PickedUser } from "@/components/InviteUserPicker";
 import { GiphyPicker } from "@/components/GiphyPicker";
-import { LockIcon, EyeIcon, HeartIcon, CommentIcon, SearchIcon, SunIcon, MoonIcon, ArrowUpIcon } from "@/components/icons";
+import { LockIcon, EyeIcon, HeartIcon, CommentIcon, SearchIcon, ArrowUpIcon } from "@/components/icons";
 import { Avatar } from "@/components/Avatar";
 import { TimeLimitBadge } from "@/components/TimeLimitBadge";
 import { label as labelClass, errorText, pageCard } from "@/components/ui/styles";
@@ -43,64 +43,43 @@ const SUBMIT_PHRASES = [
   "그냥 혀유~ 될 겨.",
 ];
 
-// 단독 게시물은 시간 단위, 협업 게시물은 일 단위(사용자 요청 — "협업게시물은 시간제한
-// 말고 기간제한으로 변경, 1d 3d 5d 7d"). 값은 그대로 posts.expire_hours(시간)에 저장되고
-// 화면 라벨만 다르다 — 24h(1일)가 두 세트 모두에 있어서 모드를 바꿔도 항상 유효한 기본값.
-const SOLO_EXPIRE_HOURS_OPTIONS: { hours: ExpireHours; label: string }[] = [
-  { hours: 6, label: "6h" },
-  { hours: 12, label: "12h" },
-  { hours: 24, label: "24h" },
-  { hours: 48, label: "48h" },
+// 2026-09-25(사용자 요청) memo 작업물 기능을 DEMO에 통합 — "게시 유형(DEMO/memo)" 선택 없이
+// 한 폼에서 공개 범위·노출 기간·콜라보를 옵션으로 고른다. 저장 형태는 예전과 같다:
+//   공개 범위 → posts.visibility(public / followers=Companion 공개 / invite_only=특정인 공개, 초대는
+//   post_access), 노출 기간 → expires_at(영구면 null), 콜라보 → collab_available(채팅·재창작 스택).
+type Audience = "public" | "companion" | "specific";
+const AUDIENCE_OPTIONS: { value: Audience; label: string }[] = [
+  { value: "public", label: "전체" },
+  { value: "companion", label: "Companion" },
+  { value: "specific", label: "특정인" },
 ];
-const COLLAB_EXPIRE_HOURS_OPTIONS: { hours: ExpireHours; label: string }[] = [
-  { hours: 24, label: "1d" },
-  { hours: 72, label: "3d" },
-  { hours: 120, label: "5d" },
-  { hours: 168, label: "7d" },
-];
-
-// TopNav의 피드 탭(♾️ demo / 🌀 Complex)과 동일한 개념 — 어느 피드로 게시할지 선택.
-// 둘 다 실제 posts에 저장됨(0012_complex_access_and_chat) — Complex는 visibility로 구분되고
-// 초대는 post_access, 채팅은 post_chat_messages에 별도로 쌓인다.
-type UploadType = "demo" | "complex";
-
-const UPLOAD_TYPE_OPTIONS: {
-  value: UploadType;
-  label: string;
-  Icon: (props: { className?: string }) => React.ReactNode;
-}[] = [
-  { value: "demo", label: "DEMO", Icon: SunIcon },
-  { value: "complex", label: "memo", Icon: MoonIcon },
+// 옛 memo는 단독 6/12/24/48h, 콜라보 1/3/5/7d였다 — 합치면서 한 줄에 들어가게 다섯 개로 줄임.
+const EXPIRE_OPTIONS: { hours: ExpireHours | null; label: string }[] = [
+  { hours: null, label: "영구" },
+  { hours: 6, label: "6시간" },
+  { hours: 24, label: "24시간" },
+  { hours: 72, label: "3일" },
+  { hours: 168, label: "7일" },
 ];
 
-// demo = 전체공개·노출시간 영구(만료 없음) / Complex = 팔로워공개 or 특정 사람 초대공개·노출시간 필수설정.
-// demo는 그래서 노출 시간 UI 자체가 없고, Complex만 아래 공개범위+노출시간을 요구한다.
-// "specific"은 화면 표시용 값이고 실제 posts.visibility에는 "invite_only"로 저장한다(0012 —
-// Phase 1의 "private"는 "나만 보기"에 가까운 다른 의미라 값을 분리해뒀음).
-type ComplexVisibility = "followers" | "specific";
-const COMPLEX_VISIBILITY_OPTIONS: { value: ComplexVisibility; label: string; icon: string }[] = [
-  // "followers" 저장값은 0012 그대로 두고 의미만 Companion 공개로 재정의(0017_companions).
-  // 아이콘은 이모지 대신 EyeIcon(memo 게시물의 "조회자" 기능과 같은 아이콘, 2026-09-15
-  // 사용자 요청)을 JSX에서 직접 렌더 — 이 배열의 icon 필드는 이제 specific("🔒")에만 쓰인다.
-  { value: "followers", label: "Companion 공개", icon: "" },
-  { value: "specific", label: "특정인 공개", icon: "🔒" },
-];
-// memo 게시 형태 — 화면 표시·선택용 값이고 실제로는 posts.collab_available(boolean)에
-// 저장된다(정책 변경, 사용자 요청 — 체크박스 대신 단독/협업 중 하나를 고르는 선택형 버튼).
-type ComplexPostMode = "solo" | "collab";
-const COMPLEX_POST_MODE_OPTIONS: { value: ComplexPostMode; label: string; icon: string }[] = [
-  // 2026-09-15 사용자 요청으로 이름·아이콘 변경(단독->솔로, 협업->콜라보) — 아이콘은
-  // 정사각형 버튼 안에 큼직하게 들어가는 이니셜 한 글자(S/C)로.
-  { value: "solo", label: "솔로게시물", icon: "S" },
-  { value: "collab", label: "콜라보게시물", icon: "C" },
-];
+// 미리보기 남은시간 뱃지용 — 노출 기간 버튼을 누를 때만 부른다(렌더 중 Date.now() 금지 규칙).
+function expiresAtFromNow(hours: ExpireHours | null) {
+  return hours === null ? null : new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+}
+
+function settingsSummary(audience: Audience, expireHours: ExpireHours | null, collab: boolean) {
+  const who =
+    audience === "public" ? "누구나 볼 수 있고" : audience === "companion" ? "Companion에게만 보이고" : "초대한 사람만 볼 수 있고";
+  const label = EXPIRE_OPTIONS.find((o) => o.hours === expireHours)?.label ?? "";
+  const when = expireHours === null ? "계속 유지돼요" : `${label} 뒤 자동으로 숨겨져요`;
+  return `${who} ${when}.${collab ? " 콜라보는 음원 스택과 채팅으로 함께 곡을 만들어요(음원만)." : ""}`;
+}
+
 // posts.expire_hours는 not null 컬럼이라 demo(영구노출)에도 값이 필요하지만,
 // 영구노출 여부는 expires_at(null)로만 판단하므로(feed/page.tsx 쿼리 참고) 이 값 자체는 화면에 노출되지 않는다.
 const PERMANENT_POST_EXPIRE_HOURS_PLACEHOLDER: ExpireHours = 48;
 
-// demo는 영상/음원 둘 다, memo는 음원(mp3/wav)만 — memo는 Discord처럼 짧은 스케치를 음원으로만
-// 주고받는 공간으로 좁혀서 이미지/영상 업로드 자체를 없앴다(재창작물 스택은 이미 0015부터
-// 음원 전용이었고, 이번엔 1차 게시물 업로드도 같은 원칙으로 맞춤).
+// 영상/음원 둘 다 올릴 수 있고, 콜라보만 음원(mp3/wav) 전용(재창작물 스택이 0015부터 음원 전용).
 type DetectedMediaKind = "video" | "audio";
 const VIDEO_OR_AUDIO_ACCEPT = "video/mp4,video/quicktime,audio/mpeg,audio/mp3,audio/wav,audio/x-wav";
 const AUDIO_ONLY_ACCEPT = "audio/mpeg,audio/mp3,audio/wav,audio/x-wav";
@@ -242,30 +221,6 @@ function selectableButtonClass(active: boolean, base: string) {
   return `${base} ${colors}`;
 }
 
-// 게시 형태(단독/협업)·공개 범위(Companion/초대) 버튼 전용 — 정사각형 아이콘 버튼으로
-// 디자인(2026-09-15, 사용자 요청). aspect-square라 grid-cols-2 안에서 폭에 맞춰 항상
-// 정사각형을 유지 — 큰 아이콘(이모지 또는 S/C 이니셜)이 위, 작은 라벨이 아래.
-function squareOptionButtonClass(active: boolean) {
-  return `flex aspect-square flex-col items-center justify-center gap-1 rounded-xl text-sm font-medium transition ${
-    active ? "bg-demo-bg text-black" : "bg-box-gray text-black hover:opacity-80"
-  }`;
-}
-
-// 게시 유형 토글 전용 — DEMO(메인 화이트/포인트 골드) vs complex(메인 짙은 그레이/포인트 퍼플)를
-// 다른 selectableButtonClass 사용처와 다르게 각자 고유 색으로 구분한다(그레이 규칙과
-// 무관한 브랜드 강조색이라 그대로 둔다 — 검정은 금지라 memo 쪽은 active-gray를 쓴다).
-// 이 둘은 브랜드 테두리(violet/gold)가 있어 base에 border를 따로 붙여 호출한다.
-function uploadTypeButtonClass(value: UploadType, active: boolean, base: string) {
-  if (!active) {
-    return `${base} bg-box-gray text-black hover:opacity-80`;
-  }
-  const colors =
-    value === "complex"
-      ? "border border-violet-500 bg-active-gray text-violet-300"
-      : "border border-demo-gold bg-white text-demo-gold";
-  return `${base} ${colors}`;
-}
-
 // 해시태그 목록 박스는 채색 없이 테두리만(사용자 지시 — "이전처럼") 그려서 안의 바탕은
 // 카드 자체 색(main-gray)이 그대로 비친다 — 칩은 그 위에서 옅은 톤(box-gray)으로 도드라지고,
 // 선택되면 활성화 박스 색(demo-bg)으로 바뀐다.
@@ -321,7 +276,7 @@ function UploadDropbox({
       // (사용자 지적, 2026-09-15). 그래서 채움 자체를 명확히 다른 색으로 바꿔서 점선 안 전체
       // 표면이 눈에 띄게 짙어지게 했다 — hover 색은 그레이 4단계 중 가장 짙은 canvas-gray를
       // 재사용(2026-09-16, 팔레트를 전체적으로 밝게 재조정하며 하드코딩된 #adadad를 정리).
-      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-10 text-center text-active-gray transition-colors ${
+      className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-active-gray px-6 py-6 text-center text-active-gray transition-colors ${
         dragOver ? "bg-demo-bg" : "bg-box-gray hover:bg-canvas-gray"
       }`}
     >
@@ -349,7 +304,7 @@ function UploadDropbox({
           ×
         </button>
       )}
-      <ArrowUpIcon className="h-8 w-8" />
+      <ArrowUpIcon className="h-6 w-6" />
       {file ? (
         <>
           <p className="max-w-full truncate text-sm font-semibold">{file.name}</p>
@@ -357,7 +312,7 @@ function UploadDropbox({
         </>
       ) : (
         <>
-          <p className="text-lg font-bold text-active-gray">Upload</p>
+          <p className="text-base font-bold text-active-gray">Upload</p>
           <p className="text-xs">{formatsLabel}</p>
         </>
       )}
@@ -442,13 +397,7 @@ export default function UploadPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // 원래는 게시 유형(DEMO/memo)을 바꿀 때마다 피드 Complex 탭(ThemeSync.tsx)처럼 효과음과
-  // 함께 페이지 전체를 다크 테마로 전환했는데, 업로드 폼 자체를 고치는 화면에서 그럴 때마다
-  // 화면 톤·효과음이 바뀌는 게 번거롭다는 피드백으로 제거 — 이 페이지는 항상 (app)/layout.tsx의
-  // PageCanvas 그레이 배경을 그대로 유지하고, 라이트/다크 전환은 다시 /feed에서만 일어난다.
-  const [uploadType, setUploadType] = useState<UploadType>("demo");
-
-  // demo 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별(Complex와 동일한 방식)
+  // 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaKind, setMediaKind] = useState<DetectedMediaKind | null>(null);
   const [mediaFileError, setMediaFileError] = useState<string | null>(null);
@@ -484,21 +433,18 @@ export default function UploadPage() {
   const [musicFile, setMusicFile] = useState<File | null>(null);
   const [musicStart, setMusicStart] = useState(0);
 
-  // Complex 전용 — 영상 또는 음원 파일 하나만 필수로 업로드, 종류는 자동 판별
-  const [complexFile, setComplexFile] = useState<File | null>(null);
-  const [complexKind, setComplexKind] = useState<DetectedMediaKind | null>(null);
-  const [complexFileError, setComplexFileError] = useState<string | null>(null);
-
   // 작품 제목 — caption(부가 설명, 선택)과 분리된 필수 입력(0052, 2026-09-15 사용자 요청).
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearch, setTagSearch] = useState("");
   const [popularUserTags, setPopularUserTags] = useState<string[]>([]);
-  const [expireHours, setExpireHours] = useState<ExpireHours>(24);
-  const [complexVisibility, setComplexVisibility] = useState<ComplexVisibility>("followers");
+  // 게시 설정(2026-09-25 memo 통합) — 기본은 전체 공개·영구·콜라보 끔(옛 DEMO와 같음).
+  const [audience, setAudience] = useState<Audience>("public");
+  const [expireHours, setExpireHours] = useState<ExpireHours | null>(null);
+  // 미리보기 카드의 남은시간 뱃지용 — 렌더 중 Date.now()를 부르지 않도록 노출 기간을 고를 때 계산.
+  const [previewExpiresAt, setPreviewExpiresAt] = useState<string | null>(null);
   const [inviteUsers, setInviteUsers] = useState<PickedUser[]>([]);
-  // 협업 기능은 Complex 전용 — demo는 해시태그로 대체(사용자 지시: "complex에서는 해시태그 삭제 대신 협업기능 추가")
   const [collabAvailable, setCollabAvailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -586,7 +532,7 @@ export default function UploadPage() {
       });
   }, [supabase]);
 
-  // demo 음원 파일의 사운드바 재생용 object URL — Complex와 동일한 useMemo+cleanup-effect 패턴.
+  // 음원 파일의 사운드바 재생용 object URL — 값 계산(useMemo)과 정리(effect)를 분리.
   const mediaObjectUrl = useMemo(() => (mediaFile ? URL.createObjectURL(mediaFile) : null), [mediaFile]);
   useEffect(() => {
     return () => {
@@ -594,19 +540,7 @@ export default function UploadPage() {
     };
   }, [mediaObjectUrl]);
 
-  // Complex 파일의 미리보기용 object URL — 파일이 바뀔 때마다 새로 계산하고, 예전 URL은 정리만 따로 한다
-  // (setState를 effect 본문에서 동기 호출하지 않도록 useMemo로 값 계산과 정리를 분리).
-  const complexObjectUrl = useMemo(
-    () => (complexFile ? URL.createObjectURL(complexFile) : null),
-    [complexFile],
-  );
-  useEffect(() => {
-    return () => {
-      if (complexObjectUrl) URL.revokeObjectURL(complexObjectUrl);
-    };
-  }, [complexObjectUrl]);
-
-  // DEMO 커버 이미지 미리보기용 object URL — 같은 패턴. GIF를 골랐으면 coverGifUrl(이미 완성된
+  // 커버 이미지 미리보기용 object URL — 같은 패턴. GIF를 골랐으면 coverGifUrl(이미 완성된
   // URL)을 그대로 쓰고, 직접 올린 사진이면 이 object URL을 쓴다(previewCoverSrc가 둘을 합침).
   const coverObjectUrl = useMemo(() => (coverFile ? URL.createObjectURL(coverFile) : null), [coverFile]);
   useEffect(() => {
@@ -615,10 +549,6 @@ export default function UploadPage() {
     };
   }, [coverObjectUrl]);
   const previewCoverSrc = coverGifUrl ?? coverObjectUrl;
-
-  function handleUploadTypeChange(next: UploadType) {
-    setUploadType(next);
-  }
 
   function resetVideoEdit() {
     setTrimRange(null);
@@ -643,8 +573,16 @@ export default function UploadPage() {
       setMediaFileError(`파일 용량이 ${formatMB(file.size)}예요. ${formatMB(MAX_FILE_SIZE_BYTES)} 이하만 올릴 수 있어요.`);
       return;
     }
+    const kind = file ? detectMediaKind(file) : null;
+    // 콜라보는 재창작 스택이 음원 전용이라 영상은 받지 않는다.
+    if (file && collabAvailable && kind === "video") {
+      setMediaFile(null);
+      setMediaKind(null);
+      setMediaFileError("콜라보 게시물은 음원(mp3/wav) 파일만 올릴 수 있어요.");
+      return;
+    }
     setMediaFile(file);
-    setMediaKind(file ? detectMediaKind(file) : null);
+    setMediaKind(kind);
   }
 
   // Android 공유 시트에서 Compmusic으로 보낸 음원·영상(Share Target, shareTarget.ts) — sw.js가
@@ -657,7 +595,6 @@ export default function UploadPage() {
     void takeSharedUploadFile().then((file) => {
       if (cancelled) return;
       if (file) {
-        setUploadType("demo");
         handleFileChange(file);
       } else {
         setMediaFileError("공유한 파일을 받지 못했어요. 아래에서 파일을 다시 선택해주세요.");
@@ -726,50 +663,21 @@ export default function UploadPage() {
     setGifPickerOpen(false);
   }
 
-  // 공동창작 체크 여부로 memo 업로드가 두 갈래로 갈린다(정책 변경, 사용자 요청):
-  // 체크(collab) — 기존처럼 음원(mp3/wav)만, 채팅 협업방으로 게시. 미체크 — DEMO와 동일하게
-  // 영상/음원 다 허용 + 커버 이미지 필수 + 좋아요/댓글/조회자 목록으로 게시.
-  function handleComplexFileChange(file: File | null) {
-    setComplexFileError(null);
-    setCoverFile(null);
-    setCoverFileError(null);
-    setCoverPosition({ x: 50, y: 50 });
-    setCoverGifUrl(null);
-    resetVideoEdit();
-    if (file && file.size > MAX_FILE_SIZE_BYTES) {
-      setComplexFile(null);
-      setComplexKind(null);
-      setComplexFileError(`파일 용량이 ${formatMB(file.size)}예요. ${formatMB(MAX_FILE_SIZE_BYTES)} 이하만 올릴 수 있어요.`);
-      return;
+  // 콜라보를 나중에 켜서 이미 골라둔 영상이 더 이상 허용 안 되는 경우 정리. 콜라보는 채팅 중심
+  // 화면이라 커버 이미지도 쓰지 않는다.
+  function handleCollabChange(on: boolean) {
+    setCollabAvailable(on);
+    if (on && mediaKind === "video") {
+      setMediaFile(null);
+      setMediaKind(null);
+      resetVideoEdit();
+      setMediaFileError("콜라보 게시물은 음원(mp3/wav) 파일만 올릴 수 있어요.");
     }
-    const kind = file ? detectMediaKind(file) : null;
-    if (file && !kind) {
-      setComplexFile(null);
-      setComplexKind(null);
-      setComplexFileError("영상 또는 음원 파일만 올릴 수 있어요.");
-      return;
-    }
-    if (file && collabAvailable && kind !== "audio") {
-      setComplexFile(null);
-      setComplexKind(null);
-      setComplexFileError("공동창작 게시물은 음원(mp3/wav) 파일만 올릴 수 있어요.");
-      return;
-    }
-    setComplexFile(file);
-    setComplexKind(kind);
   }
 
-  // 공동창작을 나중에 켜서 이미 골라둔 영상이 더 이상 허용 안 되는 경우 정리.
-  function handleCollabAvailableChange(checked: boolean) {
-    setCollabAvailable(checked);
-    // 노출 기간 옵션 세트(시간/일)가 모드마다 달라서, 다른 세트에 없는 값을 고른 채로
-    // 넘어가지 않게 24h(=1d, 두 세트 공통값)로 리셋한다.
-    setExpireHours(24);
-    if (checked && complexKind === "video") {
-      setComplexFile(null);
-      setComplexKind(null);
-      setComplexFileError("공동창작 게시물은 음원(mp3/wav) 파일만 올릴 수 있어요.");
-    }
+  function handleExpireChange(hours: ExpireHours | null) {
+    setExpireHours(hours);
+    setPreviewExpiresAt(expiresAtFromNow(hours));
   }
 
   function toggleTag(tag: string) {
@@ -796,38 +704,18 @@ export default function UploadPage() {
     tag.toLowerCase().includes(tagSearch.trim().toLowerCase()),
   );
 
-  // 영상 미리보기 aside는 DEMO 전용 — memo는 이제 음원(mp3/wav)만 올릴 수 있어서 해당 없음.
-  // DEMO와 memo 단독(공동창작 미체크)은 업로드 폼 자체가 구조적으로 동일(영상/음원+커버,
-  // 위 "공동창작 미체크 = DEMO와 동일한 형태" 주석 참고) — 그런데 미리보기는 DEMO 전용
-  // 조건으로만 걸려있어서, memo에서 영상을 올려도 미리보기가 아예 안 뜨는 문제가 있었다
-  // (사용자 제보, 2026-09-15). 협업(collabAvailable)은 채팅 중심의 다른 화면이라 제외하고
-  // 둘 다 같은 미리보기를 보여주게 통합.
-  const showsFeedLikePreview = uploadType === "demo" || (uploadType === "complex" && !collabAvailable);
-  const activeFile = uploadType === "demo" ? mediaFile : complexFile;
-  const activeKind = uploadType === "demo" ? mediaKind : complexKind;
-  const activeObjectUrl = uploadType === "demo" ? mediaObjectUrl : complexObjectUrl;
+  // 인스타그램처럼 "게시하면 이렇게 보여요"를 실시간으로 보여주는 미리보기 — 콜라보는 채팅 중심의
+  // 다른 화면이라 제외. 커버 이미지가 메인 비주얼이라 영상이 없어도(음원만 골랐거나 아직 아무것도
+  // 안 골랐어도) 커버+캡션+해시태그만으로 띄운다.
+  const showsFeedLikePreview = !collabAvailable;
   // 미리보기도 다듬은 구간만 재생되게 media fragment(#t=시작,끝)를 붙인다.
   const previewVideoSrc =
-    showsFeedLikePreview && activeKind === "video" && activeObjectUrl
+    showsFeedLikePreview && mediaKind === "video" && mediaObjectUrl
       ? hasMeaningfulTrim && trimRange
-        ? `${activeObjectUrl}#t=${trimRange.start.toFixed(2)},${trimRange.end.toFixed(2)}`
-        : activeObjectUrl
+        ? `${mediaObjectUrl}#t=${trimRange.start.toFixed(2)},${trimRange.end.toFixed(2)}`
+        : mediaObjectUrl
       : null;
-  // 인스타그램처럼 "게시하면 이렇게 보여요"를 실시간으로 보여주는 미리보기 — 커버 이미지가
-  // 이제 DEMO의 메인 비주얼이라, 영상이 없어도(음원만 골랐거나 아직 아무것도 안 골랐어도)
-  // 커버+캡션+해시태그만으로 미리보기를 띄운다.
-  const showPostPreview = showsFeedLikePreview && (previewCoverSrc || activeFile);
-  // memo 단독 게시물 미리보기는 실제 memo 피드처럼 다크 톤 + 우상단 남은시간 뱃지가 있어야
-  // 한다(2026-09-15, 사용자 요청). 업로드 화면 자체는 dark 클래스가 안 걸려있어서(피드에서만
-  // ThemeSync가 <html>에 .dark를 붙임) dark: variant 대신 조건부로 직접 색을 고른다.
-  const previewIsMemo = uploadType === "complex";
-  // 노출 시간(expireHours)로부터 지금 게시하면 언제 만료될지 미리 계산 — TimeLimitBadge가
-  // 알아서 카운트다운하므로 값 자체는 expireHours가 바뀔 때만 다시 계산하면 된다(캡션 등
-  // 다른 입력마다 재계산해 카운트다운이 매번 리셋되는 걸 막음).
-  const previewExpiresAt = useMemo(
-    () => (previewIsMemo ? new Date(Date.now() + expireHours * 60 * 60 * 1000).toISOString() : null),
-    [previewIsMemo, expireHours],
-  );
+  const showPostPreview = showsFeedLikePreview && (previewCoverSrc || mediaFile);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -843,136 +731,29 @@ export default function UploadPage() {
 
   async function submitPost() {
     setError(null);
-    track("upload_submit", { props: { tab: uploadType } });
+    track("upload_submit", { props: { tab: audience } });
 
     if (!title.trim()) {
       setError("제목을 입력해주세요.");
       return;
     }
-
-    if (uploadType === "complex") {
-      if (!complexFile || !complexKind) {
-        setError(collabAvailable ? "음원(mp3/wav) 파일을 업로드해주세요." : "영상 또는 음원 파일을 업로드해주세요.");
-        return;
-      }
-      // 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 커버 이미지도 똑같이 필수 —
-      // 단, 영상은 그 자체로 보여줄 화면이 있어서 예외(사용자 요청, DEMO와 동일 규칙).
-      if (!collabAvailable && complexKind === "audio" && !coverFile && !coverGifUrl) {
-        setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
-        return;
-      }
-      if (complexVisibility === "specific" && inviteUsers.length === 0) {
-        setError("초대할 사람을 최소 1명 선택해주세요.");
-        return;
-      }
-
-      setLoading(true);
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setLoading(false);
-        router.push("/login");
-        return;
-      }
-
-      let complexMediaPath: string;
-      try {
-        complexMediaPath = await uploadFileToR2(await applyVideoEditIfNeeded(complexFile, complexKind));
-      } catch (err) {
-        setError(`업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
-        setLoading(false);
-        return;
-      }
-
-      // 공동창작 미체크일 때만 커버 이미지 업로드(DEMO와 동일 로직) — collab는 여전히
-      // 채팅 중심이라 커버가 없다. 영상은 커버가 선택이라(위 검증) 안 골랐으면 null 그대로.
-      let complexThumbnailPath: string | null = null;
-      if (!collabAvailable) {
-        try {
-          if (coverGifUrl) {
-            complexThumbnailPath = coverGifUrl;
-          } else if (coverFile) {
-            // 실제 정사각형 크롭은 여기서 한 번만 — coverPosition(드래그로 고른 노출 영역)을
-            // 반영해 업로드 직전에 수행한다.
-            complexThumbnailPath = await uploadFileToR2(await cropImageFileToSquare(coverFile, coverPosition));
-          }
-        } catch (err) {
-          setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
-          setLoading(false);
-          return;
-        }
-      }
-
-      const publishedAt = new Date();
-      const expiresAt = new Date(publishedAt.getTime() + expireHours * 60 * 60 * 1000);
-
-      const { data: complexPost, error: complexInsertError } = await supabase
-        .from("posts")
-        .insert({
-          user_id: user.id,
-          media_type: complexKind,
-          video_url: complexKind === "video" ? complexMediaPath : null,
-          image_url: null,
-          audio_url: complexKind === "audio" ? complexMediaPath : null,
-          thumbnail_url: complexThumbnailPath,
-          title: title.trim(),
-          caption: caption || null,
-          visibility: complexVisibility === "specific" ? "invite_only" : "followers",
-          collab_available: collabAvailable,
-          collab_role_needed: null,
-          status: "published",
-          published_at: publishedAt.toISOString(),
-          expire_hours: expireHours,
-          expires_at: expiresAt.toISOString(),
-        })
-        .select("id")
-        .single();
-
-      if (complexInsertError || !complexPost) {
-        setError(`게시 실패: ${complexInsertError?.message ?? "알 수 없는 오류"}`);
-        setLoading(false);
-        return;
-      }
-
-      // 특정인 초대 — post_access에 invited 상태로 일괄 등록(0012). 초대 인원별로 DB row 하나씩,
-      // (post_id,user_id) unique라 중복 선택은 InviteUserPicker에서 이미 걸러짐.
-      if (complexVisibility === "specific" && inviteUsers.length > 0) {
-        const { error: accessError } = await supabase.from("post_access").insert(
-          inviteUsers.map((invitee) => ({
-            post_id: complexPost.id,
-            user_id: invitee.id,
-            status: "invited" as const,
-          })),
-        );
-        if (accessError) {
-          setError(`게시는 됐지만 초대 등록에 실패했어요: ${accessError.message}`);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Companion(특정인 초대면 초대받은 사람)에게 새 글 알림(0076) — 초대 등록 뒤에 불러야 대상이 잡힌다.
-      notifyReaction({ kind: "published", postId: complexPost.id });
-      haptic(HAPTIC.success);
-      setLoading(false);
-      router.push("/feed?feed=complex");
-      return;
-    }
-
     if (!mediaFile || !mediaKind) {
-      setError("영상 또는 음원(mp3/wav)을 업로드해주세요.");
+      setError(collabAvailable ? "음원(mp3/wav) 파일을 업로드해주세요." : "영상 또는 음원(mp3/wav)을 업로드해주세요.");
       return;
     }
-    // 영상은 그 자체로 보여줄 화면이 있어서 커버 이미지 필수에서 예외(사용자 요청).
-    if (mediaKind === "audio" && !coverFile && !coverGifUrl) {
+    // 영상은 그 자체로 보여줄 화면이 있어서 커버 이미지 필수에서 예외(사용자 요청). 콜라보는 채팅
+    // 중심이라 커버가 없다.
+    if (!collabAvailable && mediaKind === "audio" && !coverFile && !coverGifUrl) {
       setError("커버 이미지를 올리거나 GIF를 선택해주세요.");
       return;
     }
-    if (selectedTags.length < MIN_TAGS) {
-      setError(`해시태그를 최소 ${MIN_TAGS}개 선택해주세요.`);
+    // 해시태그는 전체 공개 글만 필수 — 태그로 탐색하는 공개 피드용이라(옛 memo엔 태그가 없었다).
+    if (audience === "public" && selectedTags.length < MIN_TAGS) {
+      setError(`전체 공개 게시물은 해시태그를 최소 ${MIN_TAGS}개 선택해주세요.`);
+      return;
+    }
+    if (audience === "specific" && inviteUsers.length === 0) {
+      setError("초대할 사람을 최소 1명 선택해주세요.");
       return;
     }
 
@@ -998,25 +779,28 @@ export default function UploadPage() {
       return;
     }
 
-    // 커버 이미지는 음원일 때만 필수(위에서 검증됨) — 영상은 그 자체가 화면이라 없어도 됨.
-    // thumbnail_url(원래 있던 미사용 컬럼)에 저장한다. GIF를 골랐으면 GIPHY 자체 URL을
-    // 그대로 쓰고(resolveMediaUrl이 읽을 때 구분), 직접 올린 사진이면 R2에 업로드해서 key를 저장한다.
+    // 커버는 thumbnail_url(원래 있던 미사용 컬럼)에 저장한다. GIF를 골랐으면 GIPHY 자체 URL을
+    // 그대로 쓰고(resolveMediaUrl이 읽을 때 구분), 직접 올린 사진이면 coverPosition(드래그로 고른
+    // 노출 영역)을 반영해 여기서 한 번만 정사각형으로 크롭해 R2에 올린다.
     let thumbnailPath: string | null = null;
-    try {
-      if (coverGifUrl) {
-        thumbnailPath = coverGifUrl;
-      } else if (coverFile) {
-        thumbnailPath = await uploadFileToR2(await cropImageFileToSquare(coverFile, coverPosition));
+    if (!collabAvailable) {
+      try {
+        if (coverGifUrl) {
+          thumbnailPath = coverGifUrl;
+        } else if (coverFile) {
+          thumbnailPath = await uploadFileToR2(await cropImageFileToSquare(coverFile, coverPosition));
+        }
+      } catch (err) {
+        setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      setError(`커버 이미지 업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
-      setLoading(false);
-      return;
     }
 
     const publishedAt = new Date();
+    // 영구 노출은 expires_at=null(피드 쿼리가 만료 취급을 안 함).
+    const expiresAt = expireHours === null ? null : new Date(publishedAt.getTime() + expireHours * 60 * 60 * 1000);
 
-    // demo(전체공개)는 노출시간 영구 — expires_at을 null로 둬야 피드 쿼리에서 만료 취급을 안 한다.
     const { data: post, error: insertError } = await supabase
       .from("posts")
       .insert({
@@ -1029,28 +813,49 @@ export default function UploadPage() {
         title: title.trim(),
         caption: caption || null,
         instrument_tags: selectedTags,
+        visibility: audience === "public" ? "public" : audience === "companion" ? "followers" : "invite_only",
+        collab_available: collabAvailable,
+        collab_role_needed: null,
         status: "published",
         published_at: publishedAt.toISOString(),
-        expire_hours: PERMANENT_POST_EXPIRE_HOURS_PLACEHOLDER,
-        expires_at: null,
+        expire_hours: expireHours ?? PERMANENT_POST_EXPIRE_HOURS_PLACEHOLDER,
+        expires_at: expiresAt?.toISOString() ?? null,
       })
       .select("id")
       .single();
 
-    setLoading(false);
-
     if (insertError || !post) {
       setError(`게시 실패: ${insertError?.message ?? "알 수 없는 오류"}`);
+      setLoading(false);
       return;
     }
 
-    // Companion 새 글 푸시 + 운영자 Discord(첫 반응 보장) — 0076.
+    // 특정인 초대 — post_access에 invited 상태로 일괄 등록(0012). 초대 인원별로 DB row 하나씩,
+    // (post_id,user_id) unique라 중복 선택은 InviteUserPicker에서 이미 걸러짐.
+    if (audience === "specific" && inviteUsers.length > 0) {
+      const { error: accessError } = await supabase.from("post_access").insert(
+        inviteUsers.map((invitee) => ({
+          post_id: post.id,
+          user_id: invitee.id,
+          status: "invited" as const,
+        })),
+      );
+      if (accessError) {
+        setError(`게시는 됐지만 초대 등록에 실패했어요: ${accessError.message}`);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Companion(특정인 공개면 초대받은 사람) 새 글 푸시 + 운영자 Discord(첫 반응 보장) — 0076.
+    // 초대 등록 뒤에 불러야 대상이 잡힌다.
     notifyReaction({ kind: "published", postId: post.id });
     haptic(HAPTIC.success);
+    setLoading(false);
     router.push("/feed");
   }
 
-  // 영상 편집 섹션 — DEMO와 memo 단독 업로드 박스 양쪽에서 같은 걸 쓴다.
+  // 영상 편집 섹션(다듬기·소리·커버 프레임).
   function renderVideoEditor(src: string) {
     return (
       <div className="border-t border-box-gray pt-3">
@@ -1106,462 +911,271 @@ export default function UploadPage() {
     // 스크롤 대신 미리보기가 아래로 줄바꿈되게 한다.
     <div className="mx-auto flex max-w-[1420px] flex-col gap-6 px-4 md:flex-row md:flex-wrap md:items-start md:justify-center">
       <main className={`${wideCard} flex flex-col gap-6 md:mx-0 md:shrink-0`}>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <span className={blackLabel}>게시 유형</span>
-            <div className="grid grid-cols-2 gap-2">
-              {UPLOAD_TYPE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleUploadTypeChange(option.value)}
-                  className={uploadTypeButtonClass(
-                    option.value,
-                    uploadType === option.value,
-                    "flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-bold transition",
-                  )}
-                >
-                  <option.Icon className="h-4 w-4" />
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-active-gray">
-              {uploadType === "complex"
-                ? "Companion공개 또는 특정인초대로 함께 볼 사람을 정할 수 있으며, 시간이 지나면 자동으로 숨김 및 보관 처리돼요."
-                : "누구나 볼 수 있는 전체공개 게시물로, 시간 제한 없이 계속 유지돼요."}
-            </p>
-          </div>
-
-          {/* 공동창작 여부(게시 형태)·공개 범위 — 둘 다 memo 게시 전반의 성격을 정하는 상위
-              설정이라 게시 유형 바로 밑, 같은 줄에 나란히 둔다(2026-09-15, 사용자 요청 —
-              "게시 유형 밑에 동일선상으로 표시"). 버튼은 정사각형 아이콘 버튼으로(사용자 요청) —
-              squareOptionButtonClass 참고. 공개 범위에 딸린 "초대할 사람"·"노출 시간/기간"은
-              그대로 아래쪽 원래 위치에 남겨둔다(값 자체는 여기서 이미 정해짐, complexVisibility
-              상태 공유). */}
-          {uploadType === "complex" && (
-            // gap-x-4(칼럼 사이)와 gap-y-1.5(버튼 줄 <-> 설명글) 분리 — 하나의 gap-4였을 때
-            // 설명글 위 여백만 다른 섹션(gap-1.5)보다 훨씬 크게 떠 보였다(사용자 지적,
-            // 2026-09-15).
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              <div className="flex flex-col gap-1.5">
-                <span className={blackLabel}>게시 형태</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {COMPLEX_POST_MODE_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleCollabAvailableChange(option.value === "collab")}
-                      className={squareOptionButtonClass(collabAvailable === (option.value === "collab"))}
-                    >
-                      {/* 이니셜 한 글자(S/C)에 네모 테두리를 둘러 배지처럼(2026-09-15 사용자 요청). */}
-                      <span className="flex h-5 w-5 items-center justify-center rounded border border-black text-xs font-black">
-                        {option.icon}
-                      </span>
-                      <span className="text-xs">{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className={blackLabel}>공개 범위</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {COMPLEX_VISIBILITY_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setComplexVisibility(option.value)}
-                      className={squareOptionButtonClass(complexVisibility === option.value)}
-                    >
-                      {option.value === "specific" ? (
-                        <LockIcon className="h-6 w-6" />
-                      ) : (
-                        // memo 게시물의 "조회자" 기능과 같은 EyeIcon(2026-09-15 사용자 요청 —
-                        // 예전엔 👥 이모지였음).
-                        <EyeIcon className="h-6 w-6" />
-                      )}
-                      <span className="text-xs">{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* 게시 형태 설명글 — 반 폭 컬럼 안에 있으면 줄바꿈이 잦아서 2열 그리드 밖,
-                  카드 전체 폭으로 빼 한 줄에 들어가게 했다(2026-09-15, 사용자 요청). */}
-              <p className="col-span-2 px-1 text-xs text-active-gray">
-                {collabAvailable
-                  ? "Companion과 음원을 스택으로 쌓아 함께 곡을 만들 수 있어요. 음원 파일(mp3/wav)만 올려주세요."
-                  : "DEMO처럼 영상·음원에 커버 이미지를 더해 올리고, 좋아요·댓글·조회자 목록을 확인할 수 있어요."}
+        {/* 2026-09-25(사용자 요청) memo 통합 + 컴팩트하게 — 게시 유형 선택을 없애고 파일 → 제목·캡션 →
+            해시태그 → 게시 설정(공개·노출·콜라보 한 줄씩) 순서로 한 폼에 담았다. 기본값(전체·영구·
+            콜라보 끔)이면 옛 DEMO 업로드와 똑같이 저장된다. */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
+            <UploadDropbox
+              file={mediaFile}
+              onSelect={handleFileChange}
+              accept={collabAvailable ? AUDIO_ONLY_ACCEPT : VIDEO_OR_AUDIO_ACCEPT}
+              formatsLabel={collabAvailable ? MEMO_UPLOADABLE_FORMATS : UPLOADABLE_FORMATS}
+            />
+            {mediaFile && !mediaKind && (
+              <p className="text-sm text-amber-600">
+                영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
               </p>
-            </div>
-          )}
-
-          {/* "초대할 사람"은 업로드 바로 위로(2026-09-15, 사용자 요청) — 특정인 공개를
-              고르자마자 업로드 전에 누구를 초대할지부터 정하게. */}
-          {uploadType === "complex" && complexVisibility === "specific" && (
-            <div className="flex flex-col gap-1.5">
-              <span className={blackLabel}>초대할 사람</span>
-              <InviteUserPicker
-                currentUserId={currentUserId ?? ""}
-                value={inviteUsers}
-                onChange={setInviteUsers}
-                inputClassName={grayField}
-              />
-            </div>
-          )}
-
-          {uploadType === "demo" ? (
-            // 캡션·해시태그처럼 라벨을 박스 바깥으로(2026-09-15, 사용자 요청 — 통일성).
-            <div className="flex flex-col gap-1.5">
-              <span className={blackLabel}>업로드</span>
-              <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
-              <UploadDropbox
+            )}
+            {mediaFileError && <p className={errorText}>{mediaFileError}</p>}
+            {showPostPreview && (
+              <button
+                type="button"
+                onClick={() => setPreviewOpen((v) => !v)}
+                className="hidden self-start text-xs font-medium text-active-gray hover:underline md:inline"
+              >
+                {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
+              </button>
+            )}
+            {mediaFile && mediaKind === "audio" && mediaObjectUrl && (
+              <SoundbarPreview
+                key={`${mediaFile.name}-${mediaFile.size}-${mediaFile.lastModified}`}
                 file={mediaFile}
-                onSelect={handleFileChange}
-                accept={VIDEO_OR_AUDIO_ACCEPT}
-                formatsLabel={UPLOADABLE_FORMATS}
+                src={mediaObjectUrl}
+                tone="demo"
               />
-              {mediaFile && !mediaKind && (
-                <p className="text-sm text-amber-600">
-                  영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요.
-                </p>
-              )}
-              {mediaFileError && <p className={errorText}>{mediaFileError}</p>}
-              {showPostPreview && (
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen((v) => !v)}
-                  className="hidden self-start text-xs font-medium text-active-gray hover:underline md:inline"
-                >
-                  {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
-                </button>
-              )}
-              {mediaFile && mediaKind === "audio" && mediaObjectUrl && (
-                <SoundbarPreview
-                  key={`${mediaFile.name}-${mediaFile.size}-${mediaFile.lastModified}`}
-                  file={mediaFile}
-                  src={mediaObjectUrl}
-                  tone="demo"
-                />
-              )}
-              {mediaKind === "video" && mediaObjectUrl && renderVideoEditor(mediaObjectUrl)}
-              {/* 커버 이미지는 음원일 때만 — 영상은 그 자체가 화면이라 버튼 자체를 안 보여준다
-                  (사용자 요청: "없어도 되는 게 아니라 없어야 해"). 평소(파일 선택 전)에도 숨김. */}
-              {mediaKind === "audio" && (
-                <>
-                  <div className="border-t border-box-gray pt-3">
-                    <span className={blackLabel}>커버 이미지 (필수)</span>
-                  </div>
-                  {coverGifUrl ? (
-                    <div className="flex items-start gap-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={coverGifUrl}
-                        alt="선택한 GIF"
-                        style={{ width: 160, height: 160 }}
-                        className="shrink-0 rounded-xl object-cover"
-                      />
-                      <div className="flex flex-col items-start gap-2 pt-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => setCoverGifUrl(null)}
-                          className="text-sm"
-                        >
-                          GIF 제거
-                        </Button>
-                      </div>
-                    </div>
-                  ) : coverObjectUrl ? (
-                    // 위 메인 업로드 박스와 같은 정사각형 점선 자리에 CoverPositionPicker가
-                    // 들어간다(2026-09-16, 사용자 지적 — 가로로 긴 버튼+파일명 한 줄은 허접해
-                    // 보임). "이미지 제거"는 그 옆 세로 버튼 자리로.
-                    <div className="flex items-start gap-3">
-                      <CoverPositionPicker
-                        src={coverObjectUrl}
-                        position={coverPosition}
-                        onChange={setCoverPosition}
-                      />
-                      <div className="flex flex-col items-start gap-2 pt-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => {
-                            setCoverFile(null);
-                            setCoverFileError(null);
-                            setCoverPosition({ x: 50, y: 50 });
-                          }}
-                          className="text-sm"
-                        >
-                          이미지 제거
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    // 아직 아무것도 안 골랐을 때 — 이미지/GIF 둘 중 하나를 고르는 선택지를
-                    // 같은 정사각형 점선 카드 두 개로 나란히(2026-09-16, 사용자 요청 — GIF
-                    // 쪽도 "고르고 싶게" 디자인).
-                    <div className="flex items-start gap-3">
-                      <CoverFileButton onChange={handleCoverChange} />
-                      <GifPickerButton onClick={() => setGifPickerOpen(true)} />
-                    </div>
-                  )}
-                  {coverFileError && <p className={errorText}>{coverFileError}</p>}
-                </>
-              )}
-              </div>
-            </div>
-          ) : (
-            // 위 demo 분기와 동일하게 라벨을 박스 바깥으로.
-            <div className="flex flex-col gap-1.5">
-              <span className={blackLabel}>업로드</span>
-              <div className="flex flex-col gap-3 rounded-xl bg-box-gray p-3">
-              <UploadDropbox
-                file={complexFile}
-                onSelect={handleComplexFileChange}
-                accept={collabAvailable ? AUDIO_ONLY_ACCEPT : VIDEO_OR_AUDIO_ACCEPT}
-                formatsLabel={collabAvailable ? MEMO_UPLOADABLE_FORMATS : UPLOADABLE_FORMATS}
-              />
-              {complexFile && !complexKind && (
-                <p className="text-sm text-amber-600">
-                  {collabAvailable
-                    ? "음원 형식이 아니에요. mp3·wav 파일을 선택해주세요."
-                    : "영상/음원 형식이 아니에요. mp4·mov 영상이나 mp3·wav 음원 파일을 선택해주세요."}
-                </p>
-              )}
-              {complexFileError && <p className={errorText}>{complexFileError}</p>}
-              {showPostPreview && (
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen((v) => !v)}
-                  className="hidden self-start text-xs font-medium text-active-gray hover:underline md:inline"
-                >
-                  {previewOpen ? "미리보기 접기 ▲" : "미리보기 펼치기 ▼"}
-                </button>
-              )}
-              {complexFile && complexKind === "audio" && complexObjectUrl && (
-                <SoundbarPreview
-                  key={`${complexFile.name}-${complexFile.size}-${complexFile.lastModified}`}
-                  file={complexFile}
-                  src={complexObjectUrl}
-                />
-              )}
-              {!collabAvailable && complexKind === "video" && complexObjectUrl && renderVideoEditor(complexObjectUrl)}
-              {/* 공동창작 미체크 = DEMO와 동일한 형태(사용자 요청)라 음원일 때만 커버 이미지
-                  버튼을 보여준다 — 영상은 그 자체가 화면이라 버튼 자체를 숨긴다. */}
-              {!collabAvailable && complexKind === "audio" && (
-                <>
-                  <div className="border-t border-box-gray pt-3">
-                    <span className={blackLabel}>커버 이미지 (필수)</span>
-                  </div>
-                  {coverGifUrl ? (
-                    <div className="flex items-start gap-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={coverGifUrl}
-                        alt="선택한 GIF"
-                        style={{ width: 160, height: 160 }}
-                        className="shrink-0 rounded-xl object-cover"
-                      />
-                      <div className="flex flex-col items-start gap-2 pt-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => setCoverGifUrl(null)}
-                          className="text-sm"
-                        >
-                          GIF 제거
-                        </Button>
-                      </div>
-                    </div>
-                  ) : coverObjectUrl ? (
-                    // 위 메인 업로드 박스와 같은 정사각형 점선 자리에 CoverPositionPicker가
-                    // 들어간다(2026-09-16, 사용자 지적 — 가로로 긴 버튼+파일명 한 줄은 허접해
-                    // 보임). "이미지 제거"는 그 옆 세로 버튼 자리로.
-                    <div className="flex items-start gap-3">
-                      <CoverPositionPicker
-                        src={coverObjectUrl}
-                        position={coverPosition}
-                        onChange={setCoverPosition}
-                      />
-                      <div className="flex flex-col items-start gap-2 pt-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => {
-                            setCoverFile(null);
-                            setCoverFileError(null);
-                            setCoverPosition({ x: 50, y: 50 });
-                          }}
-                          className="text-sm"
-                        >
-                          이미지 제거
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    // 아직 아무것도 안 골랐을 때 — 이미지/GIF 둘 중 하나를 고르는 선택지를
-                    // 같은 정사각형 점선 카드 두 개로 나란히(2026-09-16, 사용자 요청 — GIF
-                    // 쪽도 "고르고 싶게" 디자인).
-                    <div className="flex items-start gap-3">
-                      <CoverFileButton onChange={handleCoverChange} />
-                      <GifPickerButton onClick={() => setGifPickerOpen(true)} />
-                    </div>
-                  )}
-                  {coverFileError && <p className={errorText}>{coverFileError}</p>}
-                </>
-              )}
-              </div>
-            </div>
-          )}
-
-          {/* 제목 — 캡션(부가 설명, 선택)과 분리된 필수 입력(2026-09-15, 사용자 요청 —
-              "캡션칸에 작품제목을 적는 란을 구분해줘"). */}
-          <div className="flex flex-col gap-1.5">
-            <span className={blackLabel}>제목</span>
-            <input
-              type="text"
-              placeholder="작품 제목을 입력해주세요"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              // Safari가 이 필드를 이름/연락처로 오인해 자동완성 아이콘을 얹는 걸 방지
-              // (사용자 제보 — 제목 칸에 사람 아이콘이 떴음).
-              autoComplete="off"
-              className={grayField}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className={blackLabel}>캡션</span>
-            <textarea
-              placeholder="어떤 작업물인가요?"
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              rows={3}
-              className={grayField}
-            />
-          </div>
-
-          {uploadType === "demo" && (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span className={blackLabel}>해시태그</span>
-                <span className="text-xs text-active-gray">
-                  {selectedTags.length}/{MIN_TAGS}개 이상 선택
-                </span>
-              </div>
-
-              {selectedTags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className="flex items-center gap-1 rounded-full bg-demo-bg px-3 py-1.5 text-sm font-medium text-black"
-                    >
-                      #{tag}
-                      <span aria-hidden>×</span>
-                    </button>
-                  ))}
+            )}
+            {mediaKind === "video" && mediaObjectUrl && renderVideoEditor(mediaObjectUrl)}
+            {/* 커버 이미지는 음원일 때만 — 영상은 그 자체가 화면이라 버튼 자체를 안 보여준다
+                (사용자 요청: "없어도 되는 게 아니라 없어야 해"). 콜라보는 채팅 화면이라 커버 없음. */}
+            {!collabAvailable && mediaKind === "audio" && (
+              <>
+                <div className="border-t border-canvas-gray/60 pt-3">
+                  <span className={blackLabel}>커버 이미지 (필수)</span>
                 </div>
-              )}
-
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  placeholder="해시태그 검색 또는 직접 입력"
-                  value={tagSearch}
-                  onChange={(e) => setTagSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addCustomTag();
-                    }
-                  }}
-                  className={grayField}
-                />
-                <Button
-                  type="button"
-                  onClick={addCustomTag}
-                  className="shrink-0 px-4 !bg-box-gray !text-black hover:opacity-80"
-                >
-                  추가
-                </Button>
-              </div>
-              {/* 예전엔 훑어보는 용도로 자동 무한 스크롤(marquee)했는데, 항목이 계속 움직이면
-                  원하는 태그를 클릭하기 불편하다는 피드백으로 고정 목록 + 수동 스크롤로 변경. */}
-              <div className="max-h-48 overflow-y-auto rounded-xl border border-box-gray p-3">
-                {filteredGenres.length === 0 && filteredPopularUserTags.length === 0 ? (
-                  <p className="py-2 text-sm text-active-gray">
-                    일치하는 해시태그가 없어요. Enter나 추가 버튼으로 그대로 추가할 수 있어요.
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {filteredPopularUserTags.length > 0 && (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-medium text-black">
-                          🔥 인기 사용자 태그
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {filteredPopularUserTags.map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => toggleTag(tag)}
-                              className={chipButtonClass(selectedTags.includes(tag))}
-                            >
-                              #{tag}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-1.5">
-                      {filteredGenres.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => toggleTag(tag)}
-                          className={chipButtonClass(selectedTags.includes(tag))}
-                        >
-                          #{tag}
-                        </button>
-                      ))}
+                {coverGifUrl ? (
+                  <div className="flex items-start gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={coverGifUrl}
+                      alt="선택한 GIF"
+                      style={{ width: 160, height: 160 }}
+                      className="shrink-0 rounded-xl object-cover"
+                    />
+                    <div className="flex flex-col items-start gap-2 pt-1">
+                      <Button type="button" variant="ghost" onClick={() => setCoverGifUrl(null)} className="text-sm">
+                        GIF 제거
+                      </Button>
                     </div>
+                  </div>
+                ) : coverObjectUrl ? (
+                  <div className="flex items-start gap-3">
+                    <CoverPositionPicker src={coverObjectUrl} position={coverPosition} onChange={setCoverPosition} />
+                    <div className="flex flex-col items-start gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          setCoverFile(null);
+                          setCoverFileError(null);
+                          setCoverPosition({ x: 50, y: 50 });
+                        }}
+                        className="text-sm"
+                      >
+                        이미지 제거
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-3">
+                    <CoverFileButton onChange={handleCoverChange} />
+                    <GifPickerButton onClick={() => setGifPickerOpen(true)} />
                   </div>
                 )}
+                {coverFileError && <p className={errorText}>{coverFileError}</p>}
+              </>
+            )}
+          </div>
+
+          {/* 제목(필수)·캡션(선택) — 라벨 대신 placeholder로 안내해 세로 공간을 줄였다. */}
+          <input
+            type="text"
+            aria-label="제목"
+            placeholder="제목 (필수)"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            // Safari가 이 필드를 이름/연락처로 오인해 자동완성 아이콘을 얹는 걸 방지
+            // (사용자 제보 — 제목 칸에 사람 아이콘이 떴음).
+            autoComplete="off"
+            className={grayField}
+          />
+          <textarea
+            aria-label="캡션"
+            placeholder="캡션 — 어떤 작업물인가요? (선택)"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            rows={2}
+            className={grayField}
+          />
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className={blackLabel}>해시태그</span>
+              <span className="text-xs text-active-gray">
+                {audience === "public" ? `${selectedTags.length}/${MIN_TAGS}개 이상 선택` : "선택"}
+              </span>
+            </div>
+
+            {selectedTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className="flex items-center gap-1 rounded-full bg-demo-bg px-3 py-1.5 text-sm font-medium text-black"
+                  >
+                    #{tag}
+                    <span aria-hidden>×</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                placeholder="해시태그 검색 또는 직접 입력"
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomTag();
+                  }
+                }}
+                className={grayField}
+              />
+              <Button type="button" onClick={addCustomTag} className="shrink-0 px-4 !bg-box-gray !text-black hover:opacity-80">
+                추가
+              </Button>
+            </div>
+            {/* 예전엔 훑어보는 용도로 자동 무한 스크롤(marquee)했는데, 항목이 계속 움직이면
+                원하는 태그를 클릭하기 불편하다는 피드백으로 고정 목록 + 수동 스크롤로 변경. */}
+            <div className="max-h-32 overflow-y-auto rounded-xl border border-box-gray p-2.5">
+              {filteredGenres.length === 0 && filteredPopularUserTags.length === 0 ? (
+                <p className="py-1 text-sm text-active-gray">
+                  일치하는 해시태그가 없어요. Enter나 추가 버튼으로 그대로 추가할 수 있어요.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {filteredPopularUserTags.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-black">🔥 인기 사용자 태그</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {filteredPopularUserTags.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={chipButtonClass(selectedTags.includes(tag))}
+                          >
+                            #{tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-1.5">
+                    {filteredGenres.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={chipButtonClass(selectedTags.includes(tag))}
+                      >
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 게시 설정 — 옛 memo 기능(공개 범위·시간 제한·콜라보)을 한 줄씩. */}
+          <div className="flex flex-col gap-2 border-t border-box-gray pt-3">
+            <div className="flex items-center gap-3">
+              <span className={`${blackLabel} w-12 shrink-0`}>공개</span>
+              <div className="grid flex-1 grid-cols-3 gap-1.5">
+                {AUDIENCE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setAudience(option.value)}
+                    className={selectableButtonClass(
+                      audience === option.value,
+                      "flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition",
+                    )}
+                  >
+                    {option.value === "companion" && <EyeIcon className="h-3.5 w-3.5" />}
+                    {option.value === "specific" && <LockIcon className="h-3.5 w-3.5" />}
+                    {option.label}
+                  </button>
+                ))}
               </div>
             </div>
-          )}
-
-          {/* DEMO 안내는 게시 유형 바로 아래 설명글로 통합 — 여기는 memo 전용 설정만 남김.
-              공개 범위 선택 버튼과 "초대할 사람"은 위(게시 형태 옆·업로드 위)로 옮겨졌고,
-              여기는 노출 시간/기간만 남는다. */}
-          {uploadType === "complex" && (
-            <>
-              <div className="flex flex-col gap-1.5">
-                <span className={blackLabel}>{collabAvailable ? "노출 기간" : "노출 시간"}</span>
-                <div className="grid grid-cols-4 gap-2">
-                  {(collabAvailable ? COLLAB_EXPIRE_HOURS_OPTIONS : SOLO_EXPIRE_HOURS_OPTIONS).map((option) => (
-                    <button
-                      key={option.hours}
-                      type="button"
-                      onClick={() => setExpireHours(option.hours)}
-                      className={selectableButtonClass(
-                        expireHours === option.hours,
-                        "rounded-xl px-2 py-2 text-sm font-medium transition",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+            {audience === "specific" && (
+              <div className="md:pl-[3.75rem]">
+                <InviteUserPicker
+                  currentUserId={currentUserId ?? ""}
+                  value={inviteUsers}
+                  onChange={setInviteUsers}
+                  inputClassName={grayField}
+                />
               </div>
-            </>
-          )}
+            )}
+            <div className="flex items-center gap-3">
+              <span className={`${blackLabel} w-12 shrink-0`}>노출</span>
+              <div className="grid flex-1 grid-cols-5 gap-1.5">
+                {EXPIRE_OPTIONS.map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => handleExpireChange(option.hours)}
+                    className={selectableButtonClass(
+                      expireHours === option.hours,
+                      "rounded-lg px-1 py-1.5 text-xs font-semibold transition",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`${blackLabel} w-12 shrink-0`}>콜라보</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={collabAvailable}
+                aria-label="콜라보 게시물"
+                onClick={() => handleCollabChange(!collabAvailable)}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${collabAvailable ? "bg-active-gray" : "bg-box-gray"}`}
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-demo-bg shadow transition-all ${
+                    collabAvailable ? "left-[22px]" : "left-0.5"
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-active-gray">음원 스택·채팅으로 함께 만들기</span>
+            </div>
+            <p className="px-1 text-xs text-active-gray">{settingsSummary(audience, expireHours, collabAvailable)}</p>
+          </div>
 
           {error && <p className={errorText}>{error}</p>}
-          <Button type="submit" disabled={loading} className={`mt-1 w-full ${primaryButtonClass}`}>
+          <Button type="submit" disabled={loading} className={`w-full ${primaryButtonClass}`}>
             {loading ? loadingLabel : <span suppressHydrationWarning>&quot;{submitPhrase}&quot;</span>}
           </Button>
         </form>
@@ -1585,32 +1199,38 @@ export default function UploadPage() {
                 그 프레임 밖이라 내용물 높이 그대로 쌓임)와, 좋아요/댓글이 아직 게시 전이라
                 숫자 대신 아이콘만 보여준다는 점(실제로 누를 수도 없어 title 속성으로 안내). */}
             <div
-              className={`overflow-hidden rounded-2xl border ${
-                previewIsMemo ? "border-gray-800 bg-gray-950" : "border-gray-200 bg-white"
-              }`}
+              className="overflow-hidden rounded-2xl border border-gray-200 bg-white"
             >
               <div className="flex items-center gap-2 p-3">
                 <Avatar userId={currentUserId ?? ""} name={authorName} className="h-8 w-8 text-xs" />
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className={`truncate text-sm font-medium ${previewIsMemo ? "text-gray-200" : "text-gray-800"}`}>
+                  <span className="truncate text-sm font-medium text-gray-800">
                     {authorName}
                   </span>
-                  <span className={`truncate text-xs ${previewIsMemo ? "text-gray-500" : "text-gray-400"}`}>
+                  <span className="truncate text-xs text-gray-400">
                     {authorMetaLine}
                   </span>
                 </div>
-                {/* memo는 노출 시간이 필수라 실제 피드처럼 헤더 우측에 남은시간 뱃지가 뜬다
-                    (2026-09-15, 사용자 요청) — DEMO는 영구노출이라 안 뜬다. */}
+                {/* 노출 기간을 정했으면 실제 피드처럼 헤더 우측에 남은시간 뱃지가 뜬다(영구면 없음). */}
                 {previewExpiresAt && <TimeLimitBadge expiresAt={previewExpiresAt} />}
               </div>
               {title && (
-                <p className={`px-3 pb-0.5 text-sm font-bold ${previewIsMemo ? "text-gray-100" : "text-gray-900"}`}>
+                <p className="px-3 pb-0.5 text-sm font-bold text-gray-900">
                   {title}
                 </p>
               )}
-              <p className={`px-3 pb-2 text-sm ${previewIsMemo ? "text-gray-300" : "text-gray-700"}`}>
+              <p className="px-3 pb-2 text-sm text-gray-700">
                 {caption || <span className="text-gray-400">캡션이 여기 보여요</span>}
               </p>
+              {/* 비공개 글은 피드 카드처럼 공개 범위 표시(feedRender.tsx와 같은 모양). */}
+              {audience !== "public" && (
+                <div className="px-3 pb-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                    {audience === "specific" ? <LockIcon className="h-3 w-3" /> : <EyeIcon className="h-3 w-3" />}
+                    {audience === "specific" ? "특정인 공개" : "Companion 공개"}
+                  </span>
+                </div>
+              )}
               <div className="relative flex w-full items-center justify-center bg-black">
                 {previewVideoSrc ? (
                   <video
@@ -1646,9 +1266,7 @@ export default function UploadPage() {
                 </div>
               )}
               <div
-                className={`flex items-center gap-6 border-t px-4 py-3.5 text-base font-semibold ${
-                  previewIsMemo ? "border-gray-800 text-gray-300" : "border-gray-100 text-gray-600"
-                }`}
+                className="flex items-center gap-6 border-t border-gray-100 px-4 py-3.5 text-base font-semibold text-gray-600"
                 title="미리보기라 실제로 누를 수는 없어요"
               >
                 <HeartIcon className="h-5 w-5" />

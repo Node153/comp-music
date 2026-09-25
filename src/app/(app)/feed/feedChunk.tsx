@@ -9,12 +9,12 @@ import { FeedCaughtUpDivider, renderFeedPosts, type FeedPostRow } from "./feedRe
 export async function loadFeedChunk(state: FeedState, isFirstPage: boolean, focusId: string | null = null) {
   const supabase = await createClient();
   const currentUser = await getCurrentUser();
-  const isComplex = state.scope === "memo";
-  if (isComplex && !currentUser) return { nodes: [] as React.ReactNode[], next: null, postCount: 0, focused: false };
 
+  // Companion 목록 — Companion 공개 글의 열람 판정·노크 가능 여부(feedRender.tsx)에 쓴다.
+  // memo가 DEMO에 합쳐져서(2026-09-25) 로그인했으면 항상 필요.
   const [me, { data: companionRows }, page] = await Promise.all([
     currentUser ? getMyUserRow() : Promise.resolve(null),
-    currentUser && isComplex
+    currentUser
       ? supabase
           .from("companions")
           .select("requester_id, addressee_id")
@@ -32,7 +32,6 @@ export async function loadFeedChunk(state: FeedState, isFirstPage: boolean, focu
     supabase,
     currentUser,
     currentUserName: me?.name || "나",
-    isComplex,
     myCompanionIds,
   });
   let n = 0;

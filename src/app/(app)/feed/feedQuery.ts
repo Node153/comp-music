@@ -9,7 +9,9 @@ import type { FeedPostRow } from "./feedRender";
 //      게시자는 최대 2개. 규칙 때문에 빠진 글은 버리지 않고 carry로 다음 페이지 앞에 넘긴다.
 //      다른 게시자가 더 없으면(그 구간 DB를 다 읽음) 규칙을 풀어 그대로 보여준다.
 // 게스트는 재생 기록이 없어 1)만 있다(= 최신순 + 게시자 섞기).
-// memo 고정(Pin) 게시물은 첫 페이지 맨 위에 따로 두고 이후 페이지에서는 exclude로 뺀다.
+// 2026-09-25(사용자 요청) memo 탭을 없애고 DEMO 피드 하나에 전체공개 + 내가 볼 수 있는 Companion·
+// 특정인 공개 글을 함께 싣는다 — feed_candidates의 'all' 범위(0088). 콜라보 고정(Pin) 글은 첫 페이지
+// 맨 위에 따로 두고(태그로 거를 때는 제외) 이후 페이지에서는 exclude로 뺀다.
 // 공유·알림 링크의 post=(focusId)도 같은 방식 — 그 글을 첫 페이지 맨 위에 두고 목록에서는 뺀다.
 
 export const FEED_PAGE_SIZE = 10;
@@ -20,7 +22,8 @@ const MAX_PER_AUTHOR = 2;
 const MIN_PICKS = 4;
 
 export type FeedState = {
-  scope: "demo" | "memo";
+  // 예전엔 "demo" | "memo" 두 피드였다 — 이제 DEMO 하나(값은 호환용으로만 남김).
+  scope: "demo";
   tag: string | null;
   phase: "unplayed" | "played";
   cursor: { ts: string; id: string } | null;
@@ -39,8 +42,12 @@ export type FeedItem = { kind: "post"; post: FeedPostRow } | { kind: "divider" }
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-export function initialFeedState(scope: "demo" | "memo", tag: string | null): FeedState {
-  return { scope, tag, phase: "unplayed", cursor: null, carry: [], exclude: [], lastAuthor: null, dbDone: false, pendingDivider: false };
+// feed_candidates 범위 — 전체공개 + 볼 수 있는 비공개 글(0088). 옛 'demo'(전체공개만)는 이 코드가
+// 배포되기 전 화면을 위해 DB에 남아 있다.
+const RPC_SCOPE = "all";
+
+export function initialFeedState(tag: string | null): FeedState {
+  return { scope: "demo", tag, phase: "unplayed", cursor: null, carry: [], exclude: [], lastAuthor: null, dbDone: false, pendingDivider: false };
 }
 
 function byRecency(a: FeedPostRow, b: FeedPostRow) {
@@ -87,7 +94,7 @@ function diversify(
 async function fetchByIds(supabase: Supabase, s: FeedState, ids: string[]): Promise<FeedPostRow[]> {
   if (ids.length === 0) return [];
   const { data } = await supabase.rpc("feed_candidates", {
-    p_scope: s.scope,
+    p_scope: RPC_SCOPE,
     p_tag: s.tag,
     p_ids: ids,
     p_limit: 50,
@@ -95,8 +102,8 @@ async function fetchByIds(supabase: Supabase, s: FeedState, ids: string[]): Prom
   return (data ?? []) as FeedPostRow[];
 }
 
-// memo 첫 페이지 맨 위 고정 글 — feed/feedRender.tsx의 isPinned와 같은 규칙(post_pins 오버라이드
-// 우선, 없으면 "내 합작 글 또는 초대받은 invite_only 합작 글" 자동 고정).
+// 첫 페이지 맨 위 고정 글 — feed/feedRender.tsx의 isPinned와 같은 규칙(post_pins 오버라이드
+// 우선, 없으면 "내 콜라보 글 또는 초대받은 invite_only 콜라보 글" 자동 고정).
 async function fetchPinned(supabase: Supabase, s: FeedState, userId: string): Promise<FeedPostRow[]> {
   const [{ data: pinRows }, { data: accessRows }, { data: ownCollab }] = await Promise.all([
     supabase.from("post_pins").select("post_id, pinned").eq("user_id", userId),
@@ -106,8 +113,7 @@ async function fetchPinned(supabase: Supabase, s: FeedState, userId: string): Pr
       .select("id")
       .eq("user_id", userId)
       .eq("collab_available", true)
-      .eq("status", "published")
-      .neq("visibility", "public"),
+      .eq("status", "published"),
   ]);
   const unpinned = new Set((pinRows ?? []).filter((r) => !r.pinned).map((r) => r.post_id));
   const forced = new Set((pinRows ?? []).filter((r) => r.pinned).map((r) => r.post_id));
@@ -134,7 +140,7 @@ export async function buildFeedPage(
   let postCount = 0;
   let focused = false;
 
-  // 링크로 콕 집어 들어온 글 — feed_candidates가 탭(scope)·열람 권한을 그대로 걸러서, 이 탭에서
+  // 링크로 콕 집어 들어온 글 — feed_candidates가 열람 범위(본인·Companion·초대)를 그대로 걸러서,
   // 볼 수 없는 글이면 그냥 무시된다.
   if (isFirstPage && focusId) {
     const [post] = await fetchByIds(supabase, s, [focusId]);
@@ -145,7 +151,7 @@ export async function buildFeedPage(
     }
   }
 
-  if (isFirstPage && s.scope === "memo" && userId) {
+  if (isFirstPage && !s.tag && userId) {
     const pinned = (await fetchPinned(supabase, s, userId)).filter((p) => !s.exclude.includes(p.id));
     for (const post of pinned) items.push({ kind: "post", post });
     s.exclude.push(...pinned.map((p) => p.id));
@@ -163,7 +169,7 @@ export async function buildFeedPage(
     const need = POOL_SIZE - pool.length;
     if (!s.dbDone && need > 0) {
       const { data } = await supabase.rpc("feed_candidates", {
-        p_scope: s.scope,
+        p_scope: RPC_SCOPE,
         p_tag: s.tag,
         p_played: s.phase === "played",
         p_before_ts: s.cursor?.ts ?? null,

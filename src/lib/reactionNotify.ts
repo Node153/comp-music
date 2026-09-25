@@ -30,7 +30,7 @@ export type PostInfo = { id: string; user_id: string; title: string | null; capt
 // "다음 Drop 올리기" 배너(NotifyLandingBanner)를 띄운다. 남의 글로 보내는 링크(Companion 새 글 등)는
 // ownPost=false로 부른다.
 export function postHref(post: Pick<PostInfo, "id" | "visibility">, ownPost = true) {
-  return `/feed?feed=${post.visibility === "public" ? "completion" : "complex"}&post=${post.id}${ownPost ? "&from=notify" : ""}#${post.id}`;
+  return `/feed?feed=completion&post=${post.id}${ownPost ? "&from=notify" : ""}#${post.id}`;
 }
 
 export function postLabel(post: PostInfo) {

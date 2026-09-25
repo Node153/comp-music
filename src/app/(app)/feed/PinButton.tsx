@@ -54,7 +54,7 @@ export function PinButton({
       onClick={toggle}
       disabled={pending}
       aria-pressed={pinned}
-      title={pinned ? "고정 해제" : "이 게시물을 memo 상단에 고정"}
+      title={pinned ? "고정 해제" : "이 게시물을 피드 상단에 고정"}
       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition hover:bg-gray-100 dark:hover:bg-gray-800 ${
         pinned
           ? "text-violet-600 dark:text-violet-300"

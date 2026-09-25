@@ -2,9 +2,7 @@
 
 // 로그인 전 방문자용 상단바(TopNav 게스트 버전) — /feed DEMO 미리보기 전용(0024).
 // 로고+피드탭은 TopNav와 동일하게 두고, Drop/Chat/Alerts/Me/Help 클러스터 대신
-// 로그인/가입하기 링크만 보여준다. memo 탭을 눌러도 feed/page.tsx가 자물쇠 화면으로
-// 막아주니 여기서 탭 자체를 숨기거나 막을 필요는 없다 — 오히려 눌러보게 두는 게
-// "가입하면 이것도 볼 수 있다"는 유인이 된다.
+// 로그인/가입하기 링크만 보여준다. memo 탭(지금은 명반 차트)은 게스트에게도 열려 있다.
 // 2026-09-23(사용자 요청) — 예전엔 md:flex라 모바일에서 이 바 자체가 아예 안 보였다(로그인
 // 유저용 MobileTopBar/BottomNav도 게스트 화면엔 안 붙어서 모바일 게스트는 상하단 UI가
 // 하나도 없이 콘텐츠만 덩그러니 스크롤됐음). 좁은 화면에서도 한 줄에 다 들어가게 패딩만
@@ -16,7 +14,7 @@ import { SunIcon, MoonIcon } from "@/components/icons";
 
 const FEED_TABS = [
   { value: "completion", label: "DEMO", Icon: SunIcon },
-  { value: "complex", label: "memo", Icon: MoonIcon },
+  { value: "complex", label: "memo", Icon: MoonIcon }, // 지금은 명반 차트(TopNav 참고)
 ];
 
 export function GuestTopNav() {
@@ -48,7 +46,7 @@ export function GuestTopNav() {
               title={
                 tab.value === "completion"
                   ? "전체공개 게시물 · 노출 시간 영구"
-                  : "가입하고 Companion을 만들면 볼 수 있어요"
+                  : "명반 차트는 누구나 볼 수 있어요"
               }
               className={`flex h-full shrink-0 items-center gap-1 whitespace-nowrap border-b-2 px-1.5 text-xs font-bold transition sm:gap-1.5 sm:px-4 sm:text-sm ${
                 isActive

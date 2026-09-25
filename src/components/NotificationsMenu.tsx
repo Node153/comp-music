@@ -311,7 +311,7 @@ export function NotificationsMenu({
                                   {item.type === "companion_request" && "님이 Companion을 신청했어요"}
                                   {item.type === "knock" && "님이 비공개 게시물에 노크했어요"}
                                   {item.type === "companion_post" &&
-                                    (item.isDemo ? "님이 새 Drop을 올렸어요" : "님이 memo에 새 글을 올렸어요")}
+                                    (item.isDemo ? "님이 새 Drop을 올렸어요" : "님이 Companion에게만 보이는 새 글을 올렸어요")}
                                 </>
                               )}
                             </span>

@@ -49,7 +49,7 @@ export function WithdrawAccountSection() {
       <ul className="list-disc space-y-1 pl-5 text-xs text-red-700/90 dark:text-red-400/90">
         <li>실명·생년월일·프로필 정보가 삭제돼요</li>
         <li>DEMO에 올린 게시물·댓글·좋아요·Kick이 모두 삭제돼요(복구 불가)</li>
-        <li>memo에서 나눈 대화·공동 작업물은 상대방을 위해 남지만, 내 이름은 "탈퇴한 사용자"로 바뀌어요</li>
+        <li>콜라보 게시물에서 나눈 대화·공동 작업물은 상대방을 위해 남지만, 내 이름은 "탈퇴한 사용자"로 바뀌어요</li>
         <li>같은 계정으로 다시 로그인할 수 없어요</li>
       </ul>
       {error && <p className={errorText}>{error}</p>}

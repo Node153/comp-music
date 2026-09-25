@@ -356,6 +356,81 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["kicks"]["Insert"]>;
         Relationships: [];
       };
+      // 명반 차트(0087) — 장르 목록(상위 분류 grp 아래 세부 장르 slug). 누구나 읽기.
+      album_genres: {
+        Row: {
+          slug: string;
+          name: string;
+          grp: string;
+          grp_name: string;
+          sort_order: number;
+          active: boolean;
+          created_by: string | null; // 0088 — 회원이 추가한 장르면 추가한 사람
+          created_at: string;
+        };
+        Insert: {
+          slug: string;
+          name: string;
+          grp: string;
+          grp_name: string;
+          sort_order: number;
+          active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["album_genres"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0087 — 추천된 앨범. INSERT는 service role만(서버가 Apple/MusicBrainz에서 다시 조회한 정보).
+      albums: {
+        Row: {
+          id: string;
+          source: "itunes" | "musicbrainz";
+          source_id: string;
+          title: string;
+          artist: string;
+          artwork_url: string | null;
+          release_year: number | null;
+          source_url: string | null;
+          genre: string;
+          added_by: string | null;
+          certified_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          source: "itunes" | "musicbrainz";
+          source_id: string;
+          title: string;
+          artist: string;
+          artwork_url?: string | null;
+          release_year?: number | null;
+          source_url?: string | null;
+          genre: string;
+          added_by?: string | null;
+          certified_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["albums"]["Insert"]>;
+        Relationships: [];
+      };
+      // 0087 — 추천. 쓰기는 recommend_album RPC만, 취소는 본인 것만 DELETE.
+      album_recs: {
+        Row: {
+          album_id: string;
+          user_id: string;
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          album_id: string;
+          user_id: string;
+          reason?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["album_recs"]["Insert"]>;
+        Relationships: [];
+      };
       // 게시물 조회자 기록(0051) — memo 공동창작 미체크 게시물의 "본 사람" 목록용.
       // 목록은 작성자 본인만 볼 수 있다(RLS post_views_select_owner).
       post_views: {
@@ -996,6 +1071,35 @@ export interface Database {
         Args: { pid: string };
         Returns: undefined;
       };
+      // 0087 — 명반 추천(세부 장르당 5장, 첫 추천은 이유 필수). 추천 후 그 앨범의 추천 수를 돌려준다.
+      recommend_album: {
+        Args: { p_album_id: string; p_genre: string; p_reason: string | null };
+        Returns: number;
+      };
+      // 0088 — 명반 차트 장르 추가(회원). 비슷한 이름이 이미 있으면 그 장르를 existed=true로 돌려준다.
+      add_album_genre: {
+        Args: { p_grp: string; p_name: string };
+        Returns: { slug: string; name: string; grp: string; grp_name: string; sort_order: number; existed: boolean }[];
+      };
+      // 0087 — 명반 차트 화면용(추천 1개 이상인 앨범 전부 + 추천한 사람 닉네임·이유). 비로그인도 가능.
+      album_chart: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          source: "itunes" | "musicbrainz";
+          source_id: string;
+          title: string;
+          artist: string;
+          artwork_url: string | null;
+          release_year: number | null;
+          source_url: string | null;
+          genre: string;
+          certified_at: string | null;
+          rec_count: number;
+          reached_at: string;
+          recs: { user_id: string; nickname: string; reason: string | null; created_at: string }[];
+        }[];
+      };
       // 0071 — 게시물별 Kick한 사람(닉네임만, 승인 회원만).
       post_kickers: {
         Args: { pids: string[] };
@@ -1135,7 +1239,7 @@ export interface Database {
       // feed_candidates(0072) — 피드 한 페이지분 후보(키셋 커서, 재생 여부·scope 필터).
       feed_candidates: {
         Args: {
-          p_scope: "demo" | "memo";
+          p_scope: "demo" | "memo" | "all";
           p_tag?: string | null;
           p_played?: boolean;
           p_before_ts?: string | null;

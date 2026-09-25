@@ -329,7 +329,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
               knockablePosts.map((post, i) => (
                 <Link
                   key={post.postId}
-                  href={`/feed?feed=complex#${post.postId}`}
+                  href={`/feed?post=${post.postId}#${post.postId}`}
                   style={{ animationDelay: `${i * 100}ms` }}
                   className="animate-peak-in flex items-center gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 transition hover:bg-violet-100 dark:border-violet-900/40 dark:bg-violet-950/30 dark:hover:bg-violet-950/50"
                 >

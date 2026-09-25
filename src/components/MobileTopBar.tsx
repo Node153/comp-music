@@ -17,7 +17,7 @@ import { useUpdatesStatus } from "@/components/UpdatesStatusContext";
 
 const FEED_TABS = [
   { value: "completion", label: "DEMO", Icon: SunIcon },
-  { value: "complex", label: "memo", Icon: MoonIcon },
+  { value: "complex", label: "memo", Icon: MoonIcon }, // 지금은 명반 차트(TopNav 참고)
 ];
 
 export function MobileTopBar({ currentUserId }: { currentUserId: string }) {

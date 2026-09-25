@@ -1,6 +1,6 @@
 "use client";
 
-// 신규 유저 첫 방문 가이드 — DEMO/memo 탭, PEAK, 노크 기능을 4단계 팝업으로 소개한다.
+// 신규 유저 첫 방문 가이드 — DEMO/memo(명반 차트) 탭, PEAK, 노크 기능을 4단계 팝업으로 소개한다.
 // 모달 뼈대(모바일 bottom-sheet: items-end / 데스크톱 중앙: md:items-center, 배경 클릭 시
 // 닫힘)는 GuestSignupPrompt.tsx와 같은 패턴을 그대로 따른다. 서버에 "봤는지" 상태를 둘
 // 만큼 중요한 기능은 아니라 localStorage 플래그 하나로 충분(comp:demo-playlist:v1과 같은
@@ -24,15 +24,16 @@ const STEPS: Step[] = [
     panel: "demo",
     eyebrow: "1 · 4 — DEMO 탭",
     title: "낮엔 데모, 다 보여드려요",
-    desc: "전체공개 게시물이 모이는 곳이에요. 노출 시간이 영구라서 언제 들어와도 구경할 수 있어요.",
-    tag: "전체공개 · 노출 시간 영구",
+    // 2026-09-25 memo 작업물 기능(공개 범위·시간 제한·콜라보)이 DEMO 업로드 옵션으로 합쳐짐.
+    desc: "작업물이 모이는 곳이에요. 올릴 때 전체·Companion·특정인 공개와 노출 기간, 콜라보 여부를 고를 수 있어요.",
+    tag: "기본은 전체 공개 · 노출 영구",
   },
   {
     panel: "memo",
     eyebrow: "2 · 4 — memo 탭",
-    title: "밤엔 memo, Companion끼리만",
-    desc: "Companion으로 연결된 사람들에게만 보이는 공간이에요. 노출 시간을 직접 정해서 살짝만 열어둘 수 있어요.",
-    tag: "Companion 공개 · 노출 시간 설정 필수",
+    title: "밤엔 memo, 명반 차트",
+    desc: "회원들이 장르별로 추천한 명반 순위예요. 2명이 추천하면 차트에 오르고, 10명이 추천하면 명반으로 인증돼요.",
+    tag: "장르별 Top 10 · 누구나 추천",
   },
   {
     panel: "peak",
@@ -45,7 +46,7 @@ const STEPS: Step[] = [
     panel: "knock",
     eyebrow: "4 · 4 — 노크",
     title: "🚪 몰래 보기 없기, 노크하고 보기",
-    desc: "비공개(초대전용) 게시물은 잠겨 있어요. 문을 두드리듯 노크하면 작성자에게 열람 요청이 가요.",
+    desc: "특정인 공개 게시물은 잠겨 있어요. 문을 두드리듯 노크하면 작성자에게 열람 요청이 가요.",
     tag: "초대전용 게시물 · 요청 승인 후 열람",
   },
 ];

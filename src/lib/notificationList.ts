@@ -184,7 +184,6 @@ export async function getNotificationItems(
 
   const myPostIds = (myPosts ?? []).map((p) => p.id);
   const myInviteOnlyPostIds = (myPosts ?? []).filter((p) => p.visibility === "invite_only").map((p) => p.id);
-  const visibilityByPostId = new Map((myPosts ?? []).map((p) => [p.id, p.visibility]));
   const seenAt = me?.notifications_seen_at ?? new Date(0).toISOString();
 
   const [{ data: likes }, { data: comments }, { data: knocks }, { data: kicks }] =
@@ -243,7 +242,7 @@ export async function getNotificationItems(
 
   function hrefFor(postId: string) {
     // 내 게시물 알림 → 피드에 "다음 Drop 올리기" 배너(from=notify, NotifyLandingBanner).
-    return `/feed?feed=${visibilityByPostId.get(postId) === "public" ? "completion" : "complex"}&post=${postId}&from=notify#${postId}`;
+    return `/feed?feed=completion&post=${postId}&from=notify#${postId}`;
   }
   const titleByPostId = new Map((myPosts ?? []).map((p) => [p.id, p.title || p.caption || "회원님의 게시물"]));
   function isUnread(createdAt: string) {
@@ -325,7 +324,7 @@ export async function getNotificationItems(
         title: p.title || p.caption || "새 게시물",
         isDemo: p.visibility === "public",
         createdAt: p.published_at ?? p.created_at,
-        href: `/feed?feed=${p.visibility === "public" ? "completion" : "complex"}&post=${p.id}#${p.id}`,
+        href: `/feed?feed=completion&post=${p.id}#${p.id}`,
         unread: isUnread(p.published_at ?? p.created_at),
       }),
     ),

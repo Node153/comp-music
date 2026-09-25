@@ -13,6 +13,7 @@ import { SunIcon, MoonIcon } from "@/components/icons";
 // 특정인 초대) 두 피드 탭. 아이콘은 ☀/☾ 문자 대신 SVG(icons.tsx 설명 참고 — iOS 이모지 문제).
 const FEED_TABS = [
   { value: "completion", label: "DEMO", Icon: SunIcon },
+  // 2026-09-25 memo 작업물 기능은 DEMO에 통합됐고, memo 탭은 실험 기능 자리(지금은 명반 차트).
   { value: "complex", label: "memo", Icon: MoonIcon },
 ];
 
@@ -44,7 +45,7 @@ export function TopNav() {
               title={
                 tab.value === "completion"
                   ? "전체공개 게시물 · 노출 시간 영구"
-                  : "Companion 공개 게시물 · 노출 시간 설정 필수"
+                  : "명반 차트 — 회원들이 장르별로 추천한 앨범 순위"
               }
               className={`flex h-full items-center gap-1.5 border-b-2 px-4 text-sm font-bold transition ${
                 isActive

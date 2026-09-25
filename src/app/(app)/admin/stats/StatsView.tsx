@@ -297,7 +297,7 @@ export function StatsView({
                   <tr key={p.id} className="border-b border-gray-100 last:border-0">
                     <td className="max-w-[16rem] py-2 pr-3">
                       <Link
-                        href={`/feed?feed=${p.visibility === "public" ? "completion" : "complex"}#${p.id}`}
+                        href={`/feed?post=${p.id}#${p.id}`}
                         className="block truncate text-gray-900 hover:underline"
                         title={p.title}
                       >

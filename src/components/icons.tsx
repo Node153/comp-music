@@ -676,3 +676,13 @@ export function LinkIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// 명반 차트(Lab) — 커버가 없는 앨범 자리.
+export function DiscIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
