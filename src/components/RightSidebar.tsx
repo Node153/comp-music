@@ -7,7 +7,7 @@
 // DEMO 쪽으로 옮겼다(memo 탭은 이제 명반 차트). 비공개 글은 방장과 Companion인 사람에게만
 // 보이므로(feed/page.tsx와 동일한 원칙) 여기서도 Companion 필터를 거친 후보만 후보로 삼는다 —
 // 안 그러면 RLS(post_access_insert_knock_self)에서 막히는 죽은 노크 버튼을 보여주게 된다.
-// 목록이 비면 섹션 자체를 숨긴다(사이드바에 빈 안내 박스를 늘리지 않으려고).
+// 목록이 비어도 섹션은 보여준다(사용자 요청).
 import { InstallAdCard } from "@/components/InstallAdCard";
 import { AlbumPromoCard } from "@/components/AlbumPromoCard";
 import Link from "next/link";
@@ -365,13 +365,19 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
         </div>
       </section>
 
-      {!isMemoTab && knockablePosts !== null && knockablePosts.length > 0 && (
+      {!isMemoTab && (
         <section>
           <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
             <LockIcon className="h-3 w-3" /> 노크 가능한 게시물
           </h2>
           <div className="mt-1 flex flex-col gap-1">
-            {knockablePosts.map((post, i) => (
+            {knockablePosts === null ? (
+              <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">불러오는 중...</p>
+            ) : knockablePosts.length === 0 ? (
+              <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+                노크할 수 있는 비공개 게시물이 없어요
+              </p>
+            ) : knockablePosts.map((post, i) => (
               <Link
                 key={post.postId}
                 href={`/feed?post=${post.postId}#${post.postId}`}
