@@ -2,11 +2,12 @@
 
 // 데스크톱 우측 사이드바 — Discord 접속자 리스트 참고. 페이스북 카드형 박스 대신
 // 아바타+이름 한 줄로 축약해서 위계를 낮춘다.
-// memo(구 Complex) 탭에서는 "실시간 PEAK" 대신 노크 가능한 비공개(초대전용) 게시물 목록을
-// 보여준다 — 실제 posts/post_access 기반(0012_complex_access_and_chat). memo는 방장과
-// Companion인 게시물만 보이므로(feed/page.tsx와 동일한 원칙) 여기서도 Companion 필터를 거친
-// 후보만 후보로 삼는다 — 안 그러면 RLS(post_access_insert_knock_self)에서 막히는 죽은
-// 노크 버튼을 보여주게 된다.
+// PEAK 아래에 노크 가능한 비공개(특정인 공개) 게시물 목록을 보여준다 — 실제 posts/post_access
+// 기반(0012_complex_access_and_chat). memo가 DEMO로 통합되면서(0088) 이 목록도 memo 탭에서
+// DEMO 쪽으로 옮겼다(memo 탭은 이제 명반 차트). 비공개 글은 방장과 Companion인 사람에게만
+// 보이므로(feed/page.tsx와 동일한 원칙) 여기서도 Companion 필터를 거친 후보만 후보로 삼는다 —
+// 안 그러면 RLS(post_access_insert_knock_self)에서 막히는 죽은 노크 버튼을 보여주게 된다.
+// 목록이 비면 섹션 자체를 숨긴다(사이드바에 빈 안내 박스를 늘리지 않으려고).
 import { InstallAdCard } from "@/components/InstallAdCard";
 import { AlbumPromoCard } from "@/components/AlbumPromoCard";
 import Link from "next/link";
@@ -124,7 +125,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
   }, [currentUserId]);
 
   useEffect(() => {
-    if (!isMemoTab) return;
+    if (isMemoTab) return;
     let cancelled = false;
     const supabase = createClient();
 
@@ -193,7 +194,6 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
   }, [isMemoTab, currentUserId]);
 
   useEffect(() => {
-    if (isMemoTab) return;
     let cancelled = false;
 
     // PEAK 판정(posts.peaked_at) 자체는 이제 DB에 영구 고정돼있어(0056 마이그레이션) 여기서
@@ -216,7 +216,7 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [isMemoTab]);
+  }, []);
 
   return (
     <aside className="sticky top-[4.5rem] hidden h-fit w-full flex-col gap-4 md:flex">
@@ -311,51 +311,11 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
       </section>
 
       <section>
-        {isMemoTab ? (
-          <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-            <LockIcon className="h-3 w-3" /> 노크 가능한 게시물
-          </h2>
-        ) : (
-          <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            <FlameIcon className="h-3.5 w-3.5 text-red-500 dark:text-red-400" /> Peak 게시물
-          </h2>
-        )}
+        <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <FlameIcon className="h-3.5 w-3.5 text-red-500 dark:text-red-400" /> Peak 게시물
+        </h2>
         <div className="mt-1 flex flex-col gap-1">
-          {isMemoTab ? (
-            knockablePosts === null ? (
-              <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">불러오는 중...</p>
-            ) : knockablePosts.length === 0 ? (
-              <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
-                노크할 수 있는 비공개 게시물이 없어요
-              </p>
-            ) : (
-              knockablePosts.map((post, i) => (
-                <Link
-                  key={post.postId}
-                  href={`/feed?post=${post.postId}#${post.postId}`}
-                  style={{ animationDelay: `${i * 100}ms` }}
-                  className="animate-peak-in flex items-center gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 transition hover:bg-violet-100 dark:border-violet-900/40 dark:bg-violet-950/30 dark:hover:bg-violet-950/50"
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs dark:bg-black/30">
-                    <LockIcon className="h-3.5 w-3.5" />
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <span className="truncate text-sm text-gray-700 dark:text-violet-200">{post.authorName}</span>
-                      {post.pending && (
-                        <span className="shrink-0 text-[10px] font-bold text-violet-500 dark:text-violet-400">
-                          요청됨
-                        </span>
-                      )}
-                    </div>
-                    <span className="truncate text-[11px] text-gray-400 dark:text-violet-400/70">
-                      {post.caption || "비공개 게시물"} · {timeAgo(post.publishedAt)}
-                    </span>
-                  </div>
-                </Link>
-              ))
-            )
-          ) : peakPosts === null ? (
+          {peakPosts === null ? (
             <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">불러오는 중...</p>
           ) : peakPosts.length === 0 ? (
             <p className="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
@@ -404,6 +364,39 @@ export function RightSidebar({ currentUserId }: { currentUserId: string }) {
           )}
         </div>
       </section>
+
+      {!isMemoTab && knockablePosts !== null && knockablePosts.length > 0 && (
+        <section>
+          <h2 className="flex items-center gap-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            <LockIcon className="h-3 w-3" /> 노크 가능한 게시물
+          </h2>
+          <div className="mt-1 flex flex-col gap-1">
+            {knockablePosts.map((post, i) => (
+              <Link
+                key={post.postId}
+                href={`/feed?post=${post.postId}#${post.postId}`}
+                style={{ animationDelay: `${i * 100}ms` }}
+                className="animate-peak-in flex items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-gray-200/60 dark:hover:bg-gray-900"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                  <LockIcon className="h-3.5 w-3.5" />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm text-gray-700 dark:text-gray-200">{post.authorName}</span>
+                    {post.pending && (
+                      <span className="shrink-0 text-[10px] font-bold text-gray-500 dark:text-gray-400">요청됨</span>
+                    )}
+                  </div>
+                  <span className="truncate text-[11px] text-gray-400 dark:text-gray-500">
+                    {post.caption || "비공개 게시물"} · {timeAgo(post.publishedAt)}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 앱 설치 광고(InstallAdCard) — 설치 유도가 중요해서 팝업과 별개로 사이드바에 상시 노출.
           이미 설치한 앱이거나 닫은 지 7일이 안 됐으면 알아서 안 그린다. */}
