@@ -157,6 +157,14 @@ export default function SignupPage() {
       return;
     }
 
+    // 이미 인증까지 끝난 이메일이면 Supabase는 에러 없이 identities가 빈 가짜 user를
+    // 돌려주고 메일을 보내지 않는다(이메일 존재 여부 노출 방지) — "메일을 보냈습니다"로
+    // 안내하면 오지 않는 메일을 기다리게 되므로 여기서 걸러낸다.
+    if (data.user && data.user.identities?.length === 0) {
+      setError("이미 가입된 이메일입니다. 로그인하거나 비밀번호 찾기를 이용해주세요.");
+      return;
+    }
+
     // 이메일 인증(Confirm email)이 켜져 있으면 session이 바로 발급되지 않음
     if (!data.session) {
       setPendingConfirm(true);
