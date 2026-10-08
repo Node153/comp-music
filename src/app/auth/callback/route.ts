@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // 비밀번호 재설정 메일 링크가 여기로 온 경우(proxy.ts의 "옛 주소로 돌아온 인증") — 로그인만 시키고
+      // 비밀번호 재설정 메일 링크가 (/reset-password가 아니라) 여기로 온 경우 — 로그인만 시키고
       // 피드로 보내면 새 비밀번호를 정할 기회가 없으니 재설정 화면으로 보낸다. 그 화면은 세션이 있으면
       // 바로 입력 폼을 띄운다. redirectType은 supabase-js가 실제로 돌려주지만 타입에는 아직 없다.
       const { redirectType } = data as { redirectType?: string | null };

@@ -29,26 +29,25 @@ const PUBLIC_PATHS = [
   "/beta-notice",
 ];
 const UNAPPROVED_ALLOWED_PATHS = ["/status", "/verify/type", "/verify/documents"];
+const CANONICAL_ORIGIN = "https://www.compmusic.kr";
+const LEGACY_AUTH_LANDING_PATHS = ["/auth/callback", "/auth/confirm", "/reset-password"];
 
 export async function proxy(request: NextRequest) {
-  // 옛 주소로 돌아온 인증(2026-10-08) — 운영 Supabase의 Site URL이 아직 comp-music.vercel.app이고
-  // 허용 목록에 www.compmusic.kr이 없어서, compmusic.kr에서 시작한 소셜로그인·가입 메일 인증·비밀번호
-  // 재설정은 요청한 복귀 주소 대신 옛 주소의 루트(/?code=… 또는 /?error=…)로 돌아온다. 그런데 PKCE
-  // 검증값 쿠키는 시작한 도메인(www)에만 있어서 여기서는 세션으로 못 바꾼다 — 그대로 두면 로그인이 안
-  // 된 채 vercel 주소에 떨어진다(가입 화면이 vercel 주소로 열리던 원인). 시작한 도메인의 콜백으로
-  // 그대로 넘겨준다. 옛 주소에서 시작한 흐름은 /auth/callback으로 바로 오므로 여기 안 걸린다.
-  // Supabase 대시보드에서 Site URL·Redirect URLs를 고친 뒤에는 이 분기를 탈 일이 없다(남겨둬도 무해).
+  // 옛 주소 강제 이동(2026-10-08 사용자 결정) — comp-music.vercel.app(Vercel 기본 주소)도 같은 운영
+  // 배포를 가리켜서 사이트가 그대로 열렸고, 로그인 세션·홈 화면 앱·푸시 구독이 도메인마다 따로라
+  // 회원이 두 주소에 갈라져 있었다. 이제 옛 주소로 온 화면 요청은 같은 경로의 www.compmusic.kr로 보낸다.
+  // 옛 주소에 로그인돼 있던 사람은 www에서 다시 로그인해야 하므로 moved=1을 붙여 로그인 화면이 이유를
+  // 알려주게 한다(아래 "옛 주소에서 넘어온 요청"). 인증 착지 화면 셋은 예외 — 이동 전에 옛 주소에서
+  // 시작한 가입 메일·재설정 메일·소셜로그인은 PKCE 검증값 쿠키가 옛 주소에만 있어서 거기서 끝내야 한다.
   // 접속한 도메인은 Host 헤더로 본다 — request.nextUrl의 호스트는 실행 환경에 따라 서버가 뜬 주소
-  // (로컬은 항상 localhost)로 채워져서 믿을 수 없다.
-  const { searchParams } = request.nextUrl;
-  if (
-    request.headers.get("host") === LEGACY_HOST &&
-    request.nextUrl.pathname === "/" &&
-    (searchParams.has("code") || searchParams.has("error"))
-  ) {
-    return NextResponse.redirect(
-      `https://www.compmusic.kr/auth/callback${request.nextUrl.search}`,
-    );
+  // (로컬은 항상 localhost)로 채워져서 믿을 수 없다. /api·정적 파일·sw.js는 matcher에서 빠져 있어
+  // 옛 주소에서도 그대로 응답한다(크론, 옛 주소에 남은 푸시 구독).
+  const { pathname, searchParams } = request.nextUrl;
+  if (request.headers.get("host") === LEGACY_HOST && !LEGACY_AUTH_LANDING_PATHS.includes(pathname)) {
+    const target = new URL(`${pathname}${request.nextUrl.search}`, CANONICAL_ORIGIN);
+    const hadSession = request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(\.\d+)?$/.test(name));
+    if (hadSession) target.searchParams.set("moved", "1");
+    return NextResponse.redirect(target);
   }
 
   let response = NextResponse.next({ request });
@@ -76,8 +75,20 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
+
+  // 옛 주소에서 넘어온 요청(moved=1) — 여기(www)에 로그인돼 있으면 표시만 떼고 가던 화면으로,
+  // 아니면 로그인 화면으로 보내 "주소가 바뀌어서 다시 로그인해야 한다"는 안내를 띄운다(login/page.tsx).
+  if (searchParams.has("moved") && pathname !== "/login") {
+    const next = new URL(request.url);
+    if (user) {
+      next.searchParams.delete("moved");
+    } else {
+      next.pathname = "/login";
+      next.search = "?moved=1";
+    }
+    return NextResponse.redirect(next);
+  }
 
   if (!user) {
     if (isPublicPath) return response;

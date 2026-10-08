@@ -7,7 +7,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
-import { field, errorText, pageTitle } from "@/components/ui/styles";
+import { field, errorText, pageTitle, mutedText } from "@/components/ui/styles";
 
 // 로그인 화면 배경음악/배경 이미지 — 관리자가 /admin/login-screen에서 직접 올린 값
 // (site_settings.login_bgm_key / login_background_key)을 /api/login-screen로 조회해서 쓴다.
@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [moved, setMoved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [musicOn, setMusicOn] = useState(false);
   const [volume, setVolume] = useState(0.6);
@@ -41,6 +42,8 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get("error");
     if (oauthError) setError(oauthError);
+    // 옛 주소(comp-music.vercel.app)에 로그인돼 있다가 넘어온 사람(proxy.ts "옛 주소 강제 이동").
+    if (params.has("moved")) setMoved(true);
   }, []);
 
   useEffect(() => {
@@ -180,6 +183,11 @@ export default function LoginPage() {
         }`}
       >
         <h1 className={pageTitle}>로그인</h1>
+        {moved && (
+          <p className={`-mt-4 ${mutedText}`}>
+            주소가 compmusic.kr로 바뀌었어요. 번거롭지만 한 번만 다시 로그인해 주세요.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
             type="email"
