@@ -38,8 +38,11 @@
 // - 빠져 있던 항목: 푸시 알림 구독 정보(push_subscriptions, 0074), 가입 심사 때 운영자가 메시지로
 //   확인하는 학교·전공·학번, 실명 표시 범위(본인·Companion·운영자), 명반 추천.
 // - 탈퇴는 프로필 수정 화면에서 직접 가능(WithdrawAccountSection), Kakao 로그인은 버튼 숨김 상태.
+// - 가입을 끝내지 않은 계정(같은 날 추가): 소셜로그인만 하고 온보딩을 안 마친 계정은 expire-posts 크론이
+//   purge_incomplete_signups(0097)로 지운다. 시간은 크론과 같은 상수(INCOMPLETE_SIGNUP_KEEP_HOURS)에서 읽는다.
 import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
 import { AGREEMENT_VERSIONS } from "@/lib/agreements";
+import { INCOMPLETE_SIGNUP_KEEP_HOURS } from "@/lib/adminMembers";
 
 const ANNOUNCED_DATE = "2026-10-08";
 // 시행일자 = 가입 동의 버전(src/lib/agreements.ts) — 개정하면 거기서 올린다.
@@ -184,6 +187,10 @@ export default function PrivacyPolicyPage() {
           head={["정보", "보유기간"]}
           rows={[
             ["계정·프로필 정보(이메일, 실명, 생년월일, 닉네임, 프로필 항목)", "회원 탈퇴 시까지"],
+            [
+              "가입 절차를 끝내지 않은 계정의 정보(소셜로그인 후 실명·생년월일 입력과 약관 동의를 마치지 않은 경우 — 소셜 서비스가 제공한 이메일·이름)",
+              `가입을 시작한 때와 마지막으로 로그인한 때부터 ${INCOMPLETE_SIGNUP_KEEP_HOURS}시간이 지나면 자동 삭제(정리는 하루 1회 이루어져 실제 삭제까지 최대 ${INCOMPLETE_SIGNUP_KEEP_HOURS * 2}시간). 삭제 후 다시 로그인하면 처음부터 새로 가입`,
+            ],
             [
               "인증서류 원본(서류 기반 인증 재개 시)",
               "심사(승인/반려) 완료일로부터 7일 이내 파기. 심사 결과에 이의신청이 제기된 경우 그 절차 종료 후 7일 이내 파기",
@@ -387,7 +394,7 @@ export default function PrivacyPolicyPage() {
         <p className="text-xs text-gray-400">
           시행일자 2026-08-19 버전 → 2026-08-29 개정(전면 개정) → 2026-09-25 개정(이용 통계 고지) →
           2026-10-15 개정(중복 가입 제한·게시물 보유기간·푸시 알림·가입 심사 확인 정보·실명 표시
-          범위 고지 정비)
+          범위 고지 정비, 가입 미완료 계정 자동 삭제 기준 추가)
         </p>
       </Section>
     </main>
