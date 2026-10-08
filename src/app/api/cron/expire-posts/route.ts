@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteR2Object } from "@/lib/r2/storage";
 import { runWithConcurrency } from "@/lib/concurrency";
+import { INCOMPLETE_SIGNUP_KEEP_HOURS } from "@/lib/adminMembers";
 
 // FEED-06: 노출시간 만료된 posts의 status를 published -> expired로 정리(soft-expire).
 //
@@ -43,6 +44,20 @@ export async function GET(request: NextRequest) {
     if (maintainError) console.error("[expire-posts] analytics_maintain 실패", maintainError.message);
   } catch (err) {
     console.error("[expire-posts] analytics_maintain 예외", err);
+  }
+
+  // 가입을 끝내지 않은 계정 정리(0097) — 소셜로그인만 하고 온보딩(실명·생년월일·약관 동의)을 마치지
+  // 않은 "가입 중" 계정을 하루 지나면 지운다. 대상 판정과 삭제는 DB 함수가 한다. 이것도 실패해도
+  // 게시물 만료 처리는 계속한다.
+  let incompleteSignups: unknown = null;
+  try {
+    const { data: purged, error: purgeError } = await supabase.rpc("purge_incomplete_signups", {
+      p_older_than_hours: INCOMPLETE_SIGNUP_KEEP_HOURS,
+    });
+    incompleteSignups = purgeError ? { error: purgeError.message } : purged;
+    if (purgeError) console.error("[expire-posts] purge_incomplete_signups 실패", purgeError.message);
+  } catch (err) {
+    console.error("[expire-posts] purge_incomplete_signups 예외", err);
   }
 
   const { error, data } = await supabase
@@ -87,5 +102,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ expired: data?.length ?? 0, deleted: toDelete?.length ?? 0, analytics });
+  return NextResponse.json({
+    expired: data?.length ?? 0,
+    deleted: toDelete?.length ?? 0,
+    analytics,
+    incompleteSignups,
+  });
 }

@@ -3,7 +3,13 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getR2UsageBytes } from "@/lib/r2/storage";
-import { buildMembersQuery, daysAgoIso, type MemberSearchParams } from "@/lib/adminMembers";
+import {
+  buildMembersQuery,
+  daysAgoIso,
+  INCOMPLETE_SIGNUP_KEEP_HOURS,
+  INCOMPLETE_STATUS,
+  type MemberSearchParams,
+} from "@/lib/adminMembers";
 import { MemberFilters } from "./MemberFilters";
 import { MembersTable, type MemberRow } from "./MembersTable";
 
@@ -197,6 +203,13 @@ export default async function AdminMembersPage({
           );
         })}
       </nav>
+
+      {statusTab === INCOMPLETE_STATUS && (
+        <p className="text-xs text-gray-500">
+          소셜로그인만 하고 가입을 끝내지 않은 계정이에요. {INCOMPLETE_SIGNUP_KEEP_HOURS}시간이 지나면 매일 오전
+          9시 정리 때 자동으로 삭제돼요.
+        </p>
+      )}
 
       <Suspense>
         <MemberFilters />

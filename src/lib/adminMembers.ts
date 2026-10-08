@@ -21,6 +21,8 @@ export type MemberSearchParams = {
 // users 행이 status=pending으로 생기지만, 실명·생년월일·약관 동의(/onboarding)를 마치기 전까지는
 // 가입이 끝난 게 아니라서(needs_onboarding=true, 0027) 승인 대기로 세지 않는다.
 export const INCOMPLETE_STATUS = "incomplete";
+// 가입 중인 채로 이 시간이 지나면 하루 1번 도는 expire-posts 크론이 계정을 지운다(0097).
+export const INCOMPLETE_SIGNUP_KEEP_HOURS = 24;
 
 export function memberDisplayStatus(m: { status: string; needs_onboarding: boolean }): string {
   return m.status === "pending" && m.needs_onboarding ? INCOMPLETE_STATUS : m.status;

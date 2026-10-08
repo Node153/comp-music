@@ -1202,6 +1202,11 @@ export interface Database {
         Args: { p_days?: number; p_include_admins?: boolean };
         Returns: unknown;
       };
+      // purge_incomplete_signups(0097) — 온보딩을 안 마친 "가입 중" 계정을 기준 시간 지나면 삭제. service role 전용.
+      purge_incomplete_signups: {
+        Args: { p_older_than_hours?: number };
+        Returns: unknown;
+      };
       // analytics_maintain(0083) — 어제까지 일별 집계 채우고 보관기간 지난 원본 삭제. service role 전용.
       analytics_maintain: {
         Args: { p_keep_days?: number };
