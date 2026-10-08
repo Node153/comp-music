@@ -2,11 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // 접근 권한 매트릭스 (spec 1.2, 3.1)
-// 비로그인: 랜딩/가입/로그인 + /feed(DEMO 미리보기, Instagram 참고). 미승인(대기/반려): 심사
-// 관련 화면만. 승인: 전체.
-// /feed는 비로그인 방문자에게도 열어주지만, 실제로 뭘 보여줄지(DEMO만 공개, memo는 잠금)는
-// posts_select_public_anyone 등 RLS(0024)와 feed/page.tsx 안의 분기가 담당한다 — 여기서는
-// "리다이렉트하지 않는다"까지만 책임진다.
+// 비로그인: 랜딩/가입/로그인만(2026-10-08 사용자 요청 — /feed 비로그인 미리보기는 닫고 로그인
+// 화면부터 보여준다). 미승인(대기/반려): 심사 관련 화면만. 승인: 전체.
 // /reset-password는 이메일 링크의 access_token이 URL 해시로 붙어오는데, 해시는 서버로
 // 전달되지 않아 여기서는 그냥 "로그인 안 한 방문자"로만 보인다. 그래서 항상 public이어야
 // 클라이언트가 뜬 뒤 해시를 읽어 복구 세션을 만들 시간을 준다(reset-password/page.tsx 참고).
@@ -21,7 +18,6 @@ const PUBLIC_PATHS = [
   "/",
   "/login",
   "/signup",
-  "/feed",
   "/forgot-password",
   "/reset-password",
   "/auth/callback",

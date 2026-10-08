@@ -89,7 +89,9 @@ export function GuestSignupPromptProvider({ children }: { children: React.ReactN
                 가입하면 더 많은 걸 할 수 있어요
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                좋아요·Kick·댓글을 남기고, memo(비공개 공간)에서 아는 사람들과 작업물을 나눠보세요.
+                좋아요·Kick·댓글을 남기고, 내 작업물을 Drop해 피드백을 받아보세요.
+                <br />
+                음악 전공생 전용이라 가입 후 승인을 거쳐 이용할 수 있어요.
               </p>
               <div className="mt-2 flex w-full flex-col gap-2">
                 <Link
