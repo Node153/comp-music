@@ -267,6 +267,9 @@ export default function OnboardingPage() {
             onChange={(e) => setName(e.target.value)}
             className={field}
           />
+          <p className="px-1 text-xs text-gray-400">
+            관리자가 가입을 승인할 때 실명으로 확인하니, 본인의 실제 이름을 입력해 주세요.
+          </p>
         </div>
         <div className="flex flex-col gap-1.5">
           <span className={label}>생년월일</span>
