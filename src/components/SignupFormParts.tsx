@@ -147,10 +147,10 @@ export function SignupProfileFields({
 //   하나로 묶었다(2026-10-08, 가입 절차 단순화 — 체크박스가 8개라 길었고 내용은 이용약관 제6조와
 //   같다). 세 문장은 그대로 보여주고, 기록도 content_rights/collab_disclaimer/license_grant 3행 그대로.
 const AGREEMENT_KEYS = [
+  "over14",
   "terms",
   "privacy",
   "communityGuidelines",
-  "over14",
   "betaNotice",
   "contentTerms",
 ] as const;
@@ -276,8 +276,18 @@ export function SignupAgreements({
       </label>
       <div className="h-px bg-gray-200" />
       <div className="flex flex-col gap-3 text-sm text-gray-600">
+        {/* 만 14세 확인은 읽을 문서가 딸린 약관이 아니라 본인 확인 항목이라 링크가 없다 — 링크 달린
+            항목들 사이에 끼어 있으면 혼자 빠진 것처럼 보여서(사용자 지적) 맨 위로 빼고 한 줄 안내를 붙였다. */}
+        {plainRow(
+          "over14",
+          <>
+            [필수] 만 14세 이상입니다.
+            <span className="mt-0.5 block text-xs text-gray-400">
+              만 14세 미만은 가입할 수 없어요.
+            </span>
+          </>,
+        )}
         {POLICY_ITEMS.map((item) => policyRow(item.key, item.path, item.title))}
-        {plainRow("over14", "[필수] 만 14세 이상입니다.")}
         {policyRow("betaNotice", "/beta-notice", "베타 서비스 이용 안내")}
         {/* 아래 세 문장은 각각 content_rights / collab_disclaimer / license_grant 동의로 기록된다.
             문장을 바꾸면 해당 항목의 버전도 같이 올릴 것(src/lib/agreements.ts + handle_new_user 트리거). */}
