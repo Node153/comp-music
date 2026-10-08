@@ -82,7 +82,9 @@ function expiresAtFromNow(hours: ExpireHours | null) {
 function settingsSummary(audience: Audience, expireHours: ExpireHours | null) {
   const who = audience === "public" ? "전체 공개" : audience === "companion" ? "Companion 공개" : "특정인 공개";
   const label = EXPIRE_OPTIONS.find((o) => o.hours === expireHours)?.label ?? "";
-  return `${who} · ${expireHours === null ? "계속 유지" : `${label} 뒤 숨김`}`;
+  // 기간이 끝나면 피드에서 숨겨지고 7일 뒤 expire-posts 크론이 파일째 지운다 — 공개 범위와 무관.
+  // "숨김"만 적혀 있어서 프로필엔 남는 줄 알 수 있었다(약관 제6조·개인정보처리방침과 같은 문구).
+  return `${who} · ${expireHours === null ? "계속 유지" : `${label} 뒤 숨김 · 7일 후 삭제`}`;
 }
 
 // posts.expire_hours는 not null 컬럼이라 demo(영구노출)에도 값이 필요하지만,
@@ -1257,6 +1259,11 @@ export default function UploadPage() {
                     ))}
                   </div>
                 </div>
+                {expireHours !== null && (
+                  <p className="pl-11 text-xs text-active-gray">
+                    기간이 끝나면 피드에서 숨겨지고, 7일 뒤 파일과 함께 완전히 삭제돼요.
+                  </p>
+                )}
               </div>
             )}
           </div>

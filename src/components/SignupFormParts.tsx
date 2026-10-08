@@ -96,7 +96,8 @@ export function SignupProfileFields({
           className={field}
         />
         <p className={hint}>
-          관리자가 가입을 승인할 때 실명으로 확인하니, 본인의 실제 이름을 입력해 주세요.
+          관리자가 가입을 승인할 때 실명으로 확인하니, 본인의 실제 이름을 입력해 주세요. 실명은
+          서로 Companion이 된 회원과 운영자에게만 보여요.
         </p>
       </div>
       <div className="flex flex-col gap-1.5">
@@ -136,22 +137,22 @@ export function SignupProfileFields({
   );
 }
 
-// 동의 항목 8종(전부 필수). 키는 화면 표시 순서.
+// 동의 체크박스 6개(전부 필수) — 기록되는 동의는 8종 그대로다(src/lib/agreements.ts). 키는 화면 표시 순서.
 // - terms/privacy/communityGuidelines: 약관 동의 재구성(2026-08-20) — 이용약관/개인정보처리방침을
 //   각각 별개 체크박스로 분리하고 커뮤니티 운영정책(/community-guidelines)을 추가.
 // - over14: 만 14세 이상 자기신고(2026-08-29, 사용자 요청) — 생년월일 검증(isOldEnough)이 있지만
 //   조작해서 입력할 수도 있으므로 명시적 동의도 별도로 받는다(데이터 검증 + 자기신고 이중 장치).
 // - betaNotice: 베타 서비스 이용 안내(2026-08-29, 사용자 요청, /beta-notice).
-// - contentRights/collabDisclaimer/licenseGrant: 저작권/공동창작 동의(docs/copyright_agreement_draft.md).
+// - contentTerms: 저작권/공동창작/이용 허락 동의(docs/copyright_agreement_draft.md) 세 가지를 체크박스
+//   하나로 묶었다(2026-10-08, 가입 절차 단순화 — 체크박스가 8개라 길었고 내용은 이용약관 제6조와
+//   같다). 세 문장은 그대로 보여주고, 기록도 content_rights/collab_disclaimer/license_grant 3행 그대로.
 const AGREEMENT_KEYS = [
   "terms",
   "privacy",
   "communityGuidelines",
   "over14",
   "betaNotice",
-  "contentRights",
-  "collabDisclaimer",
-  "licenseGrant",
+  "contentTerms",
 ] as const;
 type AgreementKey = (typeof AGREEMENT_KEYS)[number];
 type AgreementState = Record<AgreementKey, boolean>;
@@ -179,6 +180,34 @@ const POLICY_ITEMS: { key: AgreementKey; path: string; title: string }[] = [
   { key: "communityGuidelines", path: "/community-guidelines", title: "커뮤니티 운영정책" },
 ];
 
+// 개인정보 수집·이용 동의를 받는 자리에서 바로 볼 수 있는 요약(항목·목적·보유기간·거부 시 불이익).
+// 전문은 /privacy — 여기 내용을 바꾸면 방침 1~3장과 어긋나지 않는지 같이 볼 것. 평소엔 접혀 있다.
+function PrivacyConsentSummary() {
+  return (
+    <details className="mt-1 text-xs leading-relaxed text-gray-500">
+      <summary className="cursor-pointer text-gray-400 hover:text-gray-600">
+        수집 항목·목적·보유기간 보기
+      </summary>
+      <ul className="mt-1.5 flex flex-col gap-1 rounded-lg bg-white p-2.5 ring-1 ring-gray-200">
+        <li>
+          <span className="font-medium text-gray-700">수집 항목</span> 이메일, 실명, 생년월일, 닉네임
+          (이메일 가입 시 비밀번호), 가입 심사 때 확인하는 학교·전공·학번
+        </li>
+        <li>
+          <span className="font-medium text-gray-700">이용 목적</span> 회원 식별·로그인, 만 14세 이상
+          확인과 중복 가입 방지, 가입 심사, 서비스 제공과 알림 발송
+        </li>
+        <li>
+          <span className="font-medium text-gray-700">보유 기간</span> 회원 탈퇴 시까지
+        </li>
+        <li>
+          동의하지 않을 수 있지만, 가입에 꼭 필요한 정보라 동의하지 않으면 가입할 수 없어요.
+        </li>
+      </ul>
+    </details>
+  );
+}
+
 export function SignupAgreements({
   agreements,
 }: {
@@ -203,7 +232,7 @@ export function SignupAgreements({
           onChange={(e) => setOne(key, e.target.checked)}
           className={checkbox}
         />
-        <span>
+        <div className="min-w-0 flex-1">
           <label htmlFor={id} className="cursor-pointer">
             [필수]{" "}
           </label>
@@ -213,7 +242,8 @@ export function SignupAgreements({
           <label htmlFor={id} className="cursor-pointer">
             에 동의합니다.
           </label>
-        </span>
+          {key === "privacy" && <PrivacyConsentSummary />}
+        </div>
       </div>
     );
   }
@@ -249,34 +279,33 @@ export function SignupAgreements({
         {POLICY_ITEMS.map((item) => policyRow(item.key, item.path, item.title))}
         {plainRow("over14", "[필수] 만 14세 이상입니다.")}
         {policyRow("betaNotice", "/beta-notice", "베타 서비스 이용 안내")}
+        {/* 아래 세 문장은 각각 content_rights / collab_disclaimer / license_grant 동의로 기록된다.
+            문장을 바꾸면 해당 항목의 버전도 같이 올릴 것(src/lib/agreements.ts + handle_new_user 트리거). */}
         {plainRow(
-          "contentRights",
+          "contentTerms",
           <>
-            [필수] 제가 올리는 음원·영상·이미지는 직접 만들었거나, 사용할 권한을 받은
-            콘텐츠입니다. 다른 사람의 저작권을 침해하지 않겠습니다.
-            <span className="mt-0.5 block text-xs text-gray-400">
-              다른 사람의 샘플·비트·반주 등을 사용했다면 정식 허가가 필요해요.
+            [필수] 콘텐츠 권리에 관한 아래 세 가지를 확인하고 동의합니다.
+            <span className="mt-1.5 flex flex-col gap-1.5 text-[13px] leading-relaxed text-gray-500">
+              <span>
+                · 제가 올리는 음원·영상·이미지는 직접 만들었거나, 사용할 권한을 받은 콘텐츠입니다.
+                다른 사람의 저작권을 침해하지 않겠습니다.
+                <span className="block text-xs text-gray-400">
+                  다른 사람의 샘플·비트·반주 등을 사용했다면 정식 허가가 필요해요.
+                </span>
+              </span>
+              <span>
+                · 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은 참여자끼리 직접 정해야
+                한다는 점을 이해했습니다. Compmusic은 이를 대신 결정하거나 분쟁을 중재하지
+                않습니다.
+                <span className="block text-xs text-gray-400">
+                  작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
+                </span>
+              </span>
+              <span>
+                · Compmusic이 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서
+                사용하는 것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
+              </span>
             </span>
-          </>,
-        )}
-        {/* 문구를 바꾸면 동의 버전도 같이 올릴 것 — onboarding/page.tsx의 COLLAB_DISCLAIMER_VERSION과
-            handle_new_user 트리거(0092). */}
-        {plainRow(
-          "collabDisclaimer",
-          <>
-            [필수] 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은 참여자끼리 직접
-            정해야 한다는 점을 이해했습니다. Compmusic은 이를 대신 결정하거나 분쟁을 중재하지
-            않습니다.
-            <span className="mt-0.5 block text-xs text-gray-400">
-              작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
-            </span>
-          </>,
-        )}
-        {plainRow(
-          "licenseGrant",
-          <>
-            [필수] Compmusic이 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서
-            사용하는 것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
           </>,
         )}
       </div>

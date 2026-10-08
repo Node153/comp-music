@@ -20,22 +20,7 @@ import { errorText } from "@/components/ui/styles";
 import { hasWhitespace } from "@/lib/nicknameExamples";
 import { BackArrowIcon } from "@/components/icons";
 import { isOldEnough } from "@/lib/age";
-
-// signup/page.tsx의 handle_new_user 트리거(0023/0029/0039)가 이메일 가입자에게 남기는 것과
-// 동일한 버전 문자열 — 동의 이력을 한 기준으로 통일하기 위해 하드코딩 값도 그대로 맞춘다.
-const AGREEMENT_VERSION = "2026-08-10";
-// 2026-10-08: 공동창작 면책 문구에서 "memo(비공개 협업 공간)에서"를 뺐다 — memo 작업물 기능은
-// DEMO로 합쳐졌고(0088) memo 탭은 명반 차트라, 더는 맞지 않는 설명이었다. 문구가 바뀐 이 항목만
-// 버전을 올린다(이메일 가입 쪽은 handle_new_user 트리거 — 0092, 두 값은 항상 같이 바꿀 것).
-const COLLAB_DISCLAIMER_VERSION = "2026-10-08";
-// 2026-08-29: 이용약관과 개인정보처리방침을 각각 대폭 보완했다 — 같은 날 개정이라도 두
-// 문서는 독립적으로 바뀔 수 있으므로 하나의 상수로 묶지 않고 분리해뒀다(실제로 바뀐
-// 문서의 버전만 올려야 동의 이력이 정확하다).
-const TERMS_VERSION = "2026-08-29";
-const PRIVACY_VERSION = "2026-08-29";
-const COMMUNITY_GUIDELINES_VERSION = "2026-08-29";
-const AGE_OVER_14_VERSION = "2026-08-29";
-const BETA_NOTICE_VERSION = "2026-08-20";
+import { signupAgreementRows } from "@/lib/agreements";
 
 const CONTACT_EMAIL = "jtaein0723@gmail.com";
 
@@ -51,7 +36,7 @@ export default function OnboardingPage() {
   // 이메일 입력칸 자체가 없어서 회원이 자기가 어느 이메일로 가입됐는지 확인할 방법이
   // 없었다(특히 Spotify 이메일 인증 이슈를 겪은 뒤 나온 요청). 폼 제출과는 무관, 읽기 전용 표시.
   const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
-  // 약관 동의 8종 — 화면·문구는 이메일 가입과 공용(SignupFormParts). 기록은 handleSubmit에서 직접 남긴다.
+  // 약관 동의(기록 8종) — 화면·문구는 이메일 가입과 공용(SignupFormParts). 기록은 handleSubmit에서 직접 남긴다.
   const agreements = useSignupAgreements();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -160,16 +145,10 @@ export default function OnboardingPage() {
       return;
     }
 
-    const { error: agreementError } = await supabase.from("agreements").insert([
-      { user_id: user.id, type: "content_rights", version: AGREEMENT_VERSION },
-      { user_id: user.id, type: "collab_disclaimer", version: COLLAB_DISCLAIMER_VERSION },
-      { user_id: user.id, type: "license_grant", version: AGREEMENT_VERSION },
-      { user_id: user.id, type: "terms_of_service", version: TERMS_VERSION },
-      { user_id: user.id, type: "privacy_policy", version: PRIVACY_VERSION },
-      { user_id: user.id, type: "community_guidelines", version: COMMUNITY_GUIDELINES_VERSION },
-      { user_id: user.id, type: "age_over_14", version: AGE_OVER_14_VERSION },
-      { user_id: user.id, type: "beta_notice", version: BETA_NOTICE_VERSION },
-    ]);
+    // 동의 8종 기록 — 버전은 이메일 가입(handle_new_user 트리거)과 같은 값(src/lib/agreements.ts).
+    const { error: agreementError } = await supabase
+      .from("agreements")
+      .insert(signupAgreementRows(user.id));
     setLoading(false);
 
     if (agreementError) {

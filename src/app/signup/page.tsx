@@ -65,7 +65,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  // 약관 동의 8종 — 폼 제출을 막는 게이트 역할만 한다(실제 기록은 handle_new_user 트리거).
+  // 약관 동의(기록 8종) — 폼 제출을 막는 게이트 역할만 한다(실제 기록은 handle_new_user 트리거).
   const agreements = useSignupAgreements();
   const [error, setError] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState(false);

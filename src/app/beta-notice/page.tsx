@@ -4,8 +4,12 @@
 // 체크박스가 새 탭으로 이 페이지를 여는데, 그 새 탭도 같은 로그인 세션을 공유하므로 예외
 // 목록에서 빠지면 곧장 /onboarding으로 되튕겨버린다 — 0041 즈음 겪었던 것과 같은 함정).
 import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
+import { AGREEMENT_VERSIONS } from "@/lib/agreements";
 
-const EFFECTIVE_DATE = "2026-08-20";
+// 2026-10-08 개정(시행 2026-10-15): "memo" 표현만 현재 구조에 맞게 정리(내용 변화 없음).
+const ANNOUNCED_DATE = "2026-10-08";
+// 시행일자 = 가입 동의 버전(src/lib/agreements.ts) — 개정하면 거기서 올린다.
+const EFFECTIVE_DATE = AGREEMENT_VERSIONS.beta_notice;
 const CONTACT_EMAIL = "jtaein0723@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -22,7 +26,9 @@ export default function BetaNoticePage() {
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-6 pb-20">
       <div className="flex flex-col gap-1">
         <h1 className={pageTitle}>베타 서비스 이용 안내</h1>
-        <p className={mutedText}>시행일: {EFFECTIVE_DATE}</p>
+        <p className={mutedText}>
+          공고일: {ANNOUNCED_DATE} · 시행일: {EFFECTIVE_DATE}
+        </p>
       </div>
 
       <p className="text-sm leading-relaxed text-gray-700">
@@ -44,7 +50,7 @@ export default function BetaNoticePage() {
             게시물이 수정·이동·비공개·삭제될 수 있습니다.
           </li>
           <li>
-            베타 기간에 저장된 게시물, memo, 채팅 및 첨부파일이 정식 출시 이후 그대로 유지되지
+            베타 기간에 저장된 게시물, 명반 추천, 채팅 및 첨부파일이 정식 출시 이후 그대로 유지되지
             않을 수 있습니다.
           </li>
         </ul>

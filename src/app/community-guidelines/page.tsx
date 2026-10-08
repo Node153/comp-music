@@ -10,8 +10,13 @@
 // 보유한 권한으로 서술하되, 구체적인 제한 범위(로그인 가능 여부 등)를 실제로 없는 세부
 // 기능인 것처럼 단정하지 않았다 — 조치 시점에 구체적으로 안내한다고만 적었다.
 import { pageTitle, sectionTitle, mutedText } from "@/components/ui/styles";
+import { AGREEMENT_VERSIONS } from "@/lib/agreements";
 
-const EFFECTIVE_DATE = "2026-08-29";
+// 2026-10-08 개정(시행 2026-10-15): memo를 "비공개 협업 공간"으로 설명하던 부분을 현재 구조
+// (게시물마다 공개 범위를 고름, memo 탭은 명반 차트)에 맞췄다. 금지행위·제재 기준은 그대로.
+const ANNOUNCED_DATE = "2026-10-08";
+// 시행일자 = 가입 동의 버전(src/lib/agreements.ts) — 개정하면 거기서 올린다.
+const EFFECTIVE_DATE = AGREEMENT_VERSIONS.community_guidelines;
 const CONTACT_EMAIL = "jtaein0723@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -57,7 +62,9 @@ export default function CommunityGuidelinesPage() {
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-6 pb-20">
       <div className="flex flex-col gap-1">
         <h1 className={pageTitle}>커뮤니티 운영정책</h1>
-        <p className={mutedText}>시행일자: {EFFECTIVE_DATE}</p>
+        <p className={mutedText}>
+          공고일: {ANNOUNCED_DATE} · 시행일자: {EFFECTIVE_DATE}
+        </p>
       </div>
 
       <Section title="1. 목적과 적용 범위">
@@ -76,19 +83,28 @@ export default function CommunityGuidelinesPage() {
         </p>
       </Section>
 
-      <Section title="2. DEMO·memo 이용 규칙">
+      <Section title="2. 게시물 공개 범위와 이용 규칙">
         <ul className="list-disc pl-5">
           <li>
-            DEMO(전체공개)는 회원이 직접 창작·연주·제작에 참여했거나, 게시에 필요한 권리를
+            DEMO는 회원이 직접 창작·연주·제작에 참여했거나, 게시에 필요한 권리를
             적법하게 확보한 음악 작업물을 공유하는 공간입니다. 커버곡, 샘플·비트·반주 음원 위
             연주, 합주 영상, 공동창작물도 게시할 수 있지만, 그 경우 저작권·실연자 권리·음반제작자
             권리·초상권 등 필요한 이용허락을 확인해야 합니다.
           </li>
           <li>
-            memo(Companion 전용/특정인 초대)는 완성 전 스케치와 공동창작 과정을 나누는 비공개
-            공간입니다. 회원은 memo에서 공유받은 음원, 악보, 가사, 대화, 연락처 및 작업 자료를
-            참여자의 동의 없이 외부에 공개·전송·재사용하거나 생성형 AI 학습 등에 입력해서는 안
-            됩니다.
+            게시물은 올릴 때 전체 공개, Companion 공개, 특정 회원 공개 중에서 공개 범위를 고를 수
+            있습니다. 회원은 비공개(Companion 공개·특정 회원 공개)로 공유받은 음원, 악보, 가사,
+            대화, 연락처 및 작업 자료를 올린 사람과 참여자의 동의 없이 외부에 공개·전송·재사용하거나
+            생성형 AI 학습 등에 입력해서는 안 됩니다.
+          </li>
+          <li>
+            노출 기간을 정한 게시물은 기간이 끝나면 피드에서 숨겨지고, 그로부터 7일 뒤 파일과 함께
+            삭제됩니다. 남겨 두고 싶은 작업물은 기간을 &quot;계속&quot;으로 올리거나 따로 보관해
+            주세요.
+          </li>
+          <li>
+            memo 탭의 명반 차트에는 실제로 듣고 추천하고 싶은 앨범과 그 이유를 적어주세요. 순위를
+            조작하기 위한 추천이나 내용 없는 추천 이유는 삭제될 수 있습니다.
           </li>
           <li>생성형 AI로 제작한 음악·이미지를 게시하는 경우, 그 사실을 캡션 등에 표시해주세요.</li>
           <li>공동작업물은 참여자와 크레딧을 표시하는 것을 권장합니다.</li>
@@ -109,7 +125,7 @@ export default function CommunityGuidelinesPage() {
           제한 등 필요한 조치를 할 수 있습니다.
         </p>
         <p>
-          memo의 메모·기록 기능으로 참여자 간 합의 내용을 남길 수 있으나, 이는 법적 계약서를
+          게시물 채팅 등 서비스 안에 참여자 간 합의 내용을 남길 수 있으나, 이는 법적 계약서를
           대체하지 않습니다. 중요한 협업은 별도의 서면 합의를 권장합니다.
         </p>
       </Section>
@@ -125,7 +141,7 @@ export default function CommunityGuidelinesPage() {
           <li>불법촬영물, 성착취물 또는 동의 없이 제작·공유된 성적 콘텐츠</li>
           <li>자살·자해를 조장하거나 구체적인 실행 방법을 유도하는 콘텐츠</li>
           <li>다른 회원의 개인정보, 연락처 또는 대화 내용을 본인 동의 없이 외부에 공개하는 행위</li>
-          <li>다른 회원의 비공개 memo 자료(음원·악보·가사·파일 등)를 무단으로 유출하는 행위</li>
+          <li>다른 회원이 비공개로 공유한 자료(음원·악보·가사·파일 등)를 무단으로 유출하는 행위</li>
           <li>사기, 금전 편취, 불법 거래 또는 다단계 모집</li>
           <li>스팸성 홍보, 도배, 무단 영리 활동, 서비스 취지와 무관한 콘텐츠 반복 게시</li>
           <li>악성코드 유포, 피싱 링크 게시 또는 로그인 정보 탈취 시도</li>
