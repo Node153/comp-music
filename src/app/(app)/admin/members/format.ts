@@ -49,6 +49,7 @@ export function formatRelative(iso: string): string {
 }
 
 export const STATUS_PILL: Record<string, { label: string; className: string; dot: string }> = {
+  incomplete: { label: "가입 중", className: "bg-gray-100 text-gray-500", dot: "bg-gray-400" },
   pending: { label: "대기", className: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
   approved: { label: "승인", className: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
   rejected: { label: "반려", className: "bg-red-50 text-red-600", dot: "bg-red-500" },

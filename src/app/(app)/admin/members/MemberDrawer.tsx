@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { USER_TYPE_LABEL, MEMBER_STATUS_LABEL } from "@/lib/adminMembers";
+import { USER_TYPE_LABEL, MEMBER_STATUS_LABEL, memberDisplayStatus } from "@/lib/adminMembers";
 import { MemberStatusActions } from "@/components/admin/MemberStatusActions";
 import { StatusPill, type MemberRow } from "./MembersTable";
 import { MemberEmailComposer } from "./MemberEmailComposer";
@@ -223,7 +223,7 @@ export function MemberDrawer({
                     </svg>
                   </button>
                 )}
-                <StatusPill status={m.status} />
+                <StatusPill status={memberDisplayStatus(m)} />
                 {m.role === "admin" && (
                   <span className="rounded bg-gray-900 px-1 text-[10px] font-medium leading-4 text-white">관리자</span>
                 )}

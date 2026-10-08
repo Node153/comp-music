@@ -17,7 +17,17 @@ export type MemberSearchParams = {
   page?: string;
 };
 
+// "가입 중"(incomplete)은 DB 상태가 아니라 화면용 구분이다 — 소셜로그인은 버튼을 누르는 순간
+// users 행이 status=pending으로 생기지만, 실명·생년월일·약관 동의(/onboarding)를 마치기 전까지는
+// 가입이 끝난 게 아니라서(needs_onboarding=true, 0027) 승인 대기로 세지 않는다.
+export const INCOMPLETE_STATUS = "incomplete";
+
+export function memberDisplayStatus(m: { status: string; needs_onboarding: boolean }): string {
+  return m.status === "pending" && m.needs_onboarding ? INCOMPLETE_STATUS : m.status;
+}
+
 export const MEMBER_STATUS_LABEL: Record<string, string> = {
+  incomplete: "가입 중",
   pending: "대기",
   approved: "승인",
   rejected: "반려",
@@ -63,11 +73,13 @@ export async function buildMembersQuery(supabase: ServerSupabase, sp: MemberSear
   let query = supabase
     .from("users")
     .select(
-      "id, name, nickname, nickname_tag, email, status, role, birth_date, created_at, last_seen_at, suspended_until, status_reason",
+      "id, name, nickname, nickname_tag, email, status, role, needs_onboarding, birth_date, created_at, last_seen_at, suspended_until, status_reason",
       { count: "exact" },
     );
 
   if (statusTab === "") query = query.neq("status", "withdrawn");
+  else if (statusTab === "pending") query = query.eq("status", "pending").eq("needs_onboarding", false);
+  else if (statusTab === INCOMPLETE_STATUS) query = query.eq("status", "pending").eq("needs_onboarding", true);
   else if (statusTab in MEMBER_STATUS_LABEL) query = query.eq("status", statusTab as UserStatus);
 
   if (q) {

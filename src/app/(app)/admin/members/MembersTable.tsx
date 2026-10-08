@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { USER_TYPE_LABEL } from "@/lib/adminMembers";
+import { USER_TYPE_LABEL, memberDisplayStatus } from "@/lib/adminMembers";
 import { MemberDrawer } from "./MemberDrawer";
 import { MemberEmailComposer } from "./MemberEmailComposer";
 import { STATUS_PILL, formatBytes, formatDateTime, formatRelative, formatShortDate, isOnline } from "./format";
@@ -19,6 +19,7 @@ export type MemberRow = {
   email: string;
   status: string;
   role: string;
+  needs_onboarding: boolean;
   birth_date: string | null;
   created_at: string;
   last_seen_at: string | null;
@@ -50,7 +51,11 @@ export function MembersTable({ rows, meId }: { rows: MemberRow[]; meId: string |
 
   const selected = rows.find((r) => r.id === selectedId) ?? null;
   const checkedRows = rows.filter((r) => checked.has(r.id));
-  const approvable = checkedRows.filter((r) => (r.status === "pending" || r.status === "rejected") && r.id !== meId);
+  // 가입 중(온보딩 전)인 사람은 약관 동의도 안 받은 상태라 일괄 승인 대상에서 뺀다.
+  const approvable = checkedRows.filter((r) => {
+    const s = memberDisplayStatus(r);
+    return (s === "pending" || s === "rejected") && r.id !== meId;
+  });
   const mailable = checkedRows.filter((r) => r.status !== "withdrawn");
   const allChecked = rows.length > 0 && rows.every((r) => checked.has(r.id));
 
@@ -174,7 +179,7 @@ export function MembersTable({ rows, meId }: { rows: MemberRow[]; meId: string |
                     {m.userType ? (USER_TYPE_LABEL[m.userType] ?? m.userType) : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="whitespace-nowrap py-1.5 pr-3">
-                    <StatusPill status={m.status} />
+                    <StatusPill status={memberDisplayStatus(m)} />
                     {m.status === "suspended" && (
                       <div className="text-[10px] text-red-600">
                         {m.suspended_until ? `~${formatShortDate(m.suspended_until)}` : "영구"}
@@ -235,7 +240,7 @@ export function MembersTable({ rows, meId }: { rows: MemberRow[]; meId: string |
               disabled={bulkBusy || approvable.length === 0}
               onClick={bulkApprove}
               className="rounded-md px-2 py-1 transition hover:bg-white/10 disabled:opacity-40"
-              title={approvable.length === 0 ? "대기/반려 상태인 회원만 일괄 승인할 수 있어요" : undefined}
+              title={approvable.length === 0 ? "대기/반려 상태인 회원만 일괄 승인할 수 있어요(가입 중 제외)" : undefined}
             >
               {bulkBusy ? "처리 중..." : `일괄 승인${approvable.length ? ` (${approvable.length})` : ""}`}
             </button>

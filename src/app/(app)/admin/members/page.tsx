@@ -19,6 +19,7 @@ const PAGE_SIZE = 30;
 const STATUS_TABS = [
   { key: "", label: "활성" },
   { key: "pending", label: "대기" },
+  { key: "incomplete", label: "가입 중" },
   { key: "approved", label: "승인" },
   { key: "rejected", label: "반려" },
   { key: "suspended", label: "정지" },
@@ -56,6 +57,7 @@ export default async function AdminMembersPage({
     { data: members, count: totalCount },
     { count: activeCount },
     { count: pendingCount },
+    { count: incompleteCount },
     { count: approvedCount },
     { count: rejectedCount },
     { count: suspendedCount },
@@ -66,7 +68,9 @@ export default async function AdminMembersPage({
   ] = await Promise.all([
     query,
     countUsers().neq("status", "withdrawn"),
-    countUsers().eq("status", "pending"),
+    // 승인 대기는 가입을 끝낸 사람만 — 소셜로그인 후 온보딩을 안 마친 사람은 "가입 중"으로 따로 센다.
+    countUsers().eq("status", "pending").eq("needs_onboarding", false),
+    countUsers().eq("status", "pending").eq("needs_onboarding", true),
     countUsers().eq("status", "approved"),
     countUsers().eq("status", "rejected"),
     countUsers().eq("status", "suspended"),
@@ -86,6 +90,7 @@ export default async function AdminMembersPage({
   const tabCounts: Record<string, number | null> = {
     "": activeCount,
     pending: pendingCount,
+    incomplete: incompleteCount,
     approved: approvedCount,
     rejected: rejectedCount,
     suspended: suspendedCount,

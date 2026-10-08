@@ -2,7 +2,8 @@
 // verify/documents/page.tsx와 status/page.tsx 양쪽이 같은 값을 봐야 서로 어긋나지 않아서
 // 한 곳에 모아둔다. 나중에 서류 심사를 다시 켤 땐 이 값만 true로 바꾸면 된다.
 //
-// true일 때: 서류 업로드 필수, verifications 행 생성, /admin/verifications에서 서류 보고 심사.
+// true일 때: 서류 업로드 필수, verifications 행 생성, /admin/verifications에서 서류 보고 심사
+// (그 화면은 남아 있지만 관리자 메뉴 링크는 2026-10-08에 뺐다 — 다시 켤 때 adminLinks.ts에 추가).
 // false일 때: 서류 없이 프로필 정보만 받고 pending 상태로 남김 → 관리자가 /admin/members에서
 // 서류 없이 바로 승인/반려(MemberStatusActions.tsx).
 export const DOCUMENT_VERIFICATION_ENABLED = false;

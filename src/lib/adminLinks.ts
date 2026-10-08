@@ -4,7 +4,6 @@ export const ADMIN_LINKS: { href: string; label: string }[] = [
   { href: "/admin/stats", label: "이용 통계" },
   { href: "/admin/members", label: "회원 관리" },
   { href: "/admin/activity", label: "활동 로그" },
-  { href: "/admin/verifications", label: "심사 대기열" },
   { href: "/admin/awaiting-reactions", label: "반응 대기" },
   { href: "/admin/announcements", label: "공지사항 관리" },
   { href: "/admin/feedback", label: "피드백 보기" },

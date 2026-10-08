@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   buildMembersQuery,
   MEMBER_STATUS_LABEL,
+  memberDisplayStatus,
   USER_TYPE_LABEL,
   type MemberSearchParams,
 } from "@/lib/adminMembers";
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
         m.status === "withdrawn" ? "" : m.email,
         m.birth_date,
         type ? (USER_TYPE_LABEL[type] ?? type) : "",
-        MEMBER_STATUS_LABEL[m.status] ?? m.status,
+        MEMBER_STATUS_LABEL[memberDisplayStatus(m)] ?? m.status,
         m.role === "admin" ? "관리자" : "일반",
         kst(m.created_at),
         kst(m.last_seen_at),
