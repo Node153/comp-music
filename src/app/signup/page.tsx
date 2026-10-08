@@ -527,9 +527,9 @@ export default function SignupPage() {
                 className={checkbox}
               />
               <span>
-                memo(비공개 협업 공간)에서 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은
-                참여자끼리 직접 정해야 한다는 점을 이해했습니다. Compmusic은 이를 대신 결정하거나
-                분쟁을 중재하지 않습니다.
+                다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은 참여자끼리 직접 정해야
+                한다는 점을 이해했습니다. Compmusic은 이를 대신 결정하거나 분쟁을 중재하지
+                않습니다.
                 <span className="mt-0.5 block text-xs text-gray-400">
                   작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
                 </span>
@@ -544,7 +544,7 @@ export default function SignupPage() {
                 className={checkbox}
               />
               <span>
-                Compmusic가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
+                Compmusic이 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
                 것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
               </span>
             </label>

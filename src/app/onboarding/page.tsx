@@ -19,6 +19,10 @@ import { isOldEnough } from "@/lib/age";
 // signup/page.tsx의 handle_new_user 트리거(0023/0029/0039)가 이메일 가입자에게 남기는 것과
 // 동일한 버전 문자열 — 동의 이력을 한 기준으로 통일하기 위해 하드코딩 값도 그대로 맞춘다.
 const AGREEMENT_VERSION = "2026-08-10";
+// 2026-10-08: 공동창작 면책 문구에서 "memo(비공개 협업 공간)에서"를 뺐다 — memo 작업물 기능은
+// DEMO로 합쳐졌고(0088) memo 탭은 명반 차트라, 더는 맞지 않는 설명이었다. 문구가 바뀐 이 항목만
+// 버전을 올린다(이메일 가입 쪽은 handle_new_user 트리거 — 0092, 두 값은 항상 같이 바꿀 것).
+const COLLAB_DISCLAIMER_VERSION = "2026-10-08";
 // 2026-08-29: 이용약관과 개인정보처리방침을 각각 대폭 보완했다 — 같은 날 개정이라도 두
 // 문서는 독립적으로 바뀔 수 있으므로 하나의 상수로 묶지 않고 분리해뒀다(실제로 바뀐
 // 문서의 버전만 올려야 동의 이력이 정확하다).
@@ -213,7 +217,7 @@ export default function OnboardingPage() {
 
     const { error: agreementError } = await supabase.from("agreements").insert([
       { user_id: user.id, type: "content_rights", version: AGREEMENT_VERSION },
-      { user_id: user.id, type: "collab_disclaimer", version: AGREEMENT_VERSION },
+      { user_id: user.id, type: "collab_disclaimer", version: COLLAB_DISCLAIMER_VERSION },
       { user_id: user.id, type: "license_grant", version: AGREEMENT_VERSION },
       { user_id: user.id, type: "terms_of_service", version: TERMS_VERSION },
       { user_id: user.id, type: "privacy_policy", version: PRIVACY_VERSION },
@@ -431,8 +435,8 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              제가 올리는 음원·영상·이미지는 직접 만들었거나, 사용할 권한을 받은 콘텐츠입니다.
-              다른 사람의 저작권을 침해하지 않겠습니다.
+              [필수] 제가 올리는 음원·영상·이미지는 직접 만들었거나, 사용할 권한을 받은
+              콘텐츠입니다. 다른 사람의 저작권을 침해하지 않겠습니다.
               <span className="mt-0.5 block text-xs text-gray-400">
                 다른 사람의 샘플·비트·반주 등을 사용했다면 정식 허가가 필요해요.
               </span>
@@ -447,9 +451,9 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              memo(비공개 협업 공간)에서 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은
-              참여자끼리 직접 정해야 한다는 점을 이해했습니다. Compmusic은 이를 대신 결정하거나
-              분쟁을 중재하지 않습니다.
+              [필수] 다른 사람과 함께 만든 콘텐츠의 소유권·수익 배분·크레딧은 참여자끼리 직접
+              정해야 한다는 점을 이해했습니다. Compmusic은 이를 대신 결정하거나 분쟁을 중재하지
+              않습니다.
               <span className="mt-0.5 block text-xs text-gray-400">
                 작업을 시작하기 전에 각자의 역할과 지분을 미리 정해두는 것을 추천해요.
               </span>
@@ -464,8 +468,8 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 shrink-0 accent-black"
             />
             <span>
-              Compmusic가 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서 사용하는
-              것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
+              [필수] Compmusic이 제 게시물을 서비스 화면에 보여주고, 서비스 운영에 필요한 범위에서
+              사용하는 것에 동의합니다. 콘텐츠의 소유권은 여전히 저에게 있습니다.
             </span>
           </label>
         </div>
