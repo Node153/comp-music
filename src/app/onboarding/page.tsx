@@ -55,7 +55,11 @@ export default function OnboardingPage() {
   // — signup/page.tsx와 같은 이유(동명이인 판별 보조).
   const [birthDate, setBirthDate] = useState("");
   const [nickname, setNickname] = useState("");
-  const { pick: pickNickname } = useNicknamePhrases();
+  // 닉네임은 실명이 그대로 새면 안 되므로 예시 목록 기반 랜덤값으로 채운다(signup/page.tsx와
+  // 동일 패턴 — 목록 로드 후 채우고, 그 사이 직접 입력했으면 건드리지 않음).
+  const { pick: pickNickname } = useNicknamePhrases((pick) =>
+    setNickname((prev) => prev || pick()),
+  );
   // 화면에 "이 계정으로 로그인했다"는 걸 보여주기 위한 용도(사용자 요청) — 소셜로그인은
   // 이메일 입력칸 자체가 없어서 회원이 자기가 어느 이메일로 가입됐는지 확인할 방법이
   // 없었다(특히 Spotify 이메일 인증 이슈를 겪은 뒤 나온 요청). 폼 제출과는 무관, 읽기 전용 표시.
@@ -100,8 +104,7 @@ export default function OnboardingPage() {
   }
 
   useEffect(() => {
-    // Google 프로필의 표시 이름을 실명 입력칸에 미리 채워준다(수정 가능) — 닉네임은 실명이
-    // 그대로 새면 안 되므로 예시 목록 기반 랜덤값으로 채운다(signup/page.tsx와 동일 패턴).
+    // Google 프로필의 표시 이름을 실명 입력칸에 미리 채워준다(수정 가능).
     // Spotify는 여기서 제외(사용자 요청) — Spotify의 'name'은 실명이 아니라 사용자가 자유롭게
     // 정한 표시 이름(예: "노래좋으면벽봄" 같은 닉네임)이라 실명 입력칸에 미리 채우면 오히려
     // 헷갈린다. Google은 보통 실제 이름을 쓰므로 그대로 둔다.
@@ -115,8 +118,6 @@ export default function OnboardingPage() {
         if (metaName) setName(metaName);
       }
     });
-    setNickname(pickNickname());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
   // 뒤로가기(사용자 요청) — 이 화면은 소셜로그인 직후 자동으로 오게 되는데, 브라우저 뒤로가기는

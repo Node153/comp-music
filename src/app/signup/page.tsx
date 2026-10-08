@@ -1,7 +1,7 @@
 "use client";
 
 // S2 회원가입 (AUTH-01)
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -79,14 +79,11 @@ export default function SignupPage() {
   // 실명/닉네임 이원화(0018) — Companion에게는 실명, 그 외에게는 닉네임이 보이므로 둘 다 필수.
   // 배달의민족 가입 화면 참고 — 재밌는 닉네임을 자동으로 채워주고 "다시 뽑기"로 고르게 한다.
   // 서버(SSR)와 클라이언트가 다른 랜덤값을 만들면 하이드레이션이 꼬이므로, 초기값은 빈
-  // 문자열로 두고 마운트 후 useEffect에서만 채운다(NicknameForm의 비동기 로드와 같은 패턴).
+  // 문자열로 두고 문구 목록 로드가 끝난 뒤에 채운다(그 사이 직접 입력했으면 건드리지 않음).
   const [nickname, setNickname] = useState("");
-  const { pick: pickNickname } = useNicknamePhrases();
-  useEffect(() => {
-    setNickname(pickNickname());
-    // pickNickname은 매 렌더 새 함수지만 의미상 마운트 시 1회 — deps 비움.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { pick: pickNickname } = useNicknamePhrases((pick) =>
+    setNickname((prev) => prev || pick()),
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
