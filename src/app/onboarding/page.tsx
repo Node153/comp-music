@@ -72,6 +72,29 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // "전체 동의" 체크박스 — signup/page.tsx와 동일(소셜 가입 화면엔 빠져 있었음). 파생 상태라
+  // 개별 항목을 하나라도 끄면 자동으로 해제된다(별도 state 없음).
+  const allAgreed =
+    agreedTerms &&
+    agreedPrivacy &&
+    agreedCommunityGuidelines &&
+    agreedOver14 &&
+    agreedBetaNotice &&
+    agreedContentRights &&
+    agreedCollabDisclaimer &&
+    agreedLicenseGrant;
+
+  function setAllAgreed(v: boolean) {
+    setAgreedTerms(v);
+    setAgreedPrivacy(v);
+    setAgreedCommunityGuidelines(v);
+    setAgreedOver14(v);
+    setAgreedBetaNotice(v);
+    setAgreedContentRights(v);
+    setAgreedCollabDisclaimer(v);
+    setAgreedLicenseGrant(v);
+  }
+
   useEffect(() => {
     // Google 프로필의 표시 이름을 실명 입력칸에 미리 채워준다(수정 가능) — 닉네임은 실명이
     // 그대로 새면 안 되므로 예시 목록 기반 랜덤값으로 채운다(signup/page.tsx와 동일 패턴).
@@ -276,6 +299,16 @@ export default function OnboardingPage() {
         </div>
 
         <div className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3.5">
+          <label className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <input
+              type="checkbox"
+              checked={allAgreed}
+              onChange={(e) => setAllAgreed(e.target.checked)}
+              className="h-4 w-4 shrink-0 accent-black"
+            />
+            <span>전체 동의</span>
+          </label>
+          <div className="h-px bg-gray-200" />
           {/* 체크박스(<label>)와 새 탭 버튼이 완전히 분리된 구조(사용자 요청, Safari 새탭
               버그 재수정) — signup/page.tsx와 같은 이유(window.open으로 바꿔도 <button>이
               <label> "안"에 있으면 여전히 실기기 Safari에서 새 탭 이동이 안 됐음). */}
