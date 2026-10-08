@@ -19,6 +19,29 @@ export function WithdrawAccountSection() {
     if (!window.confirm("정말 탈퇴하시겠어요? 되돌릴 수 없어요.")) return;
     setLoading(true);
     setError(null);
+    // 내 게시물의 첨부 파일(R2)은 DB 함수가 못 지워서 여기서 먼저 지운다 — 게시물 직접 삭제
+    // (DeletePostButton)와 같은 서버 라우트. 게시물 행은 아래 RPC가 공개 범위와 무관하게 전부 지운다(0095).
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data: posts } = await supabase
+        .from("posts")
+        .select("video_url, image_url, audio_url, thumbnail_url")
+        .eq("user_id", user.id);
+      const keys = (posts ?? [])
+        .flatMap((p) => [p.video_url, p.image_url, p.audio_url, p.thumbnail_url])
+        .filter((key): key is string => !!key && key.startsWith(`${user.id}/`));
+      await Promise.allSettled(
+        keys.map((key) =>
+          fetch("/api/storage/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key }),
+          }),
+        ),
+      );
+    }
     const { error } = await supabase.rpc("withdraw_own_account");
     if (error) {
       setError(`탈퇴 처리에 실패했어요: ${error.message}`);
@@ -48,8 +71,8 @@ export function WithdrawAccountSection() {
       <p className="text-sm font-semibold text-red-700 dark:text-red-400">탈퇴하면 이렇게 처리돼요</p>
       <ul className="list-disc space-y-1 pl-5 text-xs text-red-700/90 dark:text-red-400/90">
         <li>실명·생년월일·프로필 정보가 삭제돼요</li>
-        <li>DEMO에 올린 게시물·댓글·좋아요·Kick이 모두 삭제돼요(복구 불가)</li>
-        <li>콜라보 게시물에서 나눈 대화·공동 작업물은 상대방을 위해 남지만, 내 이름은 "탈퇴한 사용자"로 바뀌어요</li>
+        <li>내가 올린 게시물은 공개 범위와 상관없이 첨부 파일, 달린 댓글·좋아요·Kick과 함께 모두 삭제돼요(복구 불가)</li>
+        <li>다른 회원의 글에 남긴 댓글, 나눈 메시지, 명반 추천은 상대방을 위해 남지만, 내 이름은 &quot;탈퇴한 사용자&quot;로 바뀌어요</li>
         <li>같은 계정으로 다시 로그인할 수 없어요</li>
       </ul>
       {error && <p className={errorText}>{error}</p>}
