@@ -72,7 +72,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/expire-post
 
 ## 3. 배포
 
-- 주소: https://comp-music.vercel.app
+- 주소: https://compmusic.kr (Vercel 기본 주소 https://comp-music.vercel.app 도 같은 운영 배포를 가리킴)
 - Vercel 계정 `hoolala0723`, 팀 `comp808`, 프로젝트명 `comp-music`
 - **GitHub 연동이 안 돼 있어 push 자동배포가 안 됩니다.** 코드 수정 후 수동 배포:
   ```bash

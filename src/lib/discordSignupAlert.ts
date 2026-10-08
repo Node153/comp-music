@@ -9,7 +9,7 @@ import "server-only";
 const WEBHOOK_URL =
   process.env.DISCORD_SIGNUP_WEBHOOK_URL || process.env.DISCORD_ERROR_WEBHOOK_URL;
 
-const ADMIN_MEMBERS_URL = "https://comp-music.vercel.app/admin/members";
+const ADMIN_MEMBERS_URL = "https://compmusic.kr/admin/members";
 const PLACEHOLDER_EMAIL_SUFFIX = "@no-email.comp.local";
 
 type NewSignup = {

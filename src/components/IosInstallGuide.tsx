@@ -17,6 +17,7 @@ import { XIcon, SmartphoneIcon, BellIcon, KeyIcon } from "@/components/icons";
 import { isIOS, isStandalone } from "@/lib/pushClient";
 import { isAndroid } from "@/components/AndroidInstallGuide";
 import { track } from "@/lib/analytics";
+import { outboundOrigin } from "@/lib/siteUrl";
 
 const OPEN_EVENT = "comp:open-install-guide";
 const STORAGE_KEY = "comp:ios-install-prompt:v1";
@@ -145,7 +146,7 @@ function IosInstallGuideModal({ onClose }: { onClose: (reason: "close" | "finish
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/feed`);
+      await navigator.clipboard.writeText(`${outboundOrigin()}/feed`);
       setCopied(true);
     } catch {
       // 복사가 막혀도 안내 문구만으로 진행 가능.
@@ -193,7 +194,7 @@ function IosInstallGuideModal({ onClose }: { onClose: (reason: "close" | "finish
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(`${window.location.origin}/feed`)}`;
+                  window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(`${outboundOrigin()}/feed`)}`;
                 }}
                 className="rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-80 dark:bg-white dark:text-black"
               >

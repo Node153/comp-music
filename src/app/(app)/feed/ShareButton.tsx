@@ -10,6 +10,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LinkIcon } from "@/components/icons";
 import { track } from "@/lib/analytics";
+import { outboundOrigin } from "@/lib/siteUrl";
 
 export function ShareButton({ postId, title }: { postId: string; title: string }) {
   const [toast, setToast] = useState<string | null>(null);
@@ -17,7 +18,7 @@ export function ShareButton({ postId, title }: { postId: string; title: string }
 
   // src는 이용 통계(0079)의 유입 태그 — 이 링크로 들어온 방문을 공유 경로별로 센다(도착하면 주소창에서 지워짐).
   const url = (src: "share_copy" | "share_native") =>
-    `${window.location.origin}/feed?feed=completion&post=${postId}&src=${src}#${postId}`;
+    `${outboundOrigin()}/feed?feed=completion&post=${postId}&src=${src}#${postId}`;
 
   function showToast(message: string) {
     setToast(message);

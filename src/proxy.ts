@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { LEGACY_HOST } from "@/lib/siteUrl";
 
 // 접근 권한 매트릭스 (spec 1.2, 3.1)
 // 비로그인: 랜딩/가입/로그인만(2026-10-08 사용자 요청 — /feed 비로그인 미리보기는 닫고 로그인
@@ -30,6 +31,26 @@ const PUBLIC_PATHS = [
 const UNAPPROVED_ALLOWED_PATHS = ["/status", "/verify/type", "/verify/documents"];
 
 export async function proxy(request: NextRequest) {
+  // 옛 주소로 돌아온 인증(2026-10-08) — 운영 Supabase의 Site URL이 아직 comp-music.vercel.app이고
+  // 허용 목록에 www.compmusic.kr이 없어서, compmusic.kr에서 시작한 소셜로그인·가입 메일 인증·비밀번호
+  // 재설정은 요청한 복귀 주소 대신 옛 주소의 루트(/?code=… 또는 /?error=…)로 돌아온다. 그런데 PKCE
+  // 검증값 쿠키는 시작한 도메인(www)에만 있어서 여기서는 세션으로 못 바꾼다 — 그대로 두면 로그인이 안
+  // 된 채 vercel 주소에 떨어진다(가입 화면이 vercel 주소로 열리던 원인). 시작한 도메인의 콜백으로
+  // 그대로 넘겨준다. 옛 주소에서 시작한 흐름은 /auth/callback으로 바로 오므로 여기 안 걸린다.
+  // Supabase 대시보드에서 Site URL·Redirect URLs를 고친 뒤에는 이 분기를 탈 일이 없다(남겨둬도 무해).
+  // 접속한 도메인은 Host 헤더로 본다 — request.nextUrl의 호스트는 실행 환경에 따라 서버가 뜬 주소
+  // (로컬은 항상 localhost)로 채워져서 믿을 수 없다.
+  const { searchParams } = request.nextUrl;
+  if (
+    request.headers.get("host") === LEGACY_HOST &&
+    request.nextUrl.pathname === "/" &&
+    (searchParams.has("code") || searchParams.has("error"))
+  ) {
+    return NextResponse.redirect(
+      `https://www.compmusic.kr/auth/callback${request.nextUrl.search}`,
+    );
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

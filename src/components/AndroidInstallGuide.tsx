@@ -16,6 +16,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { CheckIcon, XIcon } from "@/components/icons";
 import { isStandalone, usePushStatus } from "@/lib/pushClient";
 import { track } from "@/lib/analytics";
+import { outboundOrigin } from "@/lib/siteUrl";
 
 const STORAGE_KEY = "comp:android-install-prompt:v1";
 const OPEN_EVENT = "comp:open-android-install-guide";
@@ -173,7 +174,7 @@ function AndroidInstallModal({ onClose }: { onClose: (reason: "close" | "never" 
   }
 
   function openExternal() {
-    const url = `${window.location.origin}/feed`;
+    const url = `${outboundOrigin()}/feed`;
     // 카카오톡은 자체 스킴으로 기본 브라우저에서 열 수 있고, 그 외 앱 안 브라우저는 크롬 intent로 연다.
     window.location.href =
       browser === "kakao"

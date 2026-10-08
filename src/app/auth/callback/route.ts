@@ -28,9 +28,15 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}/feed`);
+      // 비밀번호 재설정 메일 링크가 여기로 온 경우(proxy.ts의 "옛 주소로 돌아온 인증") — 로그인만 시키고
+      // 피드로 보내면 새 비밀번호를 정할 기회가 없으니 재설정 화면으로 보낸다. 그 화면은 세션이 있으면
+      // 바로 입력 폼을 띄운다. redirectType은 supabase-js가 실제로 돌려주지만 타입에는 아직 없다.
+      const { redirectType } = data as { redirectType?: string | null };
+      return NextResponse.redirect(
+        `${origin}${redirectType === "recovery" ? "/reset-password" : "/feed"}`,
+      );
     }
     // 실패 사유는 서버 로그(Vercel)에만 남기고, 화면에는 내부 에러 메시지를 노출하지 않는다
     // (한때 진단용으로 그대로 노출했었음 — 안정화된 지금은 되돌릴 시점).
